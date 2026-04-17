@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Hedge Markets for Trade Logistics Risk",
+  description:
+    "View and manage prediction markets for shipping delays, congestion, and trade settlement risk in AETHER-LOGOS.",
+  alternates: {
+    canonical: "/markets",
+  },
+};
 export default function MarketsPage() {
   return (
     <main style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
