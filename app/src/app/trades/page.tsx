@@ -1,3 +1,13 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Trade Escrow Dashboard",
+  description:
+    "Create and manage zkTLS-verified trade escrows on Solana with automated settlement workflows in AETHER-LOGOS.",
+  alternates: {
+    canonical: "/trades",
+  },
+};
 export default function TradesPage() {
   return (
     <main style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
