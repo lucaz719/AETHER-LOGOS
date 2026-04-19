@@ -113,10 +113,16 @@ pub mod prediction_market {
     /// Stake USDC on the Yes or No side of a market.
     /// Creates the position PDA on first call (init-if-needed).
     pub fn place_hedge(ctx: Context<PlaceHedge>, side: Side, amount: u64) -> Result<()> {
-        require!(amount > 0, MarketError::InsufficientAmount);
+        require!(amount > 0, MarketError::InvalidAmount);
 
         let market = &mut ctx.accounts.market_account;
         require!(market.status == MarketStatus::Open, MarketError::MarketNotOpen);
+        let (expected_market, expected_market_bump) = Pubkey::find_program_address(
+            &[b"market", market.shipment_twin.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_market, market.key(), MarketError::MarketNotOpen);
+        require!(expected_market_bump == market.bump, MarketError::MarketNotOpen);
 
         // Transfer USDC from user to market vault.
         token::transfer(
@@ -137,13 +143,13 @@ pub mod prediction_market {
                 market.total_yes = market
                     .total_yes
                     .checked_add(amount)
-                    .ok_or(MarketError::InsufficientAmount)?;
+                    .ok_or(MarketError::InvalidAmount)?;
             }
             Side::No => {
                 market.total_no = market
                     .total_no
                     .checked_add(amount)
-                    .ok_or(MarketError::InsufficientAmount)?;
+                    .ok_or(MarketError::InvalidAmount)?;
             }
         }
 
@@ -163,7 +169,7 @@ pub mod prediction_market {
         position.amount = position
             .amount
             .checked_add(amount)
-            .ok_or(MarketError::InsufficientAmount)?;
+            .ok_or(MarketError::InvalidAmount)?;
 
         emit!(HedgePlaced {
             market: ctx.accounts.market_account.key(),
@@ -185,6 +191,16 @@ pub mod prediction_market {
             ctx.accounts.creator.key() == market.creator,
             MarketError::UnauthorizedResolver
         );
+        require!(
+            Clock::get()?.unix_timestamp >= market.resolution_time,
+            MarketError::ResolutionTooEarly
+        );
+        let (expected_market, expected_market_bump) = Pubkey::find_program_address(
+            &[b"market", market.shipment_twin.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_market, market.key(), MarketError::MarketNotOpen);
+        require!(expected_market_bump == market.bump, MarketError::MarketNotOpen);
 
         market.outcome = Some(outcome);
         market.status = MarketStatus::Resolved;
@@ -206,6 +222,15 @@ pub mod prediction_market {
             market.status == MarketStatus::Resolved,
             MarketError::MarketNotResolved
         );
+        let (expected_market, expected_market_bump) = Pubkey::find_program_address(
+            &[b"market", market.shipment_twin.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_market, market.key(), MarketError::MarketNotResolved);
+        require!(
+            expected_market_bump == market.bump,
+            MarketError::MarketNotResolved
+        );
         require!(!position.claimed, MarketError::AlreadyClaimed);
 
         let outcome = market.outcome.unwrap(); // safe: status is Resolved
@@ -217,27 +242,18 @@ pub mod prediction_market {
 
         let winning_side_total = if outcome { market.total_yes } else { market.total_no };
 
-        // Edge case: if winning side has zero liquidity nobody can claim.
         require!(winning_side_total > 0, MarketError::ZeroPayout);
 
-        let pot = market
+        let total_pool = market
             .total_yes
             .checked_add(market.total_no)
             .ok_or(MarketError::ZeroPayout)?;
 
-        let fee = pot
-            .checked_mul(market.protocol_fee_bps as u64)
-            .ok_or(MarketError::ZeroPayout)?
-            .checked_div(10_000)
-            .ok_or(MarketError::ZeroPayout)?;
-
-        let net_pot = pot.checked_sub(fee).ok_or(MarketError::ZeroPayout)?;
-
-        let user_share = (position.amount as u128)
-            .checked_mul(net_pot as u128)
+        let user_share = ((position.amount as u128)
+            .checked_mul(total_pool as u128)
             .ok_or(MarketError::ZeroPayout)?
             .checked_div(winning_side_total as u128)
-            .ok_or(MarketError::ZeroPayout)? as u64;
+            .ok_or(MarketError::ZeroPayout)?) as u64;
 
         require!(user_share > 0, MarketError::ZeroPayout);
 
@@ -473,6 +489,9 @@ pub struct WinningsClaimed {
 
 #[error_code]
 pub enum MarketError {
+    #[msg("Stake amount must be greater than zero")]
+    InvalidAmount,
+
     #[msg("Market is not open")]
     MarketNotOpen,
 
@@ -491,11 +510,11 @@ pub enum MarketError {
     #[msg("Winnings have already been claimed")]
     AlreadyClaimed,
 
+    #[msg("Market cannot be resolved before resolution time")]
+    ResolutionTooEarly,
+
     #[msg("Position is not on the winning side")]
     PositionNotWinning,
-
-    #[msg("Stake amount must be greater than zero")]
-    InsufficientAmount,
 
     #[msg("Only the market creator can resolve")]
     UnauthorizedResolver,

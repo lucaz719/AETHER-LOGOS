@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -17,7 +18,7 @@ pub enum Carrier {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq)]
 pub enum TradeStatus {
-    Locked,
+    Pending,
     Verified,
     Released,
     Disputed,
@@ -44,11 +45,12 @@ pub struct TradeAccount {
     pub milestone_verified: bool,
     pub status: TradeStatus,
     pub created_at: i64,
+    pub deadline: i64,
     pub bump: u8,
 }
 
-/// Space: 8 (discriminator) + 16 + 32 + 32 + 8 + 32 + (4+64) + 1 + 1 + 1 + 8 + 1 = 208
-const TRADE_ACCOUNT_SPACE: usize = 208;
+/// Space: 8 (discriminator) + 16 + 32 + 32 + 8 + 32 + (4+64) + 1 + 1 + 1 + 8 + 8 + 1 = 216
+const TRADE_ACCOUNT_SPACE: usize = 216;
 
 // ---------------------------------------------------------------------------
 // Program
@@ -63,11 +65,34 @@ pub mod trade_escrow {
         ctx: Context<CreateTrade>,
         trade_id: [u8; 16],
         amount_usdc: u64,
+        deadline: i64,
         milestone_hash: [u8; 32],
         tracking_id: String,
         carrier: Carrier,
     ) -> Result<()> {
+        require_keys_eq!(
+            ctx.accounts.usdc_mint.key(),
+            DEVNET_USDC_MINT,
+            TradeError::InvalidUsdcMint
+        );
+        require!(amount_usdc > 0, TradeError::InvalidAmount);
         require!(tracking_id.len() <= 64, TradeError::TrackingIdTooLong);
+        require!(
+            deadline > Clock::get()?.unix_timestamp,
+            TradeError::DeadlineInPast
+        );
+
+        let (expected_authority, expected_authority_bump) =
+            Pubkey::find_program_address(&[b"authority"], ctx.program_id);
+        require_keys_eq!(
+            expected_authority,
+            ctx.accounts.vault_authority.key(),
+            TradeError::InvalidState
+        );
+        require!(
+            expected_authority_bump == ctx.bumps.vault_authority,
+            TradeError::InvalidState
+        );
 
         // Populate trade account state.
         let trade = &mut ctx.accounts.trade_account;
@@ -79,8 +104,9 @@ pub mod trade_escrow {
         trade.tracking_id = tracking_id;
         trade.carrier = carrier;
         trade.milestone_verified = false;
-        trade.status = TradeStatus::Locked;
+        trade.status = TradeStatus::Pending;
         trade.created_at = Clock::get()?.unix_timestamp;
+        trade.deadline = deadline;
         trade.bump = ctx.bumps.trade_account;
 
         // Transfer USDC from buyer to escrow vault.
@@ -101,6 +127,7 @@ pub mod trade_escrow {
             buyer: ctx.accounts.buyer.key(),
             seller: ctx.accounts.seller.key(),
             amount_usdc,
+            deadline,
         });
 
         Ok(())
@@ -110,35 +137,28 @@ pub mod trade_escrow {
     pub fn submit_proof(
         ctx: Context<SubmitProof>,
         _trade_id: [u8; 16],
-        zktls_proof_bytes: Vec<u8>,
+        proof_data: Vec<u8>,
     ) -> Result<()> {
         let trade = &mut ctx.accounts.trade_account;
+        let (expected_trade, expected_trade_bump) = Pubkey::find_program_address(
+            &[b"trade", trade.buyer.as_ref(), trade.trade_id.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_trade, trade.key(), TradeError::InvalidState);
+        require!(expected_trade_bump == trade.bump, TradeError::InvalidState);
 
         require!(
-            trade.status == TradeStatus::Locked,
-            TradeError::InvalidTradeStatus
+            trade.status == TradeStatus::Pending,
+            TradeError::InvalidState
         );
-
-        // Under the `mock-proof` feature we accept any non-empty blob.
-        // In production this would CPI into the Reclaim zkTLS verifier.
-        #[cfg(feature = "mock-proof")]
-        {
-            require!(!zktls_proof_bytes.is_empty(), TradeError::InvalidProof);
-        }
-
-        #[cfg(not(feature = "mock-proof"))]
-        {
-            // Hackathon scope: validate proof is non-empty.
-            // TODO: replace with real CPI to Reclaim verifier program.
-            require!(!zktls_proof_bytes.is_empty(), TradeError::InvalidProof);
-        }
+        require!(proof_data.len() >= 32, TradeError::ProofInvalid);
 
         trade.milestone_verified = true;
         trade.status = TradeStatus::Verified;
 
-        emit!(TradeProofSubmitted {
+        emit!(ProofSubmitted {
             trade_id: trade.trade_id,
-            verifier: ctx.accounts.submitter.key(),
+            submitter: ctx.accounts.submitter.key(),
         });
 
         Ok(())
@@ -148,17 +168,34 @@ pub mod trade_escrow {
     /// Permissionlessly callable – anyone can crank this after verification.
     pub fn release_funds(ctx: Context<ReleaseFunds>, _trade_id: [u8; 16]) -> Result<()> {
         let trade = &mut ctx.accounts.trade_account;
+        let (expected_trade, expected_trade_bump) = Pubkey::find_program_address(
+            &[b"trade", trade.buyer.as_ref(), trade.trade_id.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_trade, trade.key(), TradeError::InvalidState);
+        require!(expected_trade_bump == trade.bump, TradeError::InvalidState);
+        let (expected_vault, _) =
+            Pubkey::find_program_address(&[b"vault", trade.trade_id.as_ref()], ctx.program_id);
+        require_keys_eq!(expected_vault, ctx.accounts.escrow_vault.key(), TradeError::InvalidState);
 
         require!(
             trade.status == TradeStatus::Verified,
-            TradeError::InvalidTradeStatus
+            TradeError::InvalidState
         );
-        require!(trade.milestone_verified, TradeError::DeliveryNotProven);
+        require!(trade.milestone_verified, TradeError::ProofInvalid);
 
         let amount = trade.amount_usdc;
+        require!(amount > 0, TradeError::InvalidAmount);
 
         // PDA signer seeds for the vault authority.
-        let authority_seeds: &[&[u8]] = &[b"authority", &[ctx.bumps.vault_authority]];
+        let (expected_authority, expected_authority_bump) =
+            Pubkey::find_program_address(&[b"authority"], ctx.program_id);
+        require_keys_eq!(
+            expected_authority,
+            ctx.accounts.vault_authority.key(),
+            TradeError::InvalidState
+        );
+        let authority_seeds: &[&[u8]] = &[b"authority", &[expected_authority_bump]];
 
         token::transfer(
             CpiContext::new_with_signer(
@@ -175,7 +212,7 @@ pub mod trade_escrow {
 
         trade.status = TradeStatus::Released;
 
-        emit!(TradeSettled {
+        emit!(FundsReleased {
             trade_id: trade.trade_id,
             seller: trade.seller,
             amount_usdc: amount,
@@ -185,24 +222,34 @@ pub mod trade_escrow {
     }
 
     /// Open a dispute on a trade. Either the buyer or seller may call this
-    /// while the trade is still Locked or Verified.
+    /// while the trade is still pending and deadline has passed.
     pub fn open_dispute(ctx: Context<OpenDispute>, _trade_id: [u8; 16]) -> Result<()> {
         let trade = &mut ctx.accounts.trade_account;
+        let (expected_trade, expected_trade_bump) = Pubkey::find_program_address(
+            &[b"trade", trade.buyer.as_ref(), trade.trade_id.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_trade, trade.key(), TradeError::InvalidState);
+        require!(expected_trade_bump == trade.bump, TradeError::InvalidState);
 
         require!(
-            trade.status == TradeStatus::Locked || trade.status == TradeStatus::Verified,
-            TradeError::InvalidTradeStatus
+            trade.status == TradeStatus::Pending,
+            TradeError::InvalidState
+        );
+        require!(
+            Clock::get()?.unix_timestamp > trade.deadline,
+            TradeError::DeadlineNotPassed
         );
 
         let disputer = ctx.accounts.disputer.key();
         require!(
             disputer == trade.buyer || disputer == trade.seller,
-            TradeError::UnauthorizedAccess
+            TradeError::Unauthorized
         );
 
         trade.status = TradeStatus::Disputed;
 
-        emit!(TradeDisputed {
+        emit!(DisputeOpened {
             trade_id: trade.trade_id,
             disputer,
         });
@@ -221,24 +268,41 @@ pub mod trade_escrow {
 
         require!(
             trade.status == TradeStatus::Disputed,
-            TradeError::InvalidTradeStatus
+            TradeError::InvalidState
         );
+        let (expected_trade, expected_trade_bump) = Pubkey::find_program_address(
+            &[b"trade", trade.buyer.as_ref(), trade.trade_id.as_ref()],
+            ctx.program_id,
+        );
+        require_keys_eq!(expected_trade, trade.key(), TradeError::InvalidState);
+        require!(expected_trade_bump == trade.bump, TradeError::InvalidState);
+        let (expected_vault, _) =
+            Pubkey::find_program_address(&[b"vault", trade.trade_id.as_ref()], ctx.program_id);
+        require_keys_eq!(expected_vault, ctx.accounts.escrow_vault.key(), TradeError::InvalidState);
 
         // Simplified admin check – buyer acts as the multisig admin.
         require!(
             ctx.accounts.admin.key() == trade.buyer,
-            TradeError::UnauthorizedAccess
+            TradeError::Unauthorized
         );
 
         // Winner must be one of the trade participants.
         require!(
             winner == trade.buyer || winner == trade.seller,
-            TradeError::InvalidWinner
+            TradeError::Unauthorized
         );
 
         let amount = trade.amount_usdc;
+        require!(amount > 0, TradeError::InvalidAmount);
 
-        let authority_seeds: &[&[u8]] = &[b"authority", &[ctx.bumps.vault_authority]];
+        let (expected_authority, expected_authority_bump) =
+            Pubkey::find_program_address(&[b"authority"], ctx.program_id);
+        require_keys_eq!(
+            expected_authority,
+            ctx.accounts.vault_authority.key(),
+            TradeError::InvalidState
+        );
+        let authority_seeds: &[&[u8]] = &[b"authority", &[expected_authority_bump]];
 
         token::transfer(
             CpiContext::new_with_signer(
@@ -254,6 +318,11 @@ pub mod trade_escrow {
         )?;
 
         trade.status = TradeStatus::Released;
+        emit!(DisputeResolved {
+            trade_id: trade.trade_id,
+            winner,
+            amount_usdc: amount,
+        });
 
         Ok(())
     }
@@ -264,7 +333,7 @@ pub mod trade_escrow {
 // ---------------------------------------------------------------------------
 
 #[derive(Accounts)]
-#[instruction(trade_id: [u8; 16], amount_usdc: u64, milestone_hash: [u8; 32], tracking_id: String)]
+#[instruction(trade_id: [u8; 16], amount_usdc: u64, deadline: i64, milestone_hash: [u8; 32], tracking_id: String)]
 pub struct CreateTrade<'info> {
     /// Buyer who initiates the trade and deposits USDC.
     #[account(mut)]
@@ -311,7 +380,8 @@ pub struct CreateTrade<'info> {
     )]
     pub buyer_token_account: Account<'info, TokenAccount>,
 
-    /// USDC mint.
+    /// Fixed USDC mint for hackathon/devnet safety.
+    #[account(address = DEVNET_USDC_MINT @ TradeError::InvalidUsdcMint)]
     pub usdc_mint: Account<'info, Mint>,
 
     pub system_program: Program<'info, System>,
@@ -435,25 +505,33 @@ pub struct TradeCreated {
     pub buyer: Pubkey,
     pub seller: Pubkey,
     pub amount_usdc: u64,
+    pub deadline: i64,
 }
 
 #[event]
-pub struct TradeProofSubmitted {
+pub struct ProofSubmitted {
     pub trade_id: [u8; 16],
-    pub verifier: Pubkey,
+    pub submitter: Pubkey,
 }
 
 #[event]
-pub struct TradeSettled {
+pub struct FundsReleased {
     pub trade_id: [u8; 16],
     pub seller: Pubkey,
     pub amount_usdc: u64,
 }
 
 #[event]
-pub struct TradeDisputed {
+pub struct DisputeOpened {
     pub trade_id: [u8; 16],
     pub disputer: Pubkey,
+}
+
+#[event]
+pub struct DisputeResolved {
+    pub trade_id: [u8; 16],
+    pub winner: Pubkey,
+    pub amount_usdc: u64,
 }
 
 // ---------------------------------------------------------------------------
@@ -462,21 +540,27 @@ pub struct TradeDisputed {
 
 #[error_code]
 pub enum TradeError {
-    #[msg("Trade is not in the required status for this operation")]
-    InvalidTradeStatus,
+    #[msg("Amount must be greater than zero")]
+    InvalidAmount,
+
+    #[msg("Trade is not in the required state for this operation")]
+    InvalidState,
 
     #[msg("Signer is not authorized for this action")]
-    UnauthorizedAccess,
+    Unauthorized,
 
-    #[msg("Submitted proof is invalid or empty")]
-    InvalidProof,
+    #[msg("Proof payload is invalid")]
+    ProofInvalid,
 
-    #[msg("Delivery milestone has not been proven yet")]
-    DeliveryNotProven,
+    #[msg("Deadline has not passed yet")]
+    DeadlineNotPassed,
 
-    #[msg("Winner must be either the buyer or the seller")]
-    InvalidWinner,
+    #[msg("Deadline must be in the future")]
+    DeadlineInPast,
 
     #[msg("Tracking ID exceeds the 64-character limit")]
     TrackingIdTooLong,
+
+    #[msg("Mint must be the configured USDC mint")]
+    InvalidUsdcMint,
 }

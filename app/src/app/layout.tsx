@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SolanaWalletProvider } from "@/lib/wallet-provider";
 
 export const metadata: Metadata = {
   title: "AETHER-LOGOS | Trade Settlement Protocol",
@@ -12,7 +13,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <SolanaWalletProvider>{children}</SolanaWalletProvider>
+      </body>
     </html>
   );
 }

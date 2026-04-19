@@ -5,6 +5,16 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
+
+	"github.com/aether-logos/agent/carrier"
+	"github.com/aether-logos/agent/proof"
+)
+
+var (
+	dhlClient       *carrier.DHLClient
+	solanaSubmitter *proof.SolanaSubmitter
 )
 
 func main() {
@@ -12,10 +22,54 @@ func main() {
 		log.Fatalf("failed to initialise database: %v", err)
 	}
 
+	dhlClient = carrier.NewDHLClient(os.Getenv("DHL_API_KEY"))
+
+	rpcURL := os.Getenv("SOLANA_RPC_URL")
+	if rpcURL == "" {
+		rpcURL = "https://api.devnet.solana.com"
+	}
+	if os.Getenv("NEXT_PUBLIC_ESCROW_PROGRAM_ID") != "" && os.Getenv("SOLANA_PRIVATE_KEY_BASE58") != "" {
+		submitter, err := proof.NewSolanaSubmitter(
+			rpcURL,
+			os.Getenv("NEXT_PUBLIC_ESCROW_PROGRAM_ID"),
+			os.Getenv("SOLANA_PRIVATE_KEY_BASE58"),
+		)
+		if err != nil {
+			log.Fatalf("failed to initialize solana submitter: %v", err)
+		}
+		solanaSubmitter = submitter
+	}
+
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/poll", PollHandler)
 	http.HandleFunc("/notify", NotifyHandler)
 	http.HandleFunc("/health", HealthHandler)
+
+	pollIntervalSeconds := 30
+	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed <= 0 {
+			log.Fatalf("invalid POLL_INTERVAL_SECONDS: %q", raw)
+		}
+		pollIntervalSeconds = parsed
+	}
+	go func() {
+		ticker := time.NewTicker(time.Duration(pollIntervalSeconds) * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			result, err := runPollCycle()
+			if err != nil {
+				log.Printf("background poll failed: %v", err)
+				continue
+			}
+			log.Printf(
+				"background poll checked=%d updated=%d errors=%d",
+				result.Checked,
+				result.Updated,
+				result.Errors,
+			)
+		}
+	}()
 
 	port := os.Getenv("PORT")
 	if port == "" {

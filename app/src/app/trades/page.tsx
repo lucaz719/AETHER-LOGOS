@@ -1,20 +1,181 @@
-export default function TradesPage() {
-  return (
-    <main style={{ maxWidth: "800px", margin: "0 auto", padding: "2rem" }}>
-      <h1>Trade Escrow Dashboard</h1>
-      <p>Create and manage trade escrows with zkTLS-verified delivery.</p>
+'use client';
 
-      <section style={{ marginTop: "2rem" }}>
+import { useEffect, useMemo, useState } from "react";
+import { BN } from "@coral-xyz/anchor";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { useAnchorClient } from "@/hooks/useAnchorClient";
+import { ESCROW_PROGRAM_ID } from "@/lib/anchor";
+
+type TradeRow = {
+  pubkey: PublicKey;
+  account: Record<string, unknown>;
+};
+
+function getStatusLabel(status: unknown): string {
+  if (typeof status === "string") return status;
+  if (status && typeof status === "object") {
+    const first = Object.keys(status as Record<string, unknown>)[0];
+    return first ?? "unknown";
+  }
+  return "unknown";
+}
+
+export default function TradesPage() {
+  const { escrowProgram, wallet } = useAnchorClient();
+  const [amount, setAmount] = useState("1");
+  const [deadline, setDeadline] = useState("");
+  const [trackingId, setTrackingId] = useState("");
+  const [seller, setSeller] = useState("");
+  const [buyerTokenAccount, setBuyerTokenAccount] = useState("");
+  const [sellerTokenAccount, setSellerTokenAccount] = useState("");
+  const [usdcMint, setUsdcMint] = useState("");
+  const [trades, setTrades] = useState<TradeRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadTrades = useMemo(
+    () => async () => {
+      if (!escrowProgram || !wallet?.publicKey) return;
+      const rows = (await (escrowProgram.account as any).tradeAccount.all()) as TradeRow[];
+      const own = rows.filter(
+        (r) => (r.account.buyer as PublicKey).toBase58() === wallet.publicKey.toBase58(),
+      );
+      setTrades(own);
+    },
+    [escrowProgram, wallet?.publicKey],
+  );
+
+  useEffect(() => {
+    void loadTrades();
+    const id = setInterval(() => void loadTrades(), 10_000);
+    return () => clearInterval(id);
+  }, [loadTrades]);
+
+  const createTrade = async () => {
+    if (!escrowProgram || !wallet?.publicKey) return;
+    try {
+      setError(null);
+      const tradeId = crypto.getRandomValues(new Uint8Array(16));
+      const deadlineTs = Math.floor(new Date(deadline).getTime() / 1000);
+      const amountUsdc = Math.floor(Number(amount) * 1_000_000);
+      const milestoneHash = new Uint8Array(32);
+      const [tradeAccount] = PublicKey.findProgramAddressSync(
+        [Buffer.from("trade"), wallet.publicKey.toBuffer(), tradeId],
+        ESCROW_PROGRAM_ID,
+      );
+      const [escrowVault] = PublicKey.findProgramAddressSync(
+        [Buffer.from("vault"), tradeId],
+        ESCROW_PROGRAM_ID,
+      );
+      const [vaultAuthority] = PublicKey.findProgramAddressSync(
+        [Buffer.from("authority")],
+        ESCROW_PROGRAM_ID,
+      );
+
+      await escrowProgram.methods
+        .createTrade(
+          Array.from(tradeId),
+          new BN(amountUsdc),
+          new BN(deadlineTs),
+          Array.from(milestoneHash),
+          trackingId,
+          { dhl: {} },
+        )
+        .accounts({
+          buyer: wallet.publicKey,
+          seller: new PublicKey(seller),
+          tradeAccount,
+          escrowVault,
+          vaultAuthority,
+          buyerTokenAccount: new PublicKey(buyerTokenAccount),
+          usdcMint: new PublicKey(usdcMint),
+          systemProgram: SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+
+      await loadTrades();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "create trade failed");
+    }
+  };
+
+  const releaseFunds = async (trade: TradeRow) => {
+    if (!escrowProgram || !wallet?.publicKey) return;
+    const tradeId = (trade.account.tradeId as number[] | Uint8Array);
+    const [escrowVault] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vault"), Buffer.from(tradeId)],
+      ESCROW_PROGRAM_ID,
+    );
+    const [vaultAuthority] = PublicKey.findProgramAddressSync(
+      [Buffer.from("authority")],
+      ESCROW_PROGRAM_ID,
+    );
+
+    await escrowProgram.methods
+      .releaseFunds(Array.from(tradeId))
+      .accounts({
+        caller: wallet.publicKey,
+        tradeAccount: trade.pubkey,
+        escrowVault,
+        vaultAuthority,
+        sellerTokenAccount: new PublicKey(sellerTokenAccount),
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+    await loadTrades();
+  };
+
+  const openDispute = async (trade: TradeRow) => {
+    if (!escrowProgram || !wallet?.publicKey) return;
+    const tradeId = (trade.account.tradeId as number[] | Uint8Array);
+    await escrowProgram.methods
+      .openDispute(Array.from(tradeId))
+      .accounts({
+        disputer: wallet.publicKey,
+        tradeAccount: trade.pubkey,
+      })
+      .rpc();
+    await loadTrades();
+  };
+
+  return (
+    <main style={{ maxWidth: "900px", margin: "0 auto", padding: "2rem" }}>
+      <h1>Trade Escrow Dashboard</h1>
+      <WalletMultiButton />
+      <p>Create and manage trade escrows with zkTLS-verified delivery.</p>
+      {error && <p style={{ color: "crimson" }}>{error}</p>}
+
+      <section style={{ marginTop: "2rem", display: "grid", gap: "0.75rem" }}>
         <h2>Create New Trade</h2>
-        <p>Connect your Solana wallet to create a trade escrow.</p>
-        {/* Trade creation form will be implemented here */}
-        {/* Fields: Item description, Price (USDC), Destination, Carrier, Tracking ID */}
+        <input placeholder="Amount (USDC)" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
+        <input placeholder="Tracking ID" value={trackingId} onChange={(e) => setTrackingId(e.target.value)} />
+        <input placeholder="Seller wallet" value={seller} onChange={(e) => setSeller(e.target.value)} />
+        <input placeholder="Buyer USDC token account" value={buyerTokenAccount} onChange={(e) => setBuyerTokenAccount(e.target.value)} />
+        <input placeholder="Seller USDC token account" value={sellerTokenAccount} onChange={(e) => setSellerTokenAccount(e.target.value)} />
+        <input placeholder="USDC mint" value={usdcMint} onChange={(e) => setUsdcMint(e.target.value)} />
+        <button onClick={() => void createTrade()} disabled={!wallet}>Create Trade</button>
       </section>
 
       <section style={{ marginTop: "2rem" }}>
         <h2>Active Trades</h2>
-        <p>No active trades. Create one above to get started.</p>
-        {/* Trade list with status badges will be implemented here */}
+        {trades.length === 0 && <p>No active trades.</p>}
+        {trades.map((trade) => {
+          const status = getStatusLabel(trade.account.status);
+          const pastDeadline = Number(trade.account.deadline ?? 0) < Date.now() / 1000;
+          return (
+            <div key={trade.pubkey.toBase58()} style={{ border: "1px solid #ddd", padding: "0.75rem", marginBottom: "0.75rem" }}>
+              <div><strong>{trade.pubkey.toBase58()}</strong></div>
+              <div>Status: <span>{status}</span></div>
+              {status === "verified" && <button onClick={() => void releaseFunds(trade)}>Release Funds</button>}
+              {status === "pending" && pastDeadline && (
+                <button onClick={() => void openDispute(trade)}>Open Dispute</button>
+              )}
+            </div>
+          );
+        })}
       </section>
     </main>
   );
