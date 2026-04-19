@@ -57,7 +57,7 @@ Go service that polls carrier APIs and triggers proof generation automatically.
 - `GET /health` — Health check
 
 ### 🖥️ Frontend (`app/`)
-Next.js 14 dashboard with Solana wallet integration.
+Next.js 15 dashboard with Solana wallet integration.
 
 ## Quick Start
 
@@ -116,7 +116,7 @@ cp .env.example .env
 | Token Standard | SPL Token + Token-2022 |
 | Compression | ZK Compression (Light Protocol) |
 | Oracle | zkTLS (Reclaim Protocol) |
-| Frontend | Next.js 14 + React 18 |
+| Frontend | Next.js 15 + React 19 |
 | Agent | Go 1.22 + SQLite |
 | Wallet | Phantom (via wallet-adapter) |
 
@@ -129,7 +129,7 @@ AETHER-LOGOS/
 │   │   └── src/lib.rs
 │   └── prediction-market/   # Hedge market Anchor program
 │       └── src/lib.rs
-├── app/                     # Next.js 14 frontend
+├── app/                     # Next.js 15 frontend
 │   └── src/app/
 ├── agent/                   # Go shipping monitor agent
 │   ├── main.go
