@@ -1,0 +1,27 @@
+[toolchain]
+anchor_version = "0.32.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+trade_escrow = "6LaqcgUheXF2AVdGZRrh2gWanwDLmr1hcQhmDmt9rHcc"
+prediction_market = "BWvCzv6ZymKHRqVGFxWeEekvgiN1hvDKDg1C3LHEPpYX"
+
+[programs.devnet]
+trade_escrow = "6LaqcgUheXF2AVdGZRrh2gWanwDLmr1hcQhmDmt9rHcc"
+prediction_market = "BWvCzv6ZymKHRqVGFxWeEekvgiN1hvDKDg1C3LHEPpYX"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[test]
+startup_wait = 30000
+
+[scripts]
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

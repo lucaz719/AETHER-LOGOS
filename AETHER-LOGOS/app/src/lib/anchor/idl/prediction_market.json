@@ -1,0 +1,914 @@
+{
+  "address": "BWvCzv6ZymKHRqVGFxWeEekvgiN1hvDKDg1C3LHEPpYX",
+  "metadata": {
+    "name": "prediction_market",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "AETHER-LOGOS Prediction Market Program"
+  },
+  "instructions": [
+    {
+      "name": "claim_winnings",
+      "docs": [
+        "Claim proportional winnings from a resolved market."
+      ],
+      "discriminator": [
+        161,
+        215,
+        24,
+        59,
+        14,
+        236,
+        242,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "The user claiming winnings."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market_account",
+          "docs": [
+            "The resolved market."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account.shipment_twin",
+                "account": "MarketAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hedge_position",
+          "docs": [
+            "User's position."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_vault",
+          "docs": [
+            "Market vault holding staked USDC."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_authority",
+          "docs": [
+            "Market authority PDA – signs for vault token transfers."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account",
+          "docs": [
+            "User's USDC token account (destination for winnings)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_market",
+      "docs": [
+        "Create a new hedge market for a specific shipment digital twin."
+      ],
+      "discriminator": [
+        103,
+        226,
+        97,
+        235,
+        200,
+        188,
+        251,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "docs": [
+            "Creator who pays for account rent and can later resolve the market."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "shipment_twin",
+          "docs": [
+            "The shipment digital-twin reference (compressed NFT asset id)."
+          ]
+        },
+        {
+          "name": "market_account",
+          "docs": [
+            "Market PDA – initialised here."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "shipment_twin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_vault",
+          "docs": [
+            "Market vault – PDA token account holding staked USDC."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_authority",
+          "docs": [
+            "Market authority PDA – signs for vault token transfers."
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_mint",
+          "docs": [
+            "USDC mint."
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "question",
+          "type": "string"
+        },
+        {
+          "name": "resolution_time",
+          "type": "i64"
+        },
+        {
+          "name": "protocol_fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "place_hedge",
+      "docs": [
+        "Stake USDC on the Yes or No side of a market.",
+        "Creates the position PDA on first call (init-if-needed)."
+      ],
+      "discriminator": [
+        147,
+        167,
+        115,
+        90,
+        190,
+        29,
+        124,
+        17
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "docs": [
+            "User placing the hedge."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market_account",
+          "docs": [
+            "The market being bet on."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account.shipment_twin",
+                "account": "MarketAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "hedge_position",
+          "docs": [
+            "User's position PDA – created on first hedge via init-if-needed."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  115,
+                  105,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_vault",
+          "docs": [
+            "Market vault holding staked USDC."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account",
+          "docs": [
+            "User's USDC token account (source of stake)."
+          ],
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "side",
+          "type": {
+            "defined": {
+              "name": "Side"
+            }
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "resolve_market",
+      "docs": [
+        "Resolve the market by declaring an outcome.",
+        "Only the creator may resolve (hackathon scope)."
+      ],
+      "discriminator": [
+        155,
+        23,
+        80,
+        173,
+        46,
+        74,
+        23,
+        239
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "docs": [
+            "Only the original creator may resolve."
+          ],
+          "signer": true
+        },
+        {
+          "name": "market_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market_account.shipment_twin",
+                "account": "MarketAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "outcome",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "HedgePosition",
+      "discriminator": [
+        88,
+        83,
+        42,
+        238,
+        125,
+        99,
+        252,
+        52
+      ]
+    },
+    {
+      "name": "MarketAccount",
+      "discriminator": [
+        201,
+        78,
+        187,
+        225,
+        240,
+        198,
+        201,
+        251
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "HedgePlaced",
+      "discriminator": [
+        174,
+        169,
+        216,
+        73,
+        202,
+        80,
+        114,
+        78
+      ]
+    },
+    {
+      "name": "MarketCreated",
+      "discriminator": [
+        88,
+        184,
+        130,
+        231,
+        226,
+        84,
+        6,
+        58
+      ]
+    },
+    {
+      "name": "MarketResolved",
+      "discriminator": [
+        89,
+        67,
+        230,
+        95,
+        143,
+        106,
+        199,
+        202
+      ]
+    },
+    {
+      "name": "WinningsClaimed",
+      "discriminator": [
+        187,
+        184,
+        29,
+        196,
+        54,
+        117,
+        70,
+        150
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MarketNotOpen",
+      "msg": "Market is not open"
+    },
+    {
+      "code": 6001,
+      "name": "MarketNotResolved",
+      "msg": "Market is not yet resolved"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidResolutionTime",
+      "msg": "Resolution time must be in the future"
+    },
+    {
+      "code": 6003,
+      "name": "QuestionTooLong",
+      "msg": "Question exceeds the 128-character limit"
+    },
+    {
+      "code": 6004,
+      "name": "FeeTooHigh",
+      "msg": "Protocol fee exceeds the 10 % maximum (1000 bps)"
+    },
+    {
+      "code": 6005,
+      "name": "AlreadyClaimed",
+      "msg": "Winnings have already been claimed"
+    },
+    {
+      "code": 6006,
+      "name": "PositionNotWinning",
+      "msg": "Position is not on the winning side"
+    },
+    {
+      "code": 6007,
+      "name": "InsufficientAmount",
+      "msg": "Stake amount must be greater than zero"
+    },
+    {
+      "code": 6008,
+      "name": "UnauthorizedResolver",
+      "msg": "Only the market creator can resolve"
+    },
+    {
+      "code": 6009,
+      "name": "ZeroPayout",
+      "msg": "Computed payout is zero"
+    }
+  ],
+  "types": [
+    {
+      "name": "HedgePlaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "side",
+            "type": {
+              "defined": {
+                "name": "Side"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HedgePosition",
+      "docs": [
+        "A user's hedge position within a specific market.",
+        "PDA seeds: [\"position\", market pubkey, user pubkey]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "side",
+            "type": {
+              "defined": {
+                "name": "Side"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "USDC amount staked."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketAccount",
+      "docs": [
+        "Parimutuel prediction market tied to a shipment digital twin.",
+        "PDA seeds: [\"market\", shipment_twin pubkey]"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shipment_twin",
+            "docs": [
+              "The compressed-NFT / shipment reference this market hedges against."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "The wallet that created (and can resolve) this market."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "docs": [
+              "Human-readable question (max 128 chars)."
+            ],
+            "type": "string"
+          },
+          {
+            "name": "resolution_time",
+            "docs": [
+              "Unix timestamp after which the market may be resolved."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "total_yes",
+            "docs": [
+              "Total USDC staked on the Yes side."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_no",
+            "docs": [
+              "Total USDC staked on the No side."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "outcome",
+            "docs": [
+              "None while open; Some(true) = Yes won, Some(false) = No won."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "MarketStatus"
+              }
+            }
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol fee in basis points (e.g. 200 = 2%)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "type": "string"
+          },
+          {
+            "name": "resolution_time",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketResolved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "outcome",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Open"
+          },
+          {
+            "name": "Resolved"
+          },
+          {
+            "name": "Cancelled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Side",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Yes"
+          },
+          {
+            "name": "No"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WinningsClaimed",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}
