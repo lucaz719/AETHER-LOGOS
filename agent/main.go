@@ -15,23 +15,32 @@ import (
 var (
 	dhlClient       *carrier.DHLClient
 	solanaSubmitter *proof.SolanaSubmitter
+	reclaimClient   *proof.ReclaimClient
 )
 
 func main() {
-	if err := InitDB("agent.db"); err != nil {
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "agent.db"
+	}
+	if err := InitDB(dbPath); err != nil {
 		log.Fatalf("failed to initialise database: %v", err)
 	}
 
 	dhlClient = carrier.NewDHLClient(os.Getenv("DHL_API_KEY"))
+	reclaimClient = proof.NewReclaimClient(
+		os.Getenv("RECLAIM_APP_ID"),
+		os.Getenv("RECLAIM_APP_SECRET"),
+	)
 
-	rpcURL := os.Getenv("SOLANA_RPC_URL")
+	rpcURL := os.Getenv("SOLANA_RPC")
 	if rpcURL == "" {
 		rpcURL = "https://api.devnet.solana.com"
 	}
-	if os.Getenv("NEXT_PUBLIC_ESCROW_PROGRAM_ID") != "" && os.Getenv("SOLANA_PRIVATE_KEY_BASE58") != "" {
+	if os.Getenv("TRADE_ESCROW_PROGRAM_ID") != "" && os.Getenv("SOLANA_PRIVATE_KEY_BASE58") != "" {
 		submitter, err := proof.NewSolanaSubmitter(
 			rpcURL,
-			os.Getenv("NEXT_PUBLIC_ESCROW_PROGRAM_ID"),
+			os.Getenv("TRADE_ESCROW_PROGRAM_ID"),
 			os.Getenv("SOLANA_PRIVATE_KEY_BASE58"),
 		)
 		if err != nil {
@@ -44,6 +53,7 @@ func main() {
 	http.HandleFunc("/poll", PollHandler)
 	http.HandleFunc("/notify", NotifyHandler)
 	http.HandleFunc("/health", HealthHandler)
+	http.HandleFunc("/api/tracking/", TrackingHandler)
 
 	pollIntervalSeconds := 30
 	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {

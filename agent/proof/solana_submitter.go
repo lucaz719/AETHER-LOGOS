@@ -42,11 +42,11 @@ func SubmitProofDiscriminator() [8]byte {
 func (s *SolanaSubmitter) SubmitProof(
 	ctx context.Context,
 	tradeAccount solana.PublicKey,
-	tradeID [16]byte,
+	tradeID [32]byte,
 	proofData []byte,
 ) (solana.Signature, error) {
 	discriminator := SubmitProofDiscriminator()
-	payload := make([]byte, 0, 8+16+4+len(proofData))
+	payload := make([]byte, 0, 8+32+4+len(proofData))
 	payload = append(payload, discriminator[:]...)
 	payload = append(payload, tradeID[:]...)
 	lenBuf := make([]byte, 4)
@@ -92,4 +92,21 @@ func (s *SolanaSubmitter) SubmitProof(
 		return solana.Signature{}, fmt.Errorf("send transaction: %w", err)
 	}
 	return sig, nil
+}
+
+func (s *SolanaSubmitter) SubmitReclaimProof(
+	ctx context.Context,
+	tradeAccount solana.PublicKey,
+	tradeID [32]byte,
+	proof *ReclaimProof,
+) (string, error) {
+	proofBytes, err := proof.SerializeForSolana()
+	if err != nil {
+		return "", err
+	}
+	sig, err := s.SubmitProof(ctx, tradeAccount, tradeID, proofBytes)
+	if err != nil {
+		return "", err
+	}
+	return sig.String(), nil
 }

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.0",
+    "@pinata/sdk": "^2.1.0",
     "@protobufjs/aspromise": "^1.1.2",
     "@protobufjs/base64": "^1.1.2",
     "@protobufjs/codegen": "^2.0.4",

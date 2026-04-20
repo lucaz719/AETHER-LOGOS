@@ -116,13 +116,19 @@ pub mod prediction_market {
         require!(amount > 0, MarketError::InvalidAmount);
 
         let market = &mut ctx.accounts.market_account;
-        require!(market.status == MarketStatus::Open, MarketError::MarketNotOpen);
+        require!(
+            market.status == MarketStatus::Open,
+            MarketError::MarketNotOpen
+        );
         let (expected_market, expected_market_bump) = Pubkey::find_program_address(
             &[b"market", market.shipment_twin.as_ref()],
             ctx.program_id,
         );
         require_keys_eq!(expected_market, market.key(), MarketError::MarketNotOpen);
-        require!(expected_market_bump == market.bump, MarketError::MarketNotOpen);
+        require!(
+            expected_market_bump == market.bump,
+            MarketError::MarketNotOpen
+        );
 
         // Transfer USDC from user to market vault.
         token::transfer(
@@ -186,7 +192,10 @@ pub mod prediction_market {
     pub fn resolve_market(ctx: Context<ResolveMarket>, outcome: bool) -> Result<()> {
         let market = &mut ctx.accounts.market_account;
 
-        require!(market.status == MarketStatus::Open, MarketError::MarketNotOpen);
+        require!(
+            market.status == MarketStatus::Open,
+            MarketError::MarketNotOpen
+        );
         require!(
             ctx.accounts.creator.key() == market.creator,
             MarketError::UnauthorizedResolver
@@ -200,7 +209,10 @@ pub mod prediction_market {
             ctx.program_id,
         );
         require_keys_eq!(expected_market, market.key(), MarketError::MarketNotOpen);
-        require!(expected_market_bump == market.bump, MarketError::MarketNotOpen);
+        require!(
+            expected_market_bump == market.bump,
+            MarketError::MarketNotOpen
+        );
 
         market.outcome = Some(outcome);
         market.status = MarketStatus::Resolved;
@@ -226,7 +238,11 @@ pub mod prediction_market {
             &[b"market", market.shipment_twin.as_ref()],
             ctx.program_id,
         );
-        require_keys_eq!(expected_market, market.key(), MarketError::MarketNotResolved);
+        require_keys_eq!(
+            expected_market,
+            market.key(),
+            MarketError::MarketNotResolved
+        );
         require!(
             expected_market_bump == market.bump,
             MarketError::MarketNotResolved
@@ -240,7 +256,11 @@ pub mod prediction_market {
         };
         require!(user_won, MarketError::PositionNotWinning);
 
-        let winning_side_total = if outcome { market.total_yes } else { market.total_no };
+        let winning_side_total = if outcome {
+            market.total_yes
+        } else {
+            market.total_no
+        };
 
         require!(winning_side_total > 0, MarketError::ZeroPayout);
 
