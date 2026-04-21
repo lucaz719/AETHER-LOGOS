@@ -9,10 +9,6 @@
   "instructions": [
     {
       "name": "admin_resolve",
-      "docs": [
-        "Admin-resolve a disputed trade by sending funds to the winner.",
-        "Hackathon simplification: signer must be the buyer (acts as admin)."
-      ],
       "discriminator": [
         90,
         215,
@@ -26,9 +22,6 @@
       "accounts": [
         {
           "name": "admin",
-          "docs": [
-            "Admin signer (buyer in hackathon scope)."
-          ],
           "writable": true,
           "signer": true
         },
@@ -61,9 +54,6 @@
         },
         {
           "name": "escrow_vault",
-          "docs": [
-            "Escrow vault holding the USDC."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -107,9 +97,119 @@
         },
         {
           "name": "winner_token_account",
-          "docs": [
-            "Winner's USDC token account."
-          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "trade_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "winner",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "cancel_trade",
+      "discriminator": [
+        124,
+        66,
+        91,
+        59,
+        175,
+        107,
+        208,
+        120
+      ],
+      "accounts": [
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "trade_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trade_account.buyer",
+                "account": "TradeAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "trade_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "trade_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer_token_account",
           "writable": true
         },
         {
@@ -123,21 +223,14 @@
           "type": {
             "array": [
               "u8",
-              16
+              32
             ]
           }
-        },
-        {
-          "name": "winner",
-          "type": "pubkey"
         }
       ]
     },
     {
       "name": "create_trade",
-      "docs": [
-        "Create a new trade escrow and deposit USDC from the buyer."
-      ],
       "discriminator": [
         183,
         82,
@@ -151,23 +244,14 @@
       "accounts": [
         {
           "name": "buyer",
-          "docs": [
-            "Buyer who initiates the trade and deposits USDC."
-          ],
           "writable": true,
           "signer": true
         },
         {
-          "name": "seller",
-          "docs": [
-            "Seller's wallet (unchecked – just stored on the trade)."
-          ]
+          "name": "seller"
         },
         {
           "name": "trade_account",
-          "docs": [
-            "Trade PDA – initialised here."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -194,9 +278,6 @@
         },
         {
           "name": "escrow_vault",
-          "docs": [
-            "Escrow vault – a PDA-owned token account that holds the USDC."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -219,9 +300,6 @@
         },
         {
           "name": "vault_authority",
-          "docs": [
-            "Vault authority PDA – signs for vault token transfers."
-          ],
           "pda": {
             "seeds": [
               {
@@ -243,16 +321,11 @@
         },
         {
           "name": "buyer_token_account",
-          "docs": [
-            "Buyer's USDC token account (source of deposit)."
-          ],
           "writable": true
         },
         {
           "name": "usdc_mint",
-          "docs": [
-            "USDC mint."
-          ]
+          "address": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
         },
         {
           "name": "system_program",
@@ -273,17 +346,13 @@
           "type": {
             "array": [
               "u8",
-              16
+              32
             ]
           }
         },
         {
-          "name": "amount_usdc",
+          "name": "amount",
           "type": "u64"
-        },
-        {
-          "name": "deadline",
-          "type": "i64"
         },
         {
           "name": "milestone_hash",
@@ -295,25 +364,19 @@
           }
         },
         {
-          "name": "tracking_id",
-          "type": "string"
+          "name": "signature_required",
+          "type": "bool"
         },
         {
-          "name": "carrier",
+          "name": "invoice_cid",
           "type": {
-            "defined": {
-              "name": "Carrier"
-            }
+            "option": "string"
           }
         }
       ]
     },
     {
       "name": "open_dispute",
-      "docs": [
-        "Open a dispute on a trade. Either the buyer or seller may call this",
-        "while the trade is still pending and deadline has passed."
-      ],
       "discriminator": [
         137,
         25,
@@ -327,9 +390,6 @@
       "accounts": [
         {
           "name": "disputer",
-          "docs": [
-            "Either buyer or seller."
-          ],
           "signer": true
         },
         {
@@ -362,11 +422,11 @@
       ],
       "args": [
         {
-          "name": "_trade_id",
+          "name": "trade_id",
           "type": {
             "array": [
               "u8",
-              16
+              32
             ]
           }
         }
@@ -374,10 +434,6 @@
     },
     {
       "name": "release_funds",
-      "docs": [
-        "Release escrowed USDC to the seller once the milestone is verified.",
-        "Permissionlessly callable – anyone can crank this after verification."
-      ],
       "discriminator": [
         225,
         88,
@@ -391,9 +447,6 @@
       "accounts": [
         {
           "name": "caller",
-          "docs": [
-            "Permissionless crank signer."
-          ],
           "signer": true
         },
         {
@@ -425,9 +478,6 @@
         },
         {
           "name": "escrow_vault",
-          "docs": [
-            "Escrow vault holding the USDC."
-          ],
           "writable": true,
           "pda": {
             "seeds": [
@@ -471,9 +521,6 @@
         },
         {
           "name": "seller_token_account",
-          "docs": [
-            "Seller's USDC token account (destination)."
-          ],
           "writable": true
         },
         {
@@ -483,11 +530,11 @@
       ],
       "args": [
         {
-          "name": "_trade_id",
+          "name": "trade_id",
           "type": {
             "array": [
               "u8",
-              16
+              32
             ]
           }
         }
@@ -495,9 +542,6 @@
     },
     {
       "name": "submit_proof",
-      "docs": [
-        "Submit a zkTLS proof to verify the carrier milestone."
-      ],
       "discriminator": [
         54,
         241,
@@ -511,9 +555,67 @@
       "accounts": [
         {
           "name": "submitter",
-          "docs": [
-            "Anyone can submit a proof on behalf of the trade."
-          ],
+          "signer": true
+        },
+        {
+          "name": "trade_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  100,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "trade_account.buyer",
+                "account": "TradeAccount"
+              },
+              {
+                "kind": "arg",
+                "path": "trade_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "trade_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "proof_data",
+          "type": "bytes"
+        }
+      ]
+    },
+    {
+      "name": "submit_tracking",
+      "discriminator": [
+        206,
+        92,
+        182,
+        136,
+        149,
+        205,
+        153,
+        28
+      ],
+      "accounts": [
+        {
+          "name": "seller",
           "signer": true
         },
         {
@@ -550,13 +652,21 @@
           "type": {
             "array": [
               "u8",
-              16
+              32
             ]
           }
         },
         {
-          "name": "proof_data",
-          "type": "bytes"
+          "name": "tracking_id",
+          "type": "string"
+        },
+        {
+          "name": "carrier",
+          "type": {
+            "defined": {
+              "name": "Carrier"
+            }
+          }
         }
       ]
     }
@@ -573,7 +683,112 @@
         69,
         11,
         236
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trade_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "milestone_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "milestone_verified",
+            "type": "bool"
+          },
+          {
+            "name": "proof_data",
+            "type": "bytes"
+          },
+          {
+            "name": "tracking_id",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "carrier",
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "Carrier"
+                }
+              }
+            }
+          },
+          {
+            "name": "seller_notified",
+            "type": "bool"
+          },
+          {
+            "name": "order_created_at",
+            "type": "i64"
+          },
+          {
+            "name": "ship_by_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "shipped_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "signature_required",
+            "type": "bool"
+          },
+          {
+            "name": "signed_by",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "invoice_cid",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "TradeStatus"
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     }
   ],
   "events": [
@@ -617,6 +832,19 @@
       ]
     },
     {
+      "name": "OrderCreated",
+      "discriminator": [
+        224,
+        1,
+        229,
+        63,
+        254,
+        60,
+        190,
+        159
+      ]
+    },
+    {
       "name": "ProofSubmitted",
       "discriminator": [
         160,
@@ -630,16 +858,29 @@
       ]
     },
     {
-      "name": "TradeCreated",
+      "name": "TrackingSubmitted",
       "discriminator": [
-        110,
-        86,
+        179,
         122,
-        20,
-        81,
-        78,
-        181,
-        72
+        113,
+        249,
+        60,
+        89,
+        33,
+        73
+      ]
+    },
+    {
+      "name": "TradeCancelled",
+      "discriminator": [
+        228,
+        218,
+        59,
+        27,
+        43,
+        158,
+        22,
+        227
       ]
     }
   ],
@@ -671,8 +912,33 @@
     },
     {
       "code": 6005,
-      "name": "TrackingIdTooLong",
-      "msg": "Tracking ID exceeds the 64-character limit"
+      "name": "ShipDeadlinePassed",
+      "msg": "Seller tried to submit tracking after deadline"
+    },
+    {
+      "code": 6006,
+      "name": "ShipDeadlineNotPassed",
+      "msg": "Cancel attempted before deadline"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidTrackingId",
+      "msg": "Tracking ID is empty or exceeds 64 characters"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidCarrier",
+      "msg": "Unknown carrier"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidUsdcMint",
+      "msg": "Mint must be the configured USDC mint"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidInvoiceCid",
+      "msg": "Invoice CID is invalid"
     }
   ],
   "types": [
@@ -688,10 +954,13 @@
             "name": "FedEx"
           },
           {
+            "name": "UPS"
+          },
+          {
             "name": "Maersk"
           },
           {
-            "name": "UPS"
+            "name": "USPS"
           }
         ]
       }
@@ -706,7 +975,7 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
               ]
             }
           },
@@ -727,7 +996,7 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
               ]
             }
           },
@@ -736,7 +1005,7 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_usdc",
+            "name": "amount",
             "type": "u64"
           }
         ]
@@ -752,7 +1021,7 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
               ]
             }
           },
@@ -761,8 +1030,41 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_usdc",
+            "name": "amount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "OrderCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trade_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "buyer",
+            "type": "pubkey"
+          },
+          {
+            "name": "seller",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "ship_by_deadline",
+            "type": "i64"
           }
         ]
       }
@@ -777,23 +1079,23 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
               ]
             }
           },
           {
-            "name": "submitter",
-            "type": "pubkey"
+            "name": "verified_at",
+            "type": "i64"
+          },
+          {
+            "name": "proof_type",
+            "type": "string"
           }
         ]
       }
     },
     {
-      "name": "TradeAccount",
-      "docs": [
-        "Core state for a single trade escrow.",
-        "PDA seeds: [\"trade\", buyer.key(), trade_id]"
-      ],
+      "name": "TrackingSubmitted",
       "type": {
         "kind": "struct",
         "fields": [
@@ -802,7 +1104,32 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
+              ]
+            }
+          },
+          {
+            "name": "tracking_id",
+            "type": "string"
+          },
+          {
+            "name": "shipped_at",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TradeAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "trade_id",
+            "type": {
+              "array": [
+                "u8",
+                32
               ]
             }
           },
@@ -815,17 +1142,11 @@
             "type": "pubkey"
           },
           {
-            "name": "amount_usdc",
-            "docs": [
-              "USDC amount with 6 decimals (e.g. 1_000_000 = 1 USDC)."
-            ],
+            "name": "amount",
             "type": "u64"
           },
           {
             "name": "milestone_hash",
-            "docs": [
-              "SHA-256 hash of the expected carrier milestone status."
-            ],
             "type": {
               "array": [
                 "u8",
@@ -834,23 +1155,62 @@
             }
           },
           {
+            "name": "milestone_verified",
+            "type": "bool"
+          },
+          {
+            "name": "proof_data",
+            "type": "bytes"
+          },
+          {
             "name": "tracking_id",
-            "docs": [
-              "Carrier tracking identifier (max 64 chars)."
-            ],
-            "type": "string"
+            "type": {
+              "option": "string"
+            }
           },
           {
             "name": "carrier",
             "type": {
-              "defined": {
-                "name": "Carrier"
+              "option": {
+                "defined": {
+                  "name": "Carrier"
+                }
               }
             }
           },
           {
-            "name": "milestone_verified",
+            "name": "seller_notified",
             "type": "bool"
+          },
+          {
+            "name": "order_created_at",
+            "type": "i64"
+          },
+          {
+            "name": "ship_by_deadline",
+            "type": "i64"
+          },
+          {
+            "name": "shipped_at",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "signature_required",
+            "type": "bool"
+          },
+          {
+            "name": "signed_by",
+            "type": {
+              "option": "string"
+            }
+          },
+          {
+            "name": "invoice_cid",
+            "type": {
+              "option": "string"
+            }
           },
           {
             "name": "status",
@@ -861,14 +1221,6 @@
             }
           },
           {
-            "name": "created_at",
-            "type": "i64"
-          },
-          {
-            "name": "deadline",
-            "type": "i64"
-          },
-          {
             "name": "bump",
             "type": "u8"
           }
@@ -876,7 +1228,7 @@
       }
     },
     {
-      "name": "TradeCreated",
+      "name": "TradeCancelled",
       "type": {
         "kind": "struct",
         "fields": [
@@ -885,7 +1237,7 @@
             "type": {
               "array": [
                 "u8",
-                16
+                32
               ]
             }
           },
@@ -894,16 +1246,8 @@
             "type": "pubkey"
           },
           {
-            "name": "seller",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount_usdc",
+            "name": "amount",
             "type": "u64"
-          },
-          {
-            "name": "deadline",
-            "type": "i64"
           }
         ]
       }
@@ -917,6 +1261,12 @@
             "name": "Pending"
           },
           {
+            "name": "AwaitingShipment"
+          },
+          {
+            "name": "InTransit"
+          },
+          {
             "name": "Verified"
           },
           {
@@ -924,6 +1274,9 @@
           },
           {
             "name": "Disputed"
+          },
+          {
+            "name": "Cancelled"
           }
         ]
       }

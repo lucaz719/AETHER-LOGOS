@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:api": "node --test tests/api-routes.test.mjs"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.0",

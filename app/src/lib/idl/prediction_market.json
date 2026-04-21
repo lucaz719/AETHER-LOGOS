@@ -1,5 +1,5 @@
 {
-  "address": "HmbTLCmaGtYhSJafyMNx2YdAfJvpGAE2x5JRf8kzGiuY",
+  "address": "E5nFMRSazUD69LQbADyU47CQvX8tU1NWJdvLfHnzAqW9",
   "metadata": {
     "name": "prediction_market",
     "version": "0.1.0",
@@ -547,7 +547,43 @@
         99,
         252,
         52
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "side",
+            "type": {
+              "defined": {
+                "name": "Side"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "USDC amount staked."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "claimed",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     },
     {
       "name": "MarketAccount",
@@ -560,7 +596,82 @@
         198,
         201,
         251
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shipment_twin",
+            "docs": [
+              "The compressed-NFT / shipment reference this market hedges against."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "docs": [
+              "The wallet that created (and can resolve) this market."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "question",
+            "docs": [
+              "Human-readable question (max 128 chars)."
+            ],
+            "type": "string"
+          },
+          {
+            "name": "resolution_time",
+            "docs": [
+              "Unix timestamp after which the market may be resolved."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "total_yes",
+            "docs": [
+              "Total USDC staked on the Yes side."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_no",
+            "docs": [
+              "Total USDC staked on the No side."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "outcome",
+            "docs": [
+              "None while open; Some(true) = Yes won, Some(false) = No won."
+            ],
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "MarketStatus"
+              }
+            }
+          },
+          {
+            "name": "protocol_fee_bps",
+            "docs": [
+              "Protocol fee in basis points (e.g. 200 = 2%)."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     }
   ],
   "events": [
