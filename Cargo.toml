@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "programs/trade-escrow",
-    "programs/prediction-market"
+    "programs/prediction-market",
+    "programs/marketplace"
 ]
 resolver = "2"
 
