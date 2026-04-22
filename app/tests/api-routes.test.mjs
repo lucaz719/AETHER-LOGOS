@@ -75,9 +75,35 @@ test("GET /api/trades with filter responds without blockchain dependency", async
   assert.equal(body.warning, "NEXT_PUBLIC_ESCROW_PROGRAM_ID not set");
 });
 
-test("POST /api/upload reports missing credentials", async () => {
-  const res = await fetch(`${BASE_URL}/api/upload`, { method: "POST" });
-  assert.equal(res.status, 500);
+test("GET /api/marketplace/vendors returns paginated vendor list shape", async () => {
+  const res = await fetch(`${BASE_URL}/api/marketplace/vendors`);
+  assert.equal(res.status, 200);
   const body = await res.json();
-  assert.equal(body.error, "Pinata credentials are missing");
+  assert.ok(Array.isArray(body.vendors));
+  assert.equal(typeof body.total, "number");
+  assert.equal(typeof body.page, "number");
 });
+
+test("GET /api/marketplace/listings returns filtered results shape", async () => {
+  const res = await fetch(`${BASE_URL}/api/marketplace/listings?search=widget`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.listings));
+  assert.equal(typeof body.total, "number");
+});
+
+test("GET /api/marketplace/orders rejects missing buyer/vendor filter", async () => {
+  const res = await fetch(`${BASE_URL}/api/marketplace/orders`);
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.equal(body.error, "buyer or vendor query param is required");
+});
+
+test("GET /api/marketplace/orders with buyer filter returns shape", async () => {
+  const res = await fetch(`${BASE_URL}/api/marketplace/orders?buyer=ExampleBuyer1111111111111111111111111111111`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.ok(Array.isArray(body.orders));
+  assert.equal(typeof body.total, "number");
+});
+

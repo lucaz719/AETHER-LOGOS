@@ -1,0 +1,406 @@
+{
+  "address": "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN",
+  "metadata": {
+    "name": "marketplace",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "AETHER-LOGOS Marketplace Program"
+  },
+  "instructions": [
+    {
+      "name": "init_config",
+      "discriminator": [23, 235, 115, 232, 168, 96, 1, 231],
+      "accounts": [
+        { "name": "admin", "writable": true, "signer": true },
+        { "name": "config", "writable": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": []
+    },
+    {
+      "name": "register_vendor",
+      "discriminator": [192, 133, 122, 251, 31, 137, 113, 141],
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "vendor_profile", "writable": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "shop_name", "type": "string" },
+        { "name": "shop_description", "type": "string" },
+        { "name": "vendor_type", "type": { "defined": { "name": "VendorType" } } },
+        { "name": "categories", "type": { "vec": "string" } },
+        { "name": "contact_email_hash", "type": { "array": ["u8", 32] } }
+      ]
+    },
+    {
+      "name": "update_vendor",
+      "discriminator": [46, 80, 34, 41, 191, 194, 70, 55],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "vendor_profile", "writable": true }
+      ],
+      "args": [
+        { "name": "shop_name", "type": "string" },
+        { "name": "shop_description", "type": "string" },
+        { "name": "logo_cid", "type": { "option": "string" } },
+        { "name": "banner_cid", "type": { "option": "string" } },
+        { "name": "vendor_type", "type": { "defined": { "name": "VendorType" } } },
+        { "name": "categories", "type": { "vec": "string" } }
+      ]
+    },
+    {
+      "name": "verify_vendor",
+      "discriminator": [123, 77, 227, 213, 5, 29, 149, 9],
+      "accounts": [
+        { "name": "admin", "signer": true },
+        { "name": "config" },
+        { "name": "vendor_profile", "writable": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_listing",
+      "discriminator": [18, 168, 45, 24, 191, 31, 117, 54],
+      "accounts": [
+        { "name": "authority", "writable": true, "signer": true },
+        { "name": "vendor_profile" },
+        { "name": "listing", "writable": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "listing_id", "type": { "array": ["u8", 16] } },
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "images_cid", "type": { "option": "string" } },
+        { "name": "category", "type": { "defined": { "name": "ProductCategory" } } },
+        { "name": "price_usdc", "type": "u64" },
+        { "name": "min_order_qty", "type": "u32" },
+        { "name": "max_order_qty", "type": { "option": "u32" } },
+        { "name": "stock", "type": { "option": "u32" } },
+        { "name": "shipping_deadline_hours", "type": "u32" },
+        { "name": "requires_signature", "type": "bool" }
+      ]
+    },
+    {
+      "name": "update_listing",
+      "discriminator": [192, 174, 210, 68, 116, 40, 242, 253],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "vendor_profile" },
+        { "name": "listing", "writable": true }
+      ],
+      "args": [
+        { "name": "title", "type": "string" },
+        { "name": "description", "type": "string" },
+        { "name": "images_cid", "type": { "option": "string" } },
+        { "name": "category", "type": { "defined": { "name": "ProductCategory" } } },
+        { "name": "price_usdc", "type": "u64" },
+        { "name": "min_order_qty", "type": "u32" },
+        { "name": "max_order_qty", "type": { "option": "u32" } },
+        { "name": "stock", "type": { "option": "u32" } },
+        { "name": "shipping_deadline_hours", "type": "u32" },
+        { "name": "requires_signature", "type": "bool" }
+      ]
+    },
+    {
+      "name": "deactivate_listing",
+      "discriminator": [111, 76, 78, 177, 76, 192, 218, 138],
+      "accounts": [
+        { "name": "authority", "signer": true },
+        { "name": "listing", "writable": true }
+      ],
+      "args": []
+    },
+    {
+      "name": "place_order",
+      "discriminator": [51, 194, 155, 175, 109, 130, 96, 106],
+      "accounts": [
+        { "name": "buyer", "writable": true, "signer": true },
+        { "name": "vendor_profile", "writable": true },
+        { "name": "listing", "writable": true },
+        { "name": "marketplace_order", "writable": true },
+        { "name": "seller" },
+        { "name": "trade_account", "writable": true },
+        { "name": "escrow_vault", "writable": true },
+        { "name": "vault_authority" },
+        { "name": "buyer_token_account", "writable": true },
+        { "name": "usdc_mint" },
+        { "name": "trade_escrow_program" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" },
+        { "name": "token_program", "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+        { "name": "rent", "address": "SysvarRent111111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "order_id", "type": { "array": ["u8", 16] } },
+        { "name": "trade_id", "type": { "array": ["u8", 32] } },
+        { "name": "quantity", "type": "u32" },
+        { "name": "milestone_hash", "type": { "array": ["u8", 32] } }
+      ]
+    },
+    {
+      "name": "cancel_order",
+      "discriminator": [95, 129, 237, 240, 8, 49, 223, 132],
+      "accounts": [
+        { "name": "buyer", "signer": true },
+        { "name": "marketplace_order", "writable": true },
+        { "name": "trade_account" }
+      ],
+      "args": [
+        { "name": "order_id", "type": { "array": ["u8", 16] } }
+      ]
+    },
+    {
+      "name": "submit_review",
+      "discriminator": [106, 30, 50, 83, 89, 46, 213, 239],
+      "accounts": [
+        { "name": "reviewer", "writable": true, "signer": true },
+        { "name": "vendor_profile", "writable": true },
+        { "name": "review", "writable": true },
+        { "name": "trade_account" },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "rating", "type": "u8" },
+        { "name": "comment_cid", "type": { "option": "string" } }
+      ]
+    },
+    {
+      "name": "close_review",
+      "discriminator": [40, 68, 167, 50, 223, 182, 187, 66],
+      "accounts": [
+        { "name": "admin", "writable": true, "signer": true },
+        { "name": "config" },
+        { "name": "review", "writable": true }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "MarketplaceConfig",
+      "discriminator": [169, 22, 247, 131, 182, 200, 81, 124],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "admin", "type": "pubkey" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "VendorProfile",
+      "discriminator": [212, 127, 49, 14, 158, 116, 14, 66],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "pubkey" },
+          { "name": "shop_name", "type": "string" },
+          { "name": "shop_description", "type": "string" },
+          { "name": "logo_cid", "type": { "option": "string" } },
+          { "name": "banner_cid", "type": { "option": "string" } },
+          { "name": "vendor_type", "type": { "defined": { "name": "VendorType" } } },
+          { "name": "categories", "type": { "vec": "string" } },
+          { "name": "contact_email_hash", "type": { "array": ["u8", 32] } },
+          { "name": "total_sales", "type": "u64" },
+          { "name": "rating_sum", "type": "u64" },
+          { "name": "rating_count", "type": "u32" },
+          { "name": "is_verified", "type": "bool" },
+          { "name": "is_active", "type": "bool" },
+          { "name": "created_at", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "ProductListing",
+      "discriminator": [12, 188, 195, 61, 183, 115, 249, 54],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "listing_id", "type": { "array": ["u8", 16] } },
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "title", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "images_cid", "type": { "option": "string" } },
+          { "name": "category", "type": { "defined": { "name": "ProductCategory" } } },
+          { "name": "price_usdc", "type": "u64" },
+          { "name": "min_order_qty", "type": "u32" },
+          { "name": "max_order_qty", "type": { "option": "u32" } },
+          { "name": "stock", "type": { "option": "u32" } },
+          { "name": "shipping_deadline_hours", "type": "u32" },
+          { "name": "requires_signature", "type": "bool" },
+          { "name": "is_active", "type": "bool" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "MarketplaceOrder",
+      "discriminator": [36, 193, 241, 88, 220, 254, 185, 68],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "order_id", "type": { "array": ["u8", 16] } },
+          { "name": "buyer", "type": "pubkey" },
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "listing", "type": "pubkey" },
+          { "name": "quantity", "type": "u32" },
+          { "name": "unit_price", "type": "u64" },
+          { "name": "total_amount", "type": "u64" },
+          { "name": "trade_account", "type": "pubkey" },
+          { "name": "escrow_trade_id", "type": { "array": ["u8", 32] } },
+          { "name": "status", "type": { "defined": { "name": "OrderStatus" } } },
+          { "name": "created_at", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    },
+    {
+      "name": "VendorReview",
+      "discriminator": [177, 64, 117, 65, 72, 201, 59, 4],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "reviewer", "type": "pubkey" },
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "trade_account", "type": "pubkey" },
+          { "name": "rating", "type": "u8" },
+          { "name": "comment_cid", "type": { "option": "string" } },
+          { "name": "is_active", "type": "bool" },
+          { "name": "created_at", "type": "i64" },
+          { "name": "bump", "type": "u8" }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "VendorRegistered",
+      "discriminator": [117, 133, 91, 145, 149, 222, 234, 116]
+    },
+    {
+      "name": "ListingCreated",
+      "discriminator": [87, 95, 45, 203, 12, 58, 221, 174]
+    },
+    {
+      "name": "OrderPlaced",
+      "discriminator": [168, 162, 37, 90, 188, 63, 211, 225]
+    },
+    {
+      "name": "ReviewSubmitted",
+      "discriminator": [200, 44, 18, 119, 92, 71, 165, 40]
+    }
+  ],
+  "errors": [
+    { "code": 6000, "name": "FieldTooLong", "msg": "Field value exceeds maximum allowed length" },
+    { "code": 6001, "name": "TooManyCategories", "msg": "Too many categories" },
+    { "code": 6002, "name": "InvalidPrice", "msg": "Price must be greater than zero" },
+    { "code": 6003, "name": "InvalidQuantity", "msg": "Invalid quantity" },
+    { "code": 6004, "name": "InvalidDeadline", "msg": "Invalid shipping deadline" },
+    { "code": 6005, "name": "VendorNotActive", "msg": "Vendor is not active" },
+    { "code": 6006, "name": "ListingNotActive", "msg": "Listing is not active" },
+    { "code": 6007, "name": "QuantityBelowMin", "msg": "Quantity is below the minimum order quantity" },
+    { "code": 6008, "name": "QuantityAboveMax", "msg": "Quantity exceeds the maximum order quantity" },
+    { "code": 6009, "name": "InsufficientStock", "msg": "Insufficient stock" },
+    { "code": 6010, "name": "InvalidTradeAccount", "msg": "Invalid trade account address" },
+    { "code": 6011, "name": "TradeNotCancelled", "msg": "Trade must be in Cancelled status" },
+    { "code": 6012, "name": "TradeNotReleased", "msg": "Trade must be in Released status" },
+    { "code": 6013, "name": "OrderAlreadyFinalized", "msg": "Order is already finalized" },
+    { "code": 6014, "name": "InvalidRating", "msg": "Rating must be between 1 and 5" },
+    { "code": 6015, "name": "InvalidVendor", "msg": "Invalid vendor for this operation" },
+    { "code": 6016, "name": "Unauthorized", "msg": "Signer is not authorized" },
+    { "code": 6017, "name": "InvalidUsdcMint", "msg": "Mint must be the configured USDC mint" }
+  ],
+  "types": [
+    {
+      "name": "VendorType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Retailer" },
+          { "name": "Wholesaler" },
+          { "name": "Distributor" },
+          { "name": "Manufacturer" }
+        ]
+      }
+    },
+    {
+      "name": "ProductCategory",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Electronics" },
+          { "name": "Apparel" },
+          { "name": "HomeGoods" },
+          { "name": "Machinery" },
+          { "name": "FoodBeverage" },
+          { "name": "Chemicals" },
+          { "name": "Automotive" },
+          { "name": "Healthcare" },
+          { "name": "Construction" },
+          { "name": "Other" }
+        ]
+      }
+    },
+    {
+      "name": "OrderStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          { "name": "Created" },
+          { "name": "EscrowLocked" },
+          { "name": "Cancelled" }
+        ]
+      }
+    },
+    {
+      "name": "VendorRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "authority", "type": "pubkey" },
+          { "name": "shop_name", "type": "string" },
+          { "name": "vendor_type", "type": { "defined": { "name": "VendorType" } } }
+        ]
+      }
+    },
+    {
+      "name": "ListingCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "listing", "type": "pubkey" },
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "title", "type": "string" },
+          { "name": "price_usdc", "type": "u64" }
+        ]
+      }
+    },
+    {
+      "name": "OrderPlaced",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "order_id", "type": { "array": ["u8", 16] } },
+          { "name": "buyer", "type": "pubkey" },
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "listing", "type": "pubkey" },
+          { "name": "total_amount", "type": "u64" },
+          { "name": "trade_account", "type": "pubkey" }
+        ]
+      }
+    },
+    {
+      "name": "ReviewSubmitted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "vendor", "type": "pubkey" },
+          { "name": "reviewer", "type": "pubkey" },
+          { "name": "rating", "type": "u8" }
+        ]
+      }
+    }
+  ]
+}

@@ -54,6 +54,7 @@ func main() {
 	http.HandleFunc("/notify", NotifyHandler)
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/api/tracking/", TrackingHandler)
+	http.HandleFunc("/marketplace/orders", MarketplaceOrdersHandler)
 
 	pollIntervalSeconds := 30
 	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {
@@ -78,6 +79,9 @@ func main() {
 				result.Updated,
 				result.Errors,
 			)
+			if err := runMarketplaceOrderWatchCycle(); err != nil {
+				log.Printf("marketplace order watcher failed: %v", err)
+			}
 		}
 	}()
 

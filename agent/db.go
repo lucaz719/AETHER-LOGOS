@@ -146,6 +146,33 @@ func GetShipmentByTrackingID(trackingID string) (*Shipment, error) {
 	return &s, nil
 }
 
+func GetShipmentByTradeAccount(tradeAccount string) (*Shipment, error) {
+	var s Shipment
+	err := db.QueryRow(
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		 FROM shipments WHERE trade_account = ? ORDER BY id DESC LIMIT 1`,
+		tradeAccount,
+	).Scan(
+		&s.ID,
+		&s.TrackingID,
+		&s.Wallet,
+		&s.CallbackURL,
+		&s.Carrier,
+		&s.TradeAccount,
+		&s.TradeID,
+		&s.ProofHash,
+		&s.ProofTxSig,
+		&s.LastKnownStatus,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+
 func UpdateStatus(id int64, status string) error {
 	_, err := db.Exec(
 		`UPDATE shipments SET last_known_status = ?, updated_at = ? WHERE id = ?`,
