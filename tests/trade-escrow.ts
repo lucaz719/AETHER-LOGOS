@@ -21,6 +21,7 @@ describe("trade-escrow", () => {
   let buyerTokenAccount: anchor.web3.PublicKey;
   let sellerTokenAccount: anchor.web3.PublicKey;
   const tradeId = anchor.web3.Keypair.generate().publicKey.toBuffer();
+  const tradeIdBytes = Array.from(tradeId);
 
   const [tradePDA] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("trade"), buyer.publicKey.toBuffer(), tradeId],
@@ -70,7 +71,7 @@ describe("trade-escrow", () => {
     const milestoneHash = Array.from(Buffer.alloc(32, 1));
 
     await program.methods
-      .createTrade(Array.from(tradeId), amount, milestoneHash, false, null)
+      .createTrade(tradeIdBytes, amount, milestoneHash, false, null)
       .accounts({
         buyer: buyer.publicKey,
         seller: seller.publicKey,
@@ -91,7 +92,7 @@ describe("trade-escrow", () => {
 
   it("2. seller submits tracking -> status InTransit", async () => {
     await program.methods
-      .submitTracking(Array.from(tradeId), "DHL1234567890", { dhl: {} })
+      .submitTracking(tradeIdBytes, "DHL1234567890", { dhl: {} })
       .accounts({
         seller: seller.publicKey,
         tradeAccount: tradePDA,
@@ -107,7 +108,7 @@ describe("trade-escrow", () => {
     const proof = Buffer.alloc(64, 1);
 
     await program.methods
-      .submitProof(Array.from(tradeId), proof)
+      .submitProof(tradeIdBytes, proof)
       .accounts({
         submitter: buyer.publicKey,
         tradeAccount: tradePDA,
@@ -122,7 +123,7 @@ describe("trade-escrow", () => {
     const sellerBefore = await getAccount(provider.connection, sellerTokenAccount);
 
     await program.methods
-      .releaseFunds(Array.from(tradeId))
+      .releaseFunds(tradeIdBytes)
       .accounts({
         caller: buyer.publicKey,
         tradeAccount: tradePDA,
@@ -175,7 +176,7 @@ describe("trade-escrow", () => {
         .rpc();
       assert.fail("Should have thrown InvalidAmount");
     } catch (e: any) {
-      assert.include(String(e), "InvalidAmount");
+      assert.include(e.toString(), "InvalidAmount");
     }
   });
 });
