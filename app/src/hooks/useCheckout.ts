@@ -18,7 +18,7 @@ function randomBytes(len: number): Uint8Array {
   return buf;
 }
 
-function sha256Sync(data: Uint8Array): Promise<ArrayBuffer> {
+async function sha256Async(data: Uint8Array): Promise<ArrayBuffer> {
   return crypto.subtle.digest("SHA-256", data);
 }
 
@@ -46,7 +46,7 @@ export function useCheckout() {
           const tradeIdBytes = randomBytes(32);
 
           const milestoneInput = new Uint8Array([...orderIdBytes, ...new PublicKey(item.listingPubkey).toBytes()]);
-          const milestoneHashBuf = await sha256Sync(milestoneInput);
+          const milestoneHashBuf = await sha256Async(milestoneInput);
           const milestoneHash = Array.from(new Uint8Array(milestoneHashBuf));
 
           const buyerKey = wallet.publicKey;

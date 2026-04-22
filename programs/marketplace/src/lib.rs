@@ -223,11 +223,11 @@ pub mod marketplace {
         let now = Clock::get()?.unix_timestamp;
         let profile = &mut ctx.accounts.vendor_profile;
         profile.authority = ctx.accounts.authority.key();
-        profile.shop_name = shop_name.clone();
+        profile.shop_name = shop_name;
         profile.shop_description = shop_description;
         profile.logo_cid = None;
         profile.banner_cid = None;
-        profile.vendor_type = vendor_type.clone();
+        profile.vendor_type = vendor_type;
         profile.categories = categories;
         profile.contact_email_hash = contact_email_hash;
         profile.total_sales = 0;
@@ -240,8 +240,8 @@ pub mod marketplace {
 
         emit!(VendorRegistered {
             authority: ctx.accounts.authority.key(),
-            shop_name,
-            vendor_type,
+            shop_name: profile.shop_name.clone(),
+            vendor_type: profile.vendor_type.clone(),
         });
         Ok(())
     }

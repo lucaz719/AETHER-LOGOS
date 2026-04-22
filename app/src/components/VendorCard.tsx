@@ -8,12 +8,14 @@ const VENDOR_TYPE_COLORS: Record<string, string> = {
 };
 
 function StarRating({ sum, count }: { sum: number; count: number }) {
-  const avg = count > 0 ? (sum / count).toFixed(1) : "—";
+  const avg = count > 0 ? sum / count : 0;
+  const avgLabel = count > 0 ? avg.toFixed(1) : "—";
+  const rounded = Math.round(avg);
   return (
     <span style={{ color: "#f59e0b" }}>
-      {"★".repeat(Math.round(count > 0 ? sum / count : 0))}
-      {"☆".repeat(5 - Math.round(count > 0 ? sum / count : 0))}
-      <small style={{ color: "#6b7280", marginLeft: "0.25rem" }}>{avg} ({count})</small>
+      {"★".repeat(rounded)}
+      {"☆".repeat(5 - rounded)}
+      <small style={{ color: "#6b7280", marginLeft: "0.25rem" }}>{avgLabel} ({count})</small>
     </span>
   );
 }

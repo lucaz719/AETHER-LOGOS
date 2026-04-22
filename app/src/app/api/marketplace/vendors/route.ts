@@ -6,15 +6,6 @@ import marketplaceIdl from "@/lib/idl/marketplace.json";
 const PROGRAM_ID = process.env.NEXT_PUBLIC_MARKETPLACE_PROGRAM_ID ?? "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN";
 const RPC = process.env.SOLANA_RPC_URL ?? process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
-function asBase58(value: unknown): string | null {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object" && "toBase58" in (value as Record<string, unknown>)) {
-    const fn = (value as { toBase58?: () => string }).toBase58;
-    if (typeof fn === "function") return fn();
-  }
-  return null;
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type"); // 'Retailer' | 'Wholesaler' | ...

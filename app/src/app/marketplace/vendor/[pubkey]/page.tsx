@@ -12,7 +12,15 @@ function shortKey(k: string) {
   return `${k.slice(0, 4)}…${k.slice(-4)}`;
 }
 
-export default async function VendorPage({
+function asBase58Str(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toBase58" in (value as Record<string, unknown>)) {
+    return (value as { toBase58: () => string }).toBase58();
+  }
+  return null;
+}
+
+
   params,
 }: {
   params: Promise<{ pubkey: string }>;
@@ -53,7 +61,7 @@ export default async function VendorPage({
       try {
         const d = coder.decode("ProductListing", Buffer.from(raw, "base64")) as Record<string, unknown> | null;
         if (!d) return null;
-        const vendorAddr = typeof d.vendor === "string" ? d.vendor : (d.vendor && typeof d.vendor === "object" && "toBase58" in (d.vendor as Record<string, unknown>) ? (d.vendor as { toBase58: () => string }).toBase58() : null);
+        const vendorAddr = asBase58Str(d.vendor);
         if (vendorAddr !== pubkey) return null;
         return { pubkey: a.pubkey.toBase58(), account: d };
       } catch { return null; }

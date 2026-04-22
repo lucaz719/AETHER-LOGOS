@@ -287,27 +287,26 @@ func MarketplaceOrdersHandler(w http.ResponseWriter, r *http.Request) {
 	buyer := r.URL.Query().Get("buyer")
 	vendor := r.URL.Query().Get("vendor")
 
-	if buyer != "" || vendor != "" {
-		filtered := orders[:0]
-		for _, o := range orders {
-			if buyer != "" && o.Buyer != buyer {
-				continue
-			}
-			if vendor != "" && o.Vendor != vendor {
-				continue
-			}
-			filtered = append(filtered, o)
+	filtered := make([]MarketplaceOrderAccount, 0, len(orders))
+	for _, o := range orders {
+		if buyer != "" && o.Buyer != buyer {
+			continue
 		}
-		orders = filtered
+		if vendor != "" && o.Vendor != vendor {
+			continue
+		}
+		filtered = append(filtered, o)
 	}
-
-	if orders == nil {
-		orders = []MarketplaceOrderAccount{}
+	if buyer == "" && vendor == "" {
+		filtered = orders
+		if filtered == nil {
+			filtered = make([]MarketplaceOrderAccount, 0)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"orders": orders,
-		"total":  len(orders),
+		"orders": filtered,
+		"total":  len(filtered),
 	})
 }
