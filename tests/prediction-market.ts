@@ -15,7 +15,11 @@ describe("prediction-market", () => {
   anchor.setProvider(provider);
 
   const PROGRAM_ID = new anchor.web3.PublicKey("DgYUcbjMg8Mm4T8PTiiboca7AN9y9urLmYXfhYnSJuZb");
-  const program = new anchor.Program(predictionMarketIdl as any, PROGRAM_ID, provider);
+  const marketIdl = {
+    ...predictionMarketIdl,
+    address: PROGRAM_ID.toBase58(),
+  };
+  const program = new anchor.Program(marketIdl as any, provider);
   const creator = provider.wallet as anchor.Wallet;
   const noUser = anchor.web3.Keypair.generate();
   const shipmentTwin = anchor.web3.Keypair.generate().publicKey;
@@ -191,7 +195,7 @@ describe("prediction-market", () => {
         .rpc();
       assert.fail("Should have thrown PositionNotWinning");
     } catch (e: any) {
-      assert.include(String(e), "PositionNotWinning");
+      assert.include(e.toString(), "PositionNotWinning");
     }
   });
 
@@ -211,7 +215,7 @@ describe("prediction-market", () => {
         .rpc();
       assert.fail("Should have thrown AlreadyClaimed");
     } catch (e: any) {
-      assert.include(String(e), "AlreadyClaimed");
+      assert.include(e.toString(), "AlreadyClaimed");
     }
   });
 });

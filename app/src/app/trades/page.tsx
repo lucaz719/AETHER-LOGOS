@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BN } from "@coral-xyz/anchor";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
@@ -33,7 +33,7 @@ function optionalString(value: unknown): string | null {
 }
 
 export default function TradesPage() {
-  const { escrowProgram, wallet } = useAnchorClient();
+  const { escrowProgram, wallet, connection, provider } = useAnchorClient();
   const [amount, setAmount] = useState("1");
   const [seller, setSeller] = useState("");
   const [buyerTokenAccount, setBuyerTokenAccount] = useState("");
@@ -76,6 +76,25 @@ export default function TradesPage() {
       const [escrowVault] = PublicKey.findProgramAddressSync([Buffer.from("vault"), tradeId], ESCROW_PROGRAM_ID);
       const [vaultAuthority] = PublicKey.findProgramAddressSync([Buffer.from("authority")], ESCROW_PROGRAM_ID);
       const invoiceCid = invoiceUrl.includes("/ipfs/") ? invoiceUrl.split("/ipfs/")[1] : null;
+      const sellerPubkey = new PublicKey(seller);
+      const mintPubkey = new PublicKey(usdcMint);
+      const payer = (provider?.wallet as { payer?: unknown } | undefined)?.payer;
+      if (!payer) throw new Error("wallet payer is required to create associated token accounts");
+
+      const buyerATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer as Parameters<typeof getOrCreateAssociatedTokenAccount>[1],
+        mintPubkey,
+        wallet.publicKey,
+      );
+      const sellerATA = await getOrCreateAssociatedTokenAccount(
+        connection,
+        payer as Parameters<typeof getOrCreateAssociatedTokenAccount>[1],
+        mintPubkey,
+        sellerPubkey,
+      );
+      setBuyerTokenAccount(buyerATA.address.toBase58());
+      setSellerTokenAccount(sellerATA.address.toBase58());
 
       await escrowProgram.methods
         .createTrade(
@@ -87,12 +106,12 @@ export default function TradesPage() {
         )
         .accounts({
           buyer: wallet.publicKey,
-          seller: new PublicKey(seller),
+          seller: sellerPubkey,
           tradeAccount,
           escrowVault,
           vaultAuthority,
-          buyerTokenAccount: new PublicKey(buyerTokenAccount),
-          usdcMint: new PublicKey(usdcMint),
+          buyerTokenAccount: buyerATA.address,
+          usdcMint: mintPubkey,
           systemProgram: SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
@@ -178,8 +197,6 @@ export default function TradesPage() {
         <h2>Create New Trade</h2>
         <input placeholder="Amount (USDC)" value={amount} onChange={(e) => setAmount(e.target.value)} />
         <input placeholder="Seller wallet" value={seller} onChange={(e) => setSeller(e.target.value)} />
-        <input placeholder="Buyer USDC token account" value={buyerTokenAccount} onChange={(e) => setBuyerTokenAccount(e.target.value)} />
-        <input placeholder="Seller USDC token account" value={sellerTokenAccount} onChange={(e) => setSellerTokenAccount(e.target.value)} />
         <input placeholder="USDC mint" value={usdcMint} onChange={(e) => setUsdcMint(e.target.value)} />
         <label>
           <input type="checkbox" checked={signatureRequired} onChange={(e) => setSignatureRequired(e.target.checked)} />
