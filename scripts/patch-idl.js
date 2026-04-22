@@ -52,3 +52,4 @@ patchIdl(
   "./target/idl/prediction_market.json",
   "./target/idl/prediction_market.json",
 );
+patchIdl("./target/idl/marketplace.json", "./target/idl/marketplace.json");
