@@ -4,6 +4,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
+import Link from "next/link";
 
 const PROGRAM_ID = process.env.NEXT_PUBLIC_MARKETPLACE_PROGRAM_ID ?? "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN";
 const RPC = process.env.SOLANA_RPC_URL ?? process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
@@ -28,11 +29,17 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
   const category = SLUG_TO_CATEGORY[slug] ?? slug;
+  const catKey = category.charAt(0).toLowerCase() + category.slice(1);
 
   const connection = new Connection(RPC, "confirmed");
   const programKey = new PublicKey(PROGRAM_ID);
   const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
-  const accounts = await connection.getProgramAccounts(programKey, { encoding: "base64" }).catch(() => []);
+
+  const listingDisc = Buffer.from([12, 188, 195, 61, 183, 115, 249, 54]).toString("base64");
+  const accounts = await connection.getProgramAccounts(programKey, {
+    encoding: "base64",
+    filters: [{ memcmp: { offset: 0, bytes: listingDisc, encoding: "base64" } }],
+  }).catch(() => []);
 
   const listings = accounts
     .map((a) => {
@@ -42,26 +49,30 @@ export default async function CategoryPage({
         const decoded = coder.decode("ProductListing", Buffer.from(raw, "base64")) as Record<string, unknown> | null;
         if (!decoded || !decoded.is_active) return null;
         const cat = decoded.category as Record<string, unknown>;
-        if (!cat || !(category in cat)) return null;
+        if (!cat || !(catKey in cat)) return null;
         return { pubkey: a.pubkey.toBase58(), account: decoded };
       } catch { return null; }
     })
     .filter((r): r is NonNullable<typeof r> => r !== null);
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1rem" }}>
-      <div style={{ marginBottom: "1.5rem" }}><SearchBar /></div>
+    <main className="page-container">
+      <div style={{ marginBottom: "1.25rem" }}><SearchBar /></div>
       <div style={{ marginBottom: "1.5rem" }}><CategoryNav active={slug} /></div>
-      <h2 style={{ margin: "0 0 1rem" }}>
+      <h2 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1.25rem" }}>
         {category}
-        <span style={{ fontWeight: 400, color: "#64748b", fontSize: "0.9rem", marginLeft: "0.5rem" }}>
+        <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>
           ({listings.length})
         </span>
       </h2>
       {listings.length === 0 ? (
-        <p style={{ color: "#94a3b8" }}>No listings in this category yet.</p>
+        <div className="glass" style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🏷️</div>
+          <p style={{ marginBottom: "1rem" }}>No listings in this category yet.</p>
+          <Link href="/marketplace" style={{ color: "var(--cyan)" }}>← Back to Marketplace</Link>
+        </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem" }}>
           {listings.map((l) => (
             <ProductCard
               key={l.pubkey}
@@ -80,3 +91,4 @@ export default async function CategoryPage({
     </main>
   );
 }
+

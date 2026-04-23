@@ -7,6 +7,7 @@ import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
+import Link from "next/link";
 
 const VENDOR_TYPES = ["Retailer", "Wholesaler", "Distributor", "Manufacturer"] as const;
 const ALL_CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "FoodBeverage", "Chemicals", "Automotive", "Healthcare", "Construction", "Other"];
@@ -70,81 +71,127 @@ export default function VendorRegisterPage() {
 
   if (!publicKey) {
     return (
-      <main style={{ maxWidth: 600, margin: "0 auto", padding: "3rem 1rem", textAlign: "center" }}>
-        <h1>Register as Vendor</h1>
-        <p>Connect your wallet to create a vendor shop.</p>
+      <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem", maxWidth: 600 }}>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏪</div>
+        <h2 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>Register as Vendor</h2>
+        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Connect your wallet to create a vendor shop.</p>
         <WalletMultiButton />
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1rem", display: "flex", gap: "2rem" }}>
+    <main className="page-container" style={{ display: "flex", gap: "2rem" }}>
       <VendorDashboardNav active="/vendor/register" />
       <div style={{ flex: 1 }}>
-        <h1 style={{ margin: "0 0 1.5rem" }}>Shop Profile</h1>
+        <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1.75rem" }}>
+          Shop Profile
+        </h1>
         {done ? (
-          <div style={{ color: "#16a34a", fontWeight: 600 }}>✓ Vendor registered successfully!</div>
+          <div className="glass" style={{ textAlign: "center", padding: "3rem" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
+            <h2 style={{ color: "var(--green)", marginBottom: "0.5rem" }}>Vendor registered successfully!</h2>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem" }}>
+              <Link href="/vendor/dashboard" className="btn-primary" style={{ textDecoration: "none" }}>
+                Go to Dashboard →
+              </Link>
+              <Link href="/vendor/listings/new" className="btn-ghost" style={{ textDecoration: "none" }}>
+                Create First Listing
+              </Link>
+            </div>
+          </div>
         ) : (
-          <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1rem", maxWidth: 560 }}>
-            <div>
-              <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Shop Name *</label>
+          <form onSubmit={handleSubmit} style={{ display: "grid", gap: "1.25rem", maxWidth: 560 }}>
+            <div style={{ display: "grid", gap: "0.35rem" }}>
+              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)" }}>Shop Name *</label>
               <input
                 required
                 maxLength={64}
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem", border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box" }}
+                className="input"
+                placeholder="e.g. TechParts Global"
               />
             </div>
-            <div>
-              <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Shop Description *</label>
+
+            <div style={{ display: "grid", gap: "0.35rem" }}>
+              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)" }}>Shop Description *</label>
               <textarea
                 required
                 maxLength={256}
                 value={shopDesc}
                 onChange={(e) => setShopDesc(e.target.value)}
                 rows={3}
-                style={{ display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem", border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box", resize: "vertical" }}
+                className="input"
+                style={{ resize: "vertical" }}
+                placeholder="Describe your business…"
               />
             </div>
-            <div>
-              <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Vendor Type *</label>
-              <select
-                value={vendorType}
-                onChange={(e) => setVendorType(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem", border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box" }}
-              >
+
+            <div style={{ display: "grid", gap: "0.35rem" }}>
+              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)" }}>Vendor Type *</label>
+              <select value={vendorType} onChange={(e) => setVendorType(e.target.value)} className="input">
                 {VENDOR_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div>
-              <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Categories (max 8)</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.3rem" }}>
+
+            <div style={{ display: "grid", gap: "0.5rem" }}>
+              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                Categories <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(max 8)</span>
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                 {ALL_CATEGORIES.map((cat) => (
-                  <label key={cat} style={{ display: "flex", alignItems: "center", gap: "0.3rem", cursor: "pointer", fontSize: "0.85rem", padding: "0.2rem 0.5rem", border: `1px solid ${categories.includes(cat) ? "#2563eb" : "#e2e8f0"}`, borderRadius: 6 }}>
-                    <input type="checkbox" checked={categories.includes(cat)} onChange={() => toggleCategory(cat)} style={{ display: "none" }} />
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    style={{
+                      padding: "0.3rem 0.75rem",
+                      borderRadius: "var(--radius-pill)",
+                      border: categories.includes(cat) ? "1px solid var(--cyan)" : "1px solid var(--border)",
+                      background: categories.includes(cat) ? "var(--cyan-dim)" : "transparent",
+                      color: categories.includes(cat) ? "var(--cyan)" : "var(--text-secondary)",
+                      fontSize: "0.8rem",
+                      cursor: "pointer",
+                      transition: "all var(--transition)",
+                    }}
+                  >
                     {cat}
-                  </label>
+                  </button>
                 ))}
               </div>
             </div>
-            <div>
-              <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Contact Email (hashed, not stored)</label>
+
+            <div style={{ display: "grid", gap: "0.35rem" }}>
+              <label style={{ fontWeight: 600, fontSize: "0.85rem", color: "var(--text-secondary)" }}>
+                Contact Email <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(hashed on-chain)</span>
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                style={{ display: "block", width: "100%", marginTop: "0.3rem", padding: "0.5rem", border: "1px solid #e2e8f0", borderRadius: 6, boxSizing: "border-box" }}
+                className="input"
+                placeholder="you@example.com"
               />
-              <small style={{ color: "#94a3b8" }}>Only a SHA-256 hash is stored on-chain.</small>
+              <small style={{ color: "var(--text-muted)", fontSize: "0.72rem" }}>Only a SHA-256 hash is stored on-chain.</small>
             </div>
-            {error && <p style={{ color: "#dc2626", fontSize: "0.85rem", margin: 0 }}>{error}</p>}
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{ padding: "0.7rem", background: "#1e293b", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", fontWeight: 600 }}
-            >
+
+            {error && (
+              <div
+                style={{
+                  background: "rgba(244,63,94,0.08)",
+                  border: "1px solid rgba(244,63,94,0.2)",
+                  borderRadius: "var(--radius-md)",
+                  padding: "0.75rem",
+                  color: "var(--red)",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={submitting} className="btn-primary">
               {submitting ? "Registering…" : "Register Vendor"}
             </button>
           </form>
@@ -153,3 +200,4 @@ export default function VendorRegisterPage() {
     </main>
   );
 }
+
