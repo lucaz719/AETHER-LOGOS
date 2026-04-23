@@ -22,7 +22,7 @@ export function CategoryNav({ active }: { active?: string }) {
     <div
       style={{
         display: "flex",
-        gap: "0.5rem",
+        gap: "0.4rem",
         overflowX: "auto",
         paddingBottom: "0.25rem",
         scrollbarWidth: "none",
@@ -32,14 +32,16 @@ export function CategoryNav({ active }: { active?: string }) {
         href="/marketplace"
         style={{
           flexShrink: 0,
-          padding: "0.4rem 0.9rem",
-          borderRadius: 9999,
-          border: "1px solid #e2e8f0",
+          padding: "0.35rem 0.85rem",
+          borderRadius: "var(--radius-pill)",
+          border: !active ? "1px solid var(--cyan)" : "1px solid var(--border)",
+          background: !active ? "var(--cyan-dim)" : "transparent",
+          color: !active ? "var(--cyan)" : "var(--text-secondary)",
           textDecoration: "none",
-          fontSize: "0.85rem",
-          background: !active ? "#1e293b" : "#fff",
-          color: !active ? "#fff" : "#334155",
+          fontSize: "0.82rem",
+          fontWeight: !active ? 600 : 400,
           whiteSpace: "nowrap",
+          transition: "border-color var(--transition), color var(--transition), background var(--transition)",
         }}
       >
         All
@@ -50,14 +52,16 @@ export function CategoryNav({ active }: { active?: string }) {
           href={`/marketplace/category/${cat.slug}`}
           style={{
             flexShrink: 0,
-            padding: "0.4rem 0.9rem",
-            borderRadius: 9999,
-            border: "1px solid #e2e8f0",
+            padding: "0.35rem 0.85rem",
+            borderRadius: "var(--radius-pill)",
+            border: active === cat.slug ? "1px solid var(--cyan)" : "1px solid var(--border)",
+            background: active === cat.slug ? "var(--cyan-dim)" : "transparent",
+            color: active === cat.slug ? "var(--cyan)" : "var(--text-secondary)",
             textDecoration: "none",
-            fontSize: "0.85rem",
-            background: active === cat.slug ? "#1e293b" : "#fff",
-            color: active === cat.slug ? "#fff" : "#334155",
+            fontSize: "0.82rem",
+            fontWeight: active === cat.slug ? 600 : 400,
             whiteSpace: "nowrap",
+            transition: "border-color var(--transition), color var(--transition), background var(--transition)",
           }}
         >
           {cat.icon} {cat.label}
@@ -66,3 +70,4 @@ export function CategoryNav({ active }: { active?: string }) {
     </div>
   );
 }
+

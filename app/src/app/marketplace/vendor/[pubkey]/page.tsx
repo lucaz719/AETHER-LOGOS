@@ -21,6 +21,7 @@ function asBase58Str(value: unknown): string | null {
 }
 
 
+export default async function VendorPage({
   params,
 }: {
   params: Promise<{ pubkey: string }>;

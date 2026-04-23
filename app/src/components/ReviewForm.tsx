@@ -20,6 +20,7 @@ export function ReviewForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [hovered, setHovered] = useState(0);
 
   const submit = useCallback(
     async (e: React.FormEvent) => {
@@ -67,25 +68,33 @@ export function ReviewForm({
   );
 
   if (done) {
-    return <p style={{ color: "#16a34a", fontWeight: 600 }}>✓ Review submitted!</p>;
+    return <p className="badge badge-green" style={{ padding: "0.5rem 1rem", fontSize: "0.85rem" }}>✓ Review submitted!</p>;
   }
 
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: "1rem" }}>
       <div>
-        <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Rating</label>
-        <div style={{ display: "flex", gap: "0.25rem", marginTop: "0.3rem" }}>
+        <label style={{ fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" }}>
+          Rating
+        </label>
+        <div style={{ display: "flex", gap: "0.2rem" }}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
               key={n}
               type="button"
               onClick={() => setRating(n)}
+              onMouseEnter={() => setHovered(n)}
+              onMouseLeave={() => setHovered(0)}
+              aria-label={`Rate ${n} star${n !== 1 ? "s" : ""}`}
               style={{
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                fontSize: "1.5rem",
-                color: n <= rating ? "#f59e0b" : "#d1d5db",
+                fontSize: "1.8rem",
+                color: n <= (hovered || rating) ? "var(--amber)" : "var(--border)",
+                textShadow: n <= (hovered || rating) ? "0 0 8px rgba(245,158,11,0.5)" : "none",
+                transition: "color var(--transition), text-shadow var(--transition)",
+                padding: "0 2px",
               }}
             >
               ★
@@ -94,41 +103,27 @@ export function ReviewForm({
         </div>
       </div>
       <div>
-        <label style={{ fontWeight: 600, fontSize: "0.9rem" }}>Comment IPFS CID (optional)</label>
+        <label style={{ fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" }}>
+          Comment IPFS CID <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span>
+        </label>
         <input
           type="text"
           value={commentCid}
           onChange={(e) => setCommentCid(e.target.value)}
           placeholder="Qm…"
           maxLength={64}
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: "0.3rem",
-            padding: "0.5rem",
-            border: "1px solid #e2e8f0",
-            borderRadius: 6,
-            fontSize: "0.9rem",
-            boxSizing: "border-box",
-          }}
+          className="input"
         />
       </div>
-      {error && <p style={{ color: "#dc2626", fontSize: "0.85rem", margin: 0 }}>{error}</p>}
-      <button
-        type="submit"
-        disabled={submitting}
-        style={{
-          padding: "0.6rem 1.2rem",
-          background: "#1e293b",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          cursor: submitting ? "not-allowed" : "pointer",
-          opacity: submitting ? 0.7 : 1,
-        }}
-      >
+      {error && (
+        <p style={{ color: "var(--red)", fontSize: "0.82rem", background: "rgba(244,63,94,0.08)", border: "1px solid rgba(244,63,94,0.2)", borderRadius: "var(--radius-sm)", padding: "0.5rem 0.75rem" }}>
+          {error}
+        </p>
+      )}
+      <button type="submit" disabled={submitting} className="btn-primary">
         {submitting ? "Submitting…" : "Submit Review"}
       </button>
     </form>
   );
 }
+
