@@ -33,56 +33,53 @@ export function OrderStatusStepper({
 
   if (isCancelled) {
     return (
-      <div
-        style={{
-          padding: "0.5rem 1rem",
-          background: "#fef2f2",
-          borderRadius: 8,
-          color: "#dc2626",
-          fontWeight: 600,
-          fontSize: "0.85rem",
-        }}
-      >
+      <div className="badge badge-red" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem" }}>
         ✕ Order Cancelled
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", overflowX: "auto" }}>
+    <div style={{ display: "flex", alignItems: "flex-start", gap: "0", overflowX: "auto" }}>
       {MARKETPLACE_STEPS.map((step, idx) => (
-        <div key={step} style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.25rem",
-              minWidth: 72,
-            }}
-          >
+        <div key={step} style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 64 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", flex: 1 }}>
             <div
               style={{
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: idx <= current ? "#1e293b" : "#e2e8f0",
-                color: idx <= current ? "#fff" : "#94a3b8",
+                background: idx < current
+                  ? "var(--cyan)"
+                  : idx === current
+                  ? "var(--cyan-dim)"
+                  : "var(--bg-elevated)",
+                border: idx <= current
+                  ? "1.5px solid var(--cyan)"
+                  : "1.5px solid var(--border)",
+                color: idx < current
+                  ? "var(--text-inverse)"
+                  : idx === current
+                  ? "var(--cyan)"
+                  : "var(--text-muted)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                fontSize: "0.75rem",
+                fontSize: "0.7rem",
                 fontWeight: 700,
+                boxShadow: idx <= current ? "0 0 8px rgba(0,212,255,0.35)" : "none",
+                transition: "all var(--transition)",
               }}
             >
               {idx < current ? "✓" : idx + 1}
             </div>
             <span
               style={{
-                fontSize: "0.65rem",
-                color: idx <= current ? "#1e293b" : "#94a3b8",
+                fontSize: "0.6rem",
+                color: idx <= current ? "var(--cyan)" : "var(--text-muted)",
                 textAlign: "center",
                 lineHeight: 1.2,
+                whiteSpace: "nowrap",
               }}
             >
               {step}
@@ -91,11 +88,12 @@ export function OrderStatusStepper({
           {idx < MARKETPLACE_STEPS.length - 1 && (
             <div
               style={{
-                flex: 1,
                 height: 2,
-                background: idx < current ? "#1e293b" : "#e2e8f0",
-                minWidth: 24,
-                marginBottom: "1.2rem",
+                flex: 1,
+                background: idx < current ? "var(--cyan)" : "var(--border)",
+                boxShadow: idx < current ? "0 0 6px rgba(0,212,255,0.4)" : "none",
+                marginBottom: "1rem",
+                minWidth: 12,
               }}
             />
           )}
@@ -104,3 +102,4 @@ export function OrderStatusStepper({
     </div>
   );
 }
+

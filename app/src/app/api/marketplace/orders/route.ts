@@ -29,7 +29,12 @@ export async function GET(req: NextRequest) {
   const programKey = new PublicKey(PROGRAM_ID);
   const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
 
-  const accounts = await connection.getProgramAccounts(programKey, { encoding: "base64" });
+  // Filter by MarketplaceOrder discriminator [36,193,241,88,220,254,185,68] to avoid fetching every account.
+  const discriminator = Buffer.from([36, 193, 241, 88, 220, 254, 185, 68]).toString("base64");
+  const accounts = await connection.getProgramAccounts(programKey, {
+    encoding: "base64",
+    filters: [{ memcmp: { offset: 0, bytes: discriminator, encoding: "base64" } }],
+  });
 
   let orders = accounts
     .map((a) => {

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const NAV_ITEMS = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: "📊" },
+  { href: "/vendor/listings", label: "My Listings", icon: "📋" },
   { href: "/vendor/listings/new", label: "New Listing", icon: "+" },
   { href: "/vendor/orders", label: "Orders", icon: "📦" },
   { href: "/vendor/register", label: "Shop Profile", icon: "🏪" },
@@ -13,33 +14,39 @@ export function VendorDashboardNav({ active }: { active: string }) {
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "0.25rem",
-        minWidth: 180,
-        borderRight: "1px solid #e2e8f0",
+        gap: "0.2rem",
+        minWidth: 190,
+        borderRight: "1px solid var(--border)",
         paddingRight: "1rem",
       }}
     >
-      {NAV_ITEMS.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            padding: "0.6rem 0.8rem",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontSize: "0.9rem",
-            background: active === item.href ? "#f1f5f9" : "transparent",
-            color: active === item.href ? "#1e293b" : "#475569",
-            fontWeight: active === item.href ? 600 : 400,
-          }}
-        >
-          <span>{item.icon}</span>
-          {item.label}
-        </Link>
-      ))}
+      {NAV_ITEMS.map((item) => {
+        const isActive = active === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.6rem",
+              padding: "0.6rem 0.8rem",
+              borderRadius: "var(--radius-sm)",
+              textDecoration: "none",
+              fontSize: "0.88rem",
+              background: isActive ? "var(--violet-dim)" : "transparent",
+              color: isActive ? "#a78bfa" : "var(--text-secondary)",
+              fontWeight: isActive ? 600 : 400,
+              borderLeft: isActive ? "2px solid var(--violet)" : "2px solid transparent",
+              transition: "all var(--transition)",
+            }}
+          >
+            <span>{item.icon}</span>
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }
+

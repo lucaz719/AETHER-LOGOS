@@ -1,71 +1,111 @@
 'use client';
 
-import { useState } from "react";
-import { CartDrawer } from "@/components/CartDrawer";
 import { useCart } from "@/hooks/useCart";
 import Link from "next/link";
 
 export default function CartPage() {
   const { items, removeItem, updateQty, totalUsdc } = useCart();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <main style={{ maxWidth: 700, margin: "0 auto", padding: "2rem 1rem" }}>
-      <h1 style={{ marginBottom: "1.5rem" }}>Shopping Cart</h1>
+    <main className="page-container" style={{ maxWidth: 700 }}>
+      <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1.75rem" }}>
+        🛒 Cart
+      </h1>
 
       {items.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#94a3b8" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🛒</div>
-          <p>Your cart is empty.</p>
-          <Link href="/marketplace" style={{ color: "#2563eb", textDecoration: "none" }}>
+        <div className="glass" style={{ textAlign: "center", padding: "4rem 2rem", color: "var(--text-muted)" }}>
+          <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🛒</div>
+          <p style={{ marginBottom: "1.25rem" }}>Your cart is empty.</p>
+          <Link href="/marketplace" className="btn-primary" style={{ textDecoration: "none" }}>
             Browse Marketplace →
           </Link>
         </div>
       ) : (
         <div style={{ display: "grid", gap: "1rem" }}>
           {items.map((item) => (
-            <div key={item.listingPubkey} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: "1rem", display: "grid", gap: "0.5rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <Link href={`/marketplace/listing/${item.listingPubkey}`} style={{ fontWeight: 600, color: "#1e293b", textDecoration: "none" }}>
+            <div key={item.listingPubkey} className="glass" style={{ padding: "1rem", display: "grid", gap: "0.6rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <Link
+                  href={`/marketplace/listing/${item.listingPubkey}`}
+                  style={{ fontWeight: 700, color: "var(--text-primary)", textDecoration: "none", fontSize: "0.95rem" }}
+                >
                   {item.title}
                 </Link>
-                <button onClick={() => removeItem(item.listingPubkey)} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.85rem" }}>Remove</button>
+                <button
+                  onClick={() => removeItem(item.listingPubkey)}
+                  aria-label={`Remove ${item.title} from cart`}
+                  style={{ background: "none", border: "none", color: "var(--red)", cursor: "pointer", fontSize: "0.82rem" }}
+                >
+                  Remove
+                </button>
               </div>
-              <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
+              <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>
                 ${(item.priceUsdc / 1_000_000).toFixed(2)} USDC per unit
               </div>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-                <button onClick={() => updateQty(item.listingPubkey, item.quantity - 1)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "0.2rem 0.7rem", cursor: "pointer" }}>−</button>
-                <span>{item.quantity}</span>
-                <button onClick={() => updateQty(item.listingPubkey, item.quantity + 1)} style={{ border: "1px solid #e2e8f0", borderRadius: 6, padding: "0.2rem 0.7rem", cursor: "pointer" }}>+</button>
-                <span style={{ marginLeft: "auto", fontWeight: 600 }}>${((item.priceUsdc * item.quantity) / 1_000_000).toFixed(2)} USDC</span>
+                <button
+                  onClick={() => updateQty(item.listingPubkey, item.quantity - 1)}
+                  aria-label="Decrease quantity"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                    borderRadius: "var(--radius-sm)",
+                    width: 30,
+                    height: 30,
+                    cursor: "pointer",
+                  }}
+                >
+                  −
+                </button>
+                <span style={{ fontWeight: 600, minWidth: 28, textAlign: "center", color: "var(--text-primary)" }}>{item.quantity}</span>
+                <button
+                  onClick={() => updateQty(item.listingPubkey, item.quantity + 1)}
+                  aria-label="Increase quantity"
+                  style={{
+                    background: "var(--bg-elevated)",
+                    border: "1px solid var(--border)",
+                    color: "var(--text-primary)",
+                    borderRadius: "var(--radius-sm)",
+                    width: 30,
+                    height: 30,
+                    cursor: "pointer",
+                  }}
+                >
+                  +
+                </button>
+                <span style={{ marginLeft: "auto", fontWeight: 700, color: "var(--cyan)" }}>
+                  ${((item.priceUsdc * item.quantity) / 1_000_000).toFixed(2)} USDC
+                </span>
               </div>
             </div>
           ))}
 
-          <div style={{ borderTop: "2px solid #e2e8f0", paddingTop: "1rem", display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "1.1rem" }}>
+          <div
+            style={{
+              borderTop: "1px solid var(--border)",
+              paddingTop: "1rem",
+              display: "flex",
+              justifyContent: "space-between",
+              fontWeight: 700,
+              fontSize: "1.1rem",
+              color: "var(--text-primary)",
+            }}
+          >
             <span>Total</span>
-            <span>${(totalUsdc / 1_000_000).toFixed(2)} USDC</span>
+            <span style={{ color: "var(--cyan)" }}>${(totalUsdc / 1_000_000).toFixed(2)} USDC</span>
           </div>
 
           <Link
             href="/marketplace/checkout"
-            style={{
-              display: "block",
-              textAlign: "center",
-              padding: "0.75rem",
-              background: "#1e293b",
-              color: "#fff",
-              borderRadius: 8,
-              textDecoration: "none",
-              fontWeight: 600,
-              fontSize: "1rem",
-            }}
+            className="btn-primary"
+            style={{ display: "block", textAlign: "center", fontSize: "1rem", padding: "0.85rem", textDecoration: "none" }}
           >
-            Proceed to Checkout
+            🔒 Proceed to Checkout
           </Link>
         </div>
       )}
     </main>
   );
 }
+

@@ -13,10 +13,12 @@ export type VendorProfileRow = {
 export function useVendorProfile(authority?: string) {
   const { connection } = useAnchorClient();
   const [profile, setProfile] = useState<VendorProfileRow | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const load = useMemo(
     () => async () => {
       if (!authority) return;
+      setLoading(true);
       try {
         const [pda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), new PublicKey(authority).toBuffer()],
@@ -30,6 +32,8 @@ export function useVendorProfile(authority?: string) {
         setProfile({ pubkey: pda, account: data.vendor });
       } catch {
         setProfile(null);
+      } finally {
+        setLoading(false);
       }
     },
     [authority, connection],
@@ -39,5 +43,6 @@ export function useVendorProfile(authority?: string) {
     void load();
   }, [load]);
 
-  return { profile, reload: load };
+  return { profile, loading, reload: load };
 }
+
