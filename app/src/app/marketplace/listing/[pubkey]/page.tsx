@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/hooks/useCart";
-import { useVendorReviews } from "@/hooks/useVendorReviews";
+import { useToast } from "@/hooks/useToast";
 import { Skeleton } from "@/components/Skeleton";
 
 type ListingData = {
@@ -17,9 +17,9 @@ export default function ListingPage() {
   const { pubkey } = params;
   const [listing, setListing] = useState<ListingData | null>(null);
   const [qty, setQty] = useState(1);
-  const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
+  const toast = useToast();
 
   useEffect(() => {
     fetch(`/api/marketplace/listings/${pubkey}`)
@@ -62,6 +62,8 @@ export default function ListingPage() {
   const imagesCid = account.images_cid as string | undefined;
   const isActive = Boolean(account.is_active);
 
+  const ipfsGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs";
+
   const handleAddToCart = () => {
     addItem({
       listingPubkey: pubkey,
@@ -72,8 +74,7 @@ export default function ListingPage() {
       quantity: qty,
       imagesCid,
     });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    toast.success(`Added ${qty} ${qty === 1 ? 'item' : 'items'} to cart`);
   };
 
   return (
@@ -90,7 +91,7 @@ export default function ListingPage() {
         <div>
           {imagesCid ? (
             <img
-              src={`https://gateway.pinata.cloud/ipfs/${imagesCid}`}
+              src={`${ipfsGateway}/${imagesCid}`}
               alt={String(account.title ?? "")}
               style={{ width: "100%", borderRadius: "var(--radius-lg)", objectFit: "cover", maxHeight: 440 }}
             />
@@ -187,10 +188,9 @@ export default function ListingPage() {
               width: "100%",
               fontSize: "1rem",
               padding: "0.85rem",
-              background: added ? "var(--green)" : undefined,
             }}
           >
-            {added ? "✓ Added to Cart" : "Add to Cart"}
+            Add to Cart
           </button>
 
           {/* Escrow badge */}

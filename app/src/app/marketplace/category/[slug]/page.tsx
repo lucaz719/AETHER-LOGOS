@@ -1,7 +1,7 @@
 import { CategoryNav } from "@/components/CategoryNav";
 import { ProductCard } from "@/components/ProductCard";
 import { SearchBar } from "@/components/SearchBar";
-import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
+import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
 import Link from "next/link";
@@ -33,7 +33,7 @@ export default async function CategoryPage({
 
   const connection = new Connection(RPC, "confirmed");
   const programKey = new PublicKey(PROGRAM_ID);
-  const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
+  const coder = getCoder(marketplaceIdl);
 
   const listingDisc = Buffer.from([12, 188, 195, 61, 183, 115, 249, 54]).toString("base64");
   const accounts = await connection.getProgramAccounts(programKey, {

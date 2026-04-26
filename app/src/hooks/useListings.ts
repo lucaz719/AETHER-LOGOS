@@ -13,6 +13,7 @@ export type ListingFilter = {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
+  sort?: string;
   page?: number;
   limit?: number;
 };
@@ -33,6 +34,7 @@ export function useListings(filter: ListingFilter = {}) {
         if (filter.minPrice !== undefined) params.set("minPrice", String(filter.minPrice));
         if (filter.maxPrice !== undefined) params.set("maxPrice", String(filter.maxPrice));
         if (filter.search) params.set("search", filter.search);
+        if (filter.sort) params.set("sort", filter.sort);
         if (filter.page && filter.page > 1) params.set("offset", String((filter.page - 1) * limit));
         params.set("limit", String(limit + 1)); // fetch one extra to detect hasMore
         const res = await fetch(`/api/marketplace/listings?${params.toString()}`);
@@ -51,7 +53,7 @@ export function useListings(filter: ListingFilter = {}) {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filter.vendor, filter.category, filter.minPrice, filter.maxPrice, filter.search, filter.page, limit],
+    [filter.vendor, filter.category, filter.minPrice, filter.maxPrice, filter.search, filter.sort, filter.page, limit],
   );
 
   useEffect(() => {

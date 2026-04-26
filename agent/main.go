@@ -19,7 +19,10 @@ var (
 )
 
 func main() {
-	dbPath := os.Getenv("DATABASE_PATH")
+	dbPath := os.Getenv("AGENT_DB_PATH")
+	if dbPath == "" {
+		dbPath = os.Getenv("DATABASE_PATH")
+	}
 	if dbPath == "" {
 		dbPath = "agent.db"
 	}
@@ -33,7 +36,11 @@ func main() {
 		os.Getenv("RECLAIM_APP_SECRET"),
 	)
 
+	// Accept both SOLANA_RPC (agent-native) and SOLANA_RPC_URL (.env.example name).
 	rpcURL := os.Getenv("SOLANA_RPC")
+	if rpcURL == "" {
+		rpcURL = os.Getenv("SOLANA_RPC_URL")
+	}
 	if rpcURL == "" {
 		rpcURL = "https://api.devnet.solana.com"
 	}

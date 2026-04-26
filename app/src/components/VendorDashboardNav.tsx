@@ -5,7 +5,8 @@ const NAV_ITEMS = [
   { href: "/vendor/listings", label: "My Listings", icon: "📋" },
   { href: "/vendor/listings/new", label: "New Listing", icon: "+" },
   { href: "/vendor/orders", label: "Orders", icon: "📦" },
-  { href: "/vendor/register", label: "Shop Profile", icon: "🏪" },
+  { href: "/vendor/profile/edit", label: "Edit Profile", icon: "✏️" },
+  { href: "/vendor/register", label: "Register Shop", icon: "🏪" },
 ];
 
 export function VendorDashboardNav({ active }: { active: string }) {

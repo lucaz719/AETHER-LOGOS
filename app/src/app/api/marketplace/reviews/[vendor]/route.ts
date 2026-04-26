@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
+import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
 
@@ -22,7 +22,7 @@ export async function GET(
 
   const connection = new Connection(RPC, "confirmed");
   const programKey = new PublicKey(PROGRAM_ID);
-  const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
+  const coder = getCoder(marketplaceIdl);
 
   // Filter by VendorReview discriminator [177,64,117,65,72,201,59,4] to avoid fetching every account.
   const discriminator = Buffer.from([177, 64, 117, 65, 72, 201, 59, 4]).toString("base64");

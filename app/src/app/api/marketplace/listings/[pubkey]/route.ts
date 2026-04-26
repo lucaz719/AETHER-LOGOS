@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
+import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
 
@@ -23,7 +23,7 @@ export async function GET(
   const info = await connection.getAccountInfo(listingKey);
   if (!info) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
 
-  const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
+  const coder = getCoder(marketplaceIdl);
   try {
     const decoded = coder.decode("ProductListing", info.data) as Record<string, unknown>;
     return NextResponse.json({ listing: decoded, pubkey });

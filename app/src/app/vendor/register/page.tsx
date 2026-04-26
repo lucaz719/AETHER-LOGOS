@@ -14,7 +14,7 @@ const ALL_CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "Foo
 
 async function sha256Hex(text: string): Promise<Uint8Array> {
   const encoded = new TextEncoder().encode(text);
-  const buf = await crypto.subtle.digest("SHA-256", encoded);
+  const buf = await crypto.subtle.digest("SHA-256", encoded as any);
   return new Uint8Array(buf);
 }
 

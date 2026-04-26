@@ -4,9 +4,13 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useMarketplaceOrders } from "@/hooks/useMarketplaceOrders";
 import { useOrderCancel } from "@/hooks/useOrderCancel";
+import { useInterval } from "@/hooks/useInterval";
 import { OrderStatusStepper } from "@/components/OrderStatusStepper";
 import { Skeleton } from "@/components/Skeleton";
+import { Modal } from "@/components/Modal";
+import { ReviewForm } from "@/components/ReviewForm";
 import Link from "next/link";
+import { useState } from "react";
 
 function shortKey(k: string) { return `${k.slice(0, 4)}…${k.slice(-4)}`; }
 
@@ -14,6 +18,13 @@ export default function BuyerOrdersPage() {
   const { publicKey } = useWallet();
   const { orders, loading, reload } = useMarketplaceOrders("buyer", publicKey?.toBase58());
   const { cancelOrder, state: cancelState, error: cancelError } = useOrderCancel();
+
+  const [reviewOrder, setReviewOrder] = useState<{pubkey: string, vendorPubkey: string, tradePubkey: string} | null>(null);
+
+  // Poll for updates every 10 seconds if there are active orders
+  useInterval(() => {
+    if (publicKey) reload();
+  }, 10_000);
 
   if (!publicKey) {
     return (
@@ -105,6 +116,15 @@ export default function BuyerOrdersPage() {
                         {cancelState === "signing" ? "…" : "Cancel"}
                       </button>
                     )}
+                    {status === "Completed" && (
+                      <button
+                        onClick={() => setReviewOrder({ pubkey: o.pubkey, vendorPubkey: String(o.account.vendor ?? ""), tradePubkey: tradeKey })}
+                        className="btn-primary"
+                        style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}
+                      >
+                        Leave Review
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -123,6 +143,23 @@ export default function BuyerOrdersPage() {
           })}
         </div>
       )}
+
+      <Modal 
+        isOpen={!!reviewOrder} 
+        onClose={() => setReviewOrder(null)}
+        title="Leave a Review"
+      >
+        {reviewOrder && (
+          <ReviewForm 
+            vendorAuthority={reviewOrder.vendorPubkey} 
+            tradeAccountPubkey={reviewOrder.tradePubkey}
+            onSuccess={() => {
+              reload();
+              setTimeout(() => setReviewOrder(null), 2000);
+            }} 
+          />
+        )}
+      </Modal>
     </main>
   );
 }

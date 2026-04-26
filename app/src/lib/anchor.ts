@@ -27,5 +27,12 @@ export function getMarketProgram(provider: AnchorProvider): Program<Idl> {
 }
 
 export function getMarketplaceProgram(provider: AnchorProvider): Program<Idl> {
-  return new Program(marketplaceIdl as Idl, provider);
+  return new Program(marketplaceIdl as any, provider);
+}
+
+import { BorshAccountsCoder } from "@coral-xyz/anchor";
+
+export function getCoder(idl: any) {
+  const patchedIdl = { ...idl, types: [...(idl.types || []), ...(idl.accounts || [])] };
+  return new BorshAccountsCoder(patchedIdl);
 }

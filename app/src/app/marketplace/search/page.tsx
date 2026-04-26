@@ -6,46 +6,57 @@ import { SearchBar } from "@/components/SearchBar";
 import { CategoryNav } from "@/components/CategoryNav";
 import { ProductCard } from "@/components/ProductCard";
 import { VendorCard } from "@/components/VendorCard";
-import { VendorTypeFilter } from "@/components/VendorTypeFilter";
-import { ProductCardSkeleton, VendorCardSkeleton } from "@/components/Skeleton";
+import { FilterPanel } from "@/components/FilterPanel";
+import { SortDropdown } from "@/components/SortDropdown";
+import { EmptyState } from "@/components/EmptyState";
+import { ProductCardSkeleton } from "@/components/Skeleton";
 import { useListings } from "@/hooks/useListings";
 
 function SearchResults() {
   const searchParams = useSearchParams();
   const q = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? undefined;
+  const minPrice = searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : undefined;
+  const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined;
+  const sort = searchParams.get("sort") ?? undefined;
   const type = searchParams.get("type") ?? undefined;
+  
   const [vendorTypes, setVendorTypes] = useState<string[]>(type ? [type] : []);
   const [page, setPage] = useState(1);
 
-  const { listings, loading, hasMore } = useListings({ search: q, category, page });
+  const { listings, loading, hasMore } = useListings({ search: q, category, minPrice, maxPrice, sort, page });
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "200px 1fr", gap: "2rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "250px 1fr", gap: "2.5rem" }}>
       <aside>
-        <VendorTypeFilter selected={vendorTypes} onChange={setVendorTypes} />
+        <FilterPanel selectedTypes={vendorTypes} onTypesChange={setVendorTypes} />
       </aside>
       <div>
-        <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1.25rem" }}>
-          {q ? `Results for "${q}"` : "All Listings"}
-          {!loading && (
-            <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>
-              ({listings.length} found)
-            </span>
-          )}
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+          <h2 style={{ fontSize: "1.15rem", fontWeight: 700, color: "var(--text-primary)" }}>
+            {q ? `Results for "${q}"` : "All Listings"}
+            {!loading && (
+              <span style={{ fontWeight: 400, color: "var(--text-muted)", fontSize: "0.85rem", marginLeft: "0.5rem" }}>
+                ({listings.length} found)
+              </span>
+            )}
+          </h2>
+          <SortDropdown />
+        </div>
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem" }}>
+          <div className="listing-grid">
             {[0, 1, 2, 3, 4, 5].map((i) => <ProductCardSkeleton key={i} />)}
           </div>
         ) : listings.length === 0 ? (
-          <div className="glass" style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔍</div>
-            <p>No listings found{q ? ` for "${q}"` : ""}.</p>
-          </div>
+          <EmptyState
+            icon="🔍"
+            title="No results found"
+            message={q ? `We couldn't find any listings matching "${q}". Try adjusting your filters or search terms.` : "No listings match the selected filters."}
+            action={q ? { label: "Clear Search", href: "/marketplace/search" } : undefined}
+          />
         ) : (
           <>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem" }}>
+            <div className="listing-grid">
               {listings.map((l) => (
                 <ProductCard
                   key={l.pubkey}
@@ -100,7 +111,7 @@ export default function SearchPage() {
       </div>
       <Suspense
         fallback={
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(210px, 1fr))", gap: "1rem" }}>
+          <div className="listing-grid">
             {[0, 1, 2, 3].map((i) => <ProductCardSkeleton key={i} />)}
           </div>
         }

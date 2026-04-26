@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
+import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
 
@@ -14,6 +14,10 @@ function pubkeyStr(value: unknown): string | null {
   return null;
 }
 
+let cacheTime = 0;
+let cachedAccounts: readonly any[] | null = null;
+const CACHE_TTL = 10_000; // 10 seconds for orders
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const buyer = searchParams.get("buyer");
@@ -27,14 +31,22 @@ export async function GET(req: NextRequest) {
 
   const connection = new Connection(RPC, "confirmed");
   const programKey = new PublicKey(PROGRAM_ID);
-  const coder = new BorshAccountsCoder(marketplaceIdl as Idl);
+  const coder = getCoder(marketplaceIdl);
 
-  // Filter by MarketplaceOrder discriminator [36,193,241,88,220,254,185,68] to avoid fetching every account.
-  const discriminator = Buffer.from([36, 193, 241, 88, 220, 254, 185, 68]).toString("base64");
-  const accounts = await connection.getProgramAccounts(programKey, {
-    encoding: "base64",
-    filters: [{ memcmp: { offset: 0, bytes: discriminator, encoding: "base64" } }],
-  });
+  let accounts: readonly any[] = [];
+  const now = Date.now();
+  if (cachedAccounts && now - cacheTime < CACHE_TTL) {
+    accounts = cachedAccounts;
+  } else {
+    // Filter by MarketplaceOrder discriminator [36,193,241,88,220,254,185,68] to avoid fetching every account.
+    const discriminator = Buffer.from([36, 193, 241, 88, 220, 254, 185, 68]).toString("base64");
+    accounts = await connection.getProgramAccounts(programKey, {
+      encoding: "base64",
+      filters: [{ memcmp: { offset: 0, bytes: discriminator, encoding: "base64" } }],
+    });
+    cachedAccounts = accounts;
+    cacheTime = now;
+  }
 
   let orders = accounts
     .map((a) => {

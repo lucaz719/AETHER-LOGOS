@@ -6,6 +6,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useMarketplaceOrders } from "@/hooks/useMarketplaceOrders";
+import { useInterval } from "@/hooks/useInterval";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { OrderStatusStepper } from "@/components/OrderStatusStepper";
 import { Skeleton } from "@/components/Skeleton";
@@ -21,6 +22,11 @@ export default function VendorOrdersPage() {
   const [trackingInputs, setTrackingInputs] = useState<Record<string, { trackingId: string; carrier: string }>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
   const [trackingErrors, setTrackingErrors] = useState<Record<string, string>>({});
+
+  // Poll for updates every 10 seconds if there are active orders
+  useInterval(() => {
+    if (publicKey) reload();
+  }, 10_000);
 
   const updateTracking = useCallback((key: string, field: "trackingId" | "carrier", value: string) => {
     setTrackingInputs((prev) => ({ ...prev, [key]: { ...(prev[key] ?? { trackingId: "", carrier: "DHL" }), [field]: value } }));

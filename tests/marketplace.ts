@@ -304,5 +304,132 @@ describe("marketplace", () => {
       expect(isExpected, `Unexpected error: ${msg}`).to.be.true;
     }
   });
-});
 
+  // ── New tests added for gap coverage ──────────────────────────────────────
+
+  it("update_listing changes mutable fields", async () => {
+    if (!program) return;
+
+    // Create a fresh listing to update.
+    const listingId = Array.from(randomBytes(16));
+    const [vendorProfilePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vendor"), authority.publicKey.toBuffer()],
+      MARKETPLACE_PROGRAM_ID,
+    );
+    const [listingPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("listing"), authority.publicKey.toBuffer(), Buffer.from(listingId)],
+      MARKETPLACE_PROGRAM_ID,
+    );
+
+    await (program.methods as any)
+      .createListing(listingId, "Original Title", "Original desc", null, { electronics: {} }, new BN(1_000_000), 1, null, null, 24, false)
+      .accounts({ authority: authority.publicKey, vendorProfile: vendorProfilePda, listing: listingPda, systemProgram: SystemProgram.programId })
+      .signers([authority])
+      .rpc();
+
+    await (program.methods as any)
+      .updateListing("Updated Title", "Updated description", null, { apparel: {} }, new BN(2_000_000), 2, null, null, 48, true)
+      .accounts({ authority: authority.publicKey, vendorProfile: vendorProfilePda, listing: listingPda })
+      .signers([authority])
+      .rpc();
+
+    const updated = await (program.account as any).productListing.fetch(listingPda);
+    expect(updated.title).to.equal("Updated Title");
+    expect(updated.priceUsdc.toNumber()).to.equal(2_000_000);
+    expect(updated.minOrderQty).to.equal(2);
+    expect(updated.requiresSignature).to.be.true;
+    expect(updated.isActive).to.be.true;
+  });
+
+  it("deactivate_listing sets is_active to false", async () => {
+    if (!program) return;
+
+    const listingId = Array.from(randomBytes(16));
+    const [vendorProfilePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vendor"), authority.publicKey.toBuffer()],
+      MARKETPLACE_PROGRAM_ID,
+    );
+    const [listingPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("listing"), authority.publicKey.toBuffer(), Buffer.from(listingId)],
+      MARKETPLACE_PROGRAM_ID,
+    );
+
+    await (program.methods as any)
+      .createListing(listingId, "To Deactivate", "desc", null, { other: {} }, new BN(500_000), 1, null, null, 24, false)
+      .accounts({ authority: authority.publicKey, vendorProfile: vendorProfilePda, listing: listingPda, systemProgram: SystemProgram.programId })
+      .signers([authority])
+      .rpc();
+
+    await (program.methods as any)
+      .deactivateListing()
+      .accounts({ authority: authority.publicKey, listing: listingPda })
+      .signers([authority])
+      .rpc();
+
+    const listing = await (program.account as any).productListing.fetch(listingPda);
+    expect(listing.isActive).to.be.false;
+  });
+
+  it("update_vendor changes shop details", async () => {
+    if (!program) return;
+
+    const [vendorProfilePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vendor"), authority.publicKey.toBuffer()],
+      MARKETPLACE_PROGRAM_ID,
+    );
+
+    await (program.methods as any)
+      .updateVendor(
+        "Updated Shop Name",
+        "New description for the shop.",
+        null, // logo_cid
+        null, // banner_cid
+        { retailer: {} },
+        ["Apparel", "Electronics"],
+      )
+      .accounts({ authority: authority.publicKey, vendorProfile: vendorProfilePda })
+      .signers([authority])
+      .rpc();
+
+    const profile = await (program.account as any).vendorProfile.fetch(vendorProfilePda);
+    expect(profile.shopName).to.equal("Updated Shop Name");
+    expect(profile.shopDescription).to.equal("New description for the shop.");
+    expect(profile.categories).to.deep.equal(["Apparel", "Electronics"]);
+  });
+
+  it("verify_vendor requires config admin signer", async () => {
+    if (!program) return;
+
+    // A random non-admin keypair should be rejected.
+    const fakeAdmin = Keypair.generate();
+    await provider.connection.requestAirdrop(fakeAdmin.publicKey, 1e9);
+    await new Promise((r) => setTimeout(r, 500));
+
+    const [configPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("config")],
+      MARKETPLACE_PROGRAM_ID,
+    );
+    const [vendorProfilePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("vendor"), authority.publicKey.toBuffer()],
+      MARKETPLACE_PROGRAM_ID,
+    );
+
+    try {
+      await (program.methods as any)
+        .verifyVendor()
+        .accounts({ admin: fakeAdmin.publicKey, config: configPda, vendorProfile: vendorProfilePda })
+        .signers([fakeAdmin])
+        .rpc();
+      expect.fail("Expected Unauthorized or config-not-initialised error");
+    } catch (e: any) {
+      const msg: string = e?.message ?? String(e);
+      // Config not initialised → AccountNotInitialized / constraint violation → Unauthorized (6016)
+      const isExpected =
+        msg.includes("6016") ||
+        msg.includes("Unauthorized") ||
+        msg.includes("AccountNotInitialized") ||
+        msg.includes("2006");
+      expect(isExpected, `Unexpected error: ${msg}`).to.be.true;
+    }
+  });
+});

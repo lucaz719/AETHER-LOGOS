@@ -103,10 +103,11 @@ export function ReviewForm({
         </div>
       </div>
       <div>
-        <label style={{ fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" }}>
+        <label htmlFor="commentCid" style={{ fontWeight: 600, fontSize: "0.88rem", color: "var(--text-secondary)", display: "block", marginBottom: "0.4rem" }}>
           Comment IPFS CID <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>(optional)</span>
         </label>
         <input
+          id="commentCid"
           type="text"
           value={commentCid}
           onChange={(e) => setCommentCid(e.target.value)}

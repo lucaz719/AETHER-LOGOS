@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useCart } from "@/hooks/useCart";
 import { CartDrawer } from "@/components/CartDrawer";
+import { SearchBar } from "@/components/SearchBar";
 
 const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
@@ -20,6 +21,20 @@ export function NavBar() {
   const pathname = usePathname();
   const { items } = useCart();
   const [cartOpen, setCartOpen] = useState(false);
+  const [theme, setTheme] = useState("dark");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("theme") || "dark";
+    setTheme(saved);
+    document.documentElement.setAttribute("data-theme", saved);
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    localStorage.setItem("theme", nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+  };
 
   return (
     <>
@@ -87,8 +102,33 @@ export function NavBar() {
             })}
           </div>
 
-          {/* Right: Cart + Wallet */}
+          {/* SearchBar */}
+          <div style={{ flex: 1, maxWidth: 350, display: "none", '@media (min-width: 768px)': { display: 'block' } } as any}>
+            <SearchBar />
+          </div>
+
+          {/* Right: Theme Toggle + Cart + Wallet */}
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <button
+              aria-label="Toggle theme"
+              onClick={toggleTheme}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-sm)",
+                width: 38,
+                height: 38,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                color: "var(--text-secondary)",
+                fontSize: "1.1rem",
+                transition: "border-color var(--transition)",
+              }}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
             <button
               aria-label={`Shopping cart, ${items.length} items`}
               onClick={() => setCartOpen(true)}
