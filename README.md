@@ -308,40 +308,45 @@ A Next.js 15 application built with React 19 and TypeScript, providing distinct 
 ## End-to-End Transaction Flow
 
 The following diagram illustrates a complete transaction lifecycle from trade creation through fund release:
+
+```
 ┌─────────┐                    ┌──────────────┐                  ┌─────────┐
 │  BUYER  │                    │   SOLANA     │                  │  SELLER │
 └────┬────┘                    │  BLOCKCHAIN  │                  └────┬────┘
      │                         └──────┬───────┘                       │
+     │                                │                               │
      │  1. Create trade (lock USDC)   │                               │
-     │───────────────────────────────►│                               │
+     ├───────────────────────────────►│                               │
      │                                │  OrderCreated event           │
-     │                                │──────────────────────────────►│
+     │                                ├──────────────────────────────►│
      │                                │                               │
      │                                │  2. Submit tracking ID        │
-     │                                │◄──────────────────────────────│
+     │                                │◄──────────────────────────────┤
      │                                │                               │
      │                         ┌──────┴───────┐                       │
      │                         │  GO AGENT    │                       │
      │                         └──────┬───────┘                       │
      │                                │                               │
-     │                 3. Poll DHL API every 30s                      │
+     │                 3. Poll carrier API (every 30s)                │
      │                                │                               │
-     │                 4. Delivery confirmed ✓                        │
+     │                 4. Delivery confirmed                          │
      │                                │                               │
      │                 5. Generate zkTLS proof                        │
      │                                │                               │
      │                 6. Submit proof on-chain                       │
      │                                │                               │
      │                         ┌──────┴───────┐                       │
-     │                         │   SOLANA     │                       │
+     │                         │ PROOF VERIFIED
      │                         └──────┬───────┘                       │
      │                                │                               │
-     │  7. Release funds              │  USDC transferred to seller   │
-     │───────────────────────────────►│──────────────────────────────►│
+     │  7. Release funds              │                               │
+     ├───────────────────────────────►│  USDC transferred to seller   │
+     │                                ├──────────────────────────────►│
      │                                │                               │
      │  8. (Optional) Hedge market    │                               │
      │     resolved, winners claim    │                               │
-     └────────────────────────────────┘                               │
+     │                                │                               │
+     └─────────────────────────────────────────────────────────────────┘
 ```
 
 The above sequence demonstrates the core value proposition: buyers lock capital with cryptographic assurance of delivery, sellers receive payment upon confirmed delivery, and market participants can hedge logistics risk independently.
