@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BorshAccountsCoder, Idl } from "@coral-xyz/anchor";
+import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import tradeEscrowIdl from "@/lib/idl/trade_escrow.json";
 
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   const connection = new Connection(endpoint, "confirmed");
   const programKey = new PublicKey(programId);
   const accounts = await connection.getProgramAccounts(programKey, { encoding: "base64" });
-  const coder = new BorshAccountsCoder(tradeEscrowIdl as Idl);
+  const coder = getCoder(tradeEscrowIdl);
   const buyerFilter = buyer?.trim();
   const sellerFilter = seller?.trim();
 

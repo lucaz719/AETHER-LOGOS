@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import "./globals.css";
 import { SolanaWalletProvider } from "@/lib/wallet-provider";
+import { CartProvider } from "@/hooks/useCart";
+import { ToastProvider } from "@/hooks/useToast";
+import { NavBar } from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: "AETHER-LOGOS | Trade Settlement Protocol",
@@ -16,16 +19,14 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <SolanaWalletProvider>
-          <header style={{ borderBottom: "1px solid #ddd", padding: "1rem" }}>
-            <nav style={{ display: "flex", gap: "1rem", maxWidth: "1100px", margin: "0 auto" }}>
-              <Link href="/">Home</Link>
-              <Link href="/dashboard/buyer">Buyer Dashboard</Link>
-              <Link href="/dashboard/seller">Seller Dashboard</Link>
-              <Link href="/trades">Trades</Link>
-              <Link href="/markets">Markets</Link>
-            </nav>
-          </header>
-          {children}
+          <CartProvider>
+            <ToastProvider>
+              <NavBar />
+              <div style={{ minHeight: "calc(100vh - 60px)" }}>
+                {children}
+              </div>
+            </ToastProvider>
+          </CartProvider>
         </SolanaWalletProvider>
       </body>
     </html>
