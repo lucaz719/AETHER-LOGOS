@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("EVn3aVUGYbx6yvHa5h4m5N3qfJkhKm1FnYeNsfbi34CZ");
+declare_id!("7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc");
 pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]

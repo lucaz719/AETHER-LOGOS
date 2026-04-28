@@ -14,7 +14,7 @@ describe("prediction-market", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
-  const PROGRAM_ID = new anchor.web3.PublicKey("DgYUcbjMg8Mm4T8PTiiboca7AN9y9urLmYXfhYnSJuZb");
+  const PROGRAM_ID = new anchor.web3.PublicKey("Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr");
   const marketIdl = {
     ...predictionMarketIdl,
     address: PROGRAM_ID.toBase58(),
