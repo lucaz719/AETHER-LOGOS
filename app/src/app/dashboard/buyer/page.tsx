@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useBuyerOrders } from "@/hooks/useBuyerOrders";
 import { ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import { TrackingTimeline } from "@/components/TrackingTimeline";
+
+const DEVNET_USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
 function statusKey(status: unknown): string {
   if (!status || typeof status !== "object") return "unknown";
@@ -46,10 +48,8 @@ function getStatusColor(status: string): { badge: string; text: string } {
 }
 
 export default function BuyerDashboardPage() {
-  const { escrowProgram, wallet } = useAnchorClient();
+  const { escrowProgram, wallet, connection } = useAnchorClient();
   const { orders, reload } = useBuyerOrders();
-  const [buyerTokenAccount, setBuyerTokenAccount] = useState("");
-  const [sellerTokenAccount, setSellerTokenAccount] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const activeOrders = useMemo(
@@ -63,13 +63,20 @@ export default function BuyerDashboardPage() {
       const tradeId = order.account.tradeId as number[] | Uint8Array;
       const [escrowVault] = PublicKey.findProgramAddressSync([Buffer.from("vault"), Buffer.from(tradeId)], ESCROW_PROGRAM_ID);
       const [vaultAuthority] = PublicKey.findProgramAddressSync([Buffer.from("authority")], ESCROW_PROGRAM_ID);
+
+      // Derive seller's ATA automatically
+      const sellerAta = await getAssociatedTokenAddress(
+        DEVNET_USDC_MINT,
+        new PublicKey((order.account.seller as PublicKey).toString())
+      );
+
       await escrowProgram.methods
         .releaseFunds(Array.from(tradeId))
         .accounts({
           caller: wallet.publicKey,
           tradeAccount: order.pubkey,
           escrowVault,
-          sellerTokenAccount: new PublicKey(sellerTokenAccount),
+          sellerTokenAccount: sellerAta,
           vaultAuthority,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
@@ -103,13 +110,20 @@ export default function BuyerDashboardPage() {
       const tradeId = order.account.tradeId as number[] | Uint8Array;
       const [escrowVault] = PublicKey.findProgramAddressSync([Buffer.from("vault"), Buffer.from(tradeId)], ESCROW_PROGRAM_ID);
       const [vaultAuthority] = PublicKey.findProgramAddressSync([Buffer.from("authority")], ESCROW_PROGRAM_ID);
+
+      // Derive buyer's ATA automatically
+      const buyerAta = await getAssociatedTokenAddress(
+        DEVNET_USDC_MINT,
+        wallet.publicKey
+      );
+
       await escrowProgram.methods
         .cancelTrade(Array.from(tradeId))
         .accounts({
           buyer: wallet.publicKey,
           tradeAccount: order.pubkey,
           escrowVault,
-          buyerTokenAccount: new PublicKey(buyerTokenAccount),
+          buyerTokenAccount: buyerAta,
           vaultAuthority,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
@@ -139,33 +153,6 @@ export default function BuyerDashboardPage() {
             {error}
           </div>
         )}
-
-        {/* Token Accounts Setup */}
-        <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 mb-12">
-          <h2 className="text-lg font-bold text-white mb-6">Account Configuration</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Your USDC Token Account (for cancellations)</label>
-              <input
-                type="text"
-                placeholder="Token account address"
-                value={buyerTokenAccount}
-                onChange={(e) => setBuyerTokenAccount(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Seller USDC Token Account (for release)</label>
-              <input
-                type="text"
-                placeholder="Token account address"
-                value={sellerTokenAccount}
-                onChange={(e) => setSellerTokenAccount(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
-            </div>
-          </div>
-        </div>
 
         {/* Active Orders */}
         <div className="bg-[#12121a] border border-white/10 rounded-xl p-8">

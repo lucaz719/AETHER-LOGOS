@@ -117,6 +117,20 @@ export default function TradesPage() {
         })
         .rpc();
 
+      // Register with Go agent for automated proof submission
+      fetch("http://localhost:8080/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tracking_id: "",
+          wallet: wallet.publicKey.toString(),
+          callback_url: "",
+          carrier: "dhl",
+          trade_account: tradeAccount.toString(),
+          trade_id: Buffer.from(tradeId).toString("hex"),
+        }),
+      }).catch((e) => console.warn("Agent registration failed (non-fatal):", e));
+
       await loadTrades();
     } catch (e) {
       setError(e instanceof Error ? e.message : "create trade failed");

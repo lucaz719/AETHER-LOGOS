@@ -61,6 +61,21 @@ export default function SellerDashboardPage() {
           tradeAccount: order.pubkey,
         })
         .rpc();
+
+      // Register with Go agent for automated proof submission
+      fetch("http://localhost:8080/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tracking_id: tracking,
+          wallet: wallet.publicKey.toString(),
+          callback_url: "",
+          carrier: carrier.toLowerCase(),
+          trade_account: order.pubkey.toString(),
+          trade_id: Buffer.from(tradeId).toString("hex"),
+        }),
+      }).catch((e) => console.warn("Agent registration failed (non-fatal):", e));
+
       await reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "submit tracking failed");
