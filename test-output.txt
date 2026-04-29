@@ -1,0 +1,25 @@
+(node:7380) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///C:/Users/DELL/Desktop/AETHER-LOGOS/tests/prediction-market.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to C:\Users\DELL\Desktop\AETHER-LOGOS\package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+  prediction-market
+    Γ£ö 1. createMarket -> status Open (963ms)
+    Γ£ö 2. placeHedge yes (702ms)
+    Γ£ö 3. placeHedge no (849ms)
+    Γ£ö 4. resolveMarket (yes wins) (3329ms)
+    Γ£ö 5. claimWinnings yes side receives tokens (702ms)
+    Γ£ö 6. claimWinnings no side fails (205ms)
+    Γ£ö 7. double claim fails (197ms)
+
+  trade-escrow
+    Γ£ö 1. buyer creates trade -> status AwaitingShipment (704ms)
+    Γ£ö 2. seller submits tracking -> status InTransit (931ms)
+    Γ£ö 3. proof submitted -> status Verified (704ms)
+    Γ£ö 4. release funds -> status Released (910ms)
+    Γ£ö 5. invalid amount -> InvalidAmount error (200ms)
+
+
+  12 passing (17s)
+

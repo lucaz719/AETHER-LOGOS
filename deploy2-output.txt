@@ -1,0 +1,27 @@
+Deploying cluster: https://api.devnet.solana.com
+Upgrade authority: C:\Users\DELL/.config/solana/id.json
+Deploying program "prediction_market"...
+Program path: C:\Users\DELL\Desktop\AETHER-LOGOS\target\deploy\prediction_market.so...
+Program Id: Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr
+
+Signature: 2mFP7WpmjUrnhoSUyBUDTKcPkGV8nF1newpoJuXM5hwijknDebEaTLV2KQmEvEGuGCTrLyirGMrnUGu4pxfji2ba
+
+Idl data length: 2215 bytes
+Step 0/2215 
+Step 600/2215 
+Step 1200/2215 
+Step 1800/2215 
+Idl account created: CdyPbHQgfdggDJ3gJvuw4FaXQwcAeiDctJHBfd7pxRXc
+Deploying program "trade_escrow"...
+Program path: C:\Users\DELL\Desktop\AETHER-LOGOS\target\deploy\trade_escrow.so...
+Program Id: 7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc
+
+Signature: 5YPPwopQPpLYdXbi6wE2bP6AM8YW1ekKdQpM45sQZEQETHxasYHKeU5eeLqQ6A4qmnjtVp7dA2wUHGn5e9QJEy1x
+
+Idl data length: 1809 bytes
+Step 0/1809 
+Step 600/1809 
+Step 1200/1809 
+Step 1800/1809 
+Idl account created: zPFdPXyzutPbpTATfRZuwGzY2kDNyPPZXmC6V2BCGwr
+Deploy success
