@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -24,7 +24,7 @@ export default function EditListingPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Electronics");
@@ -88,7 +88,7 @@ export default function EditListingPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!marketplaceProgram || !publicKey || !id) return;
+      if (!marketProgram || !publicKey || !id) return;
       setSubmitting(true);
       setError(null);
       try {
@@ -99,10 +99,10 @@ export default function EditListingPage() {
 
         const [vendorProfilePda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), publicKey.toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
 
-        await (marketplaceProgram.methods as any)
+        await (marketProgram.methods as any)
           .updateListing(
             title, description, imagesCid, catObj, priceUsdc, minQty,
             maxQty ? parseInt(maxQty) : null,
@@ -118,7 +118,7 @@ export default function EditListingPage() {
         setSubmitting(false);
       }
     },
-    [marketplaceProgram, publicKey, id, title, description, category, priceUsd, minQty, maxQty, stock, deadlineHours, requiresSig, imagesCid, router],
+    [marketProgram, publicKey, id, title, description, category, priceUsd, minQty, maxQty, stock, deadlineHours, requiresSig, imagesCid, router],
   );
 
   if (loading) {

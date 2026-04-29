@@ -6,7 +6,6 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey } from "@solana/web3.js";
 import Link from "next/link";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -17,7 +16,7 @@ type ListingRow = {
 
 export default function VendorListingsPage() {
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [deactivating, setDeactivating] = useState<string | null>(null);
@@ -40,11 +39,11 @@ export default function VendorListingsPage() {
 
   const deactivate = useCallback(
     async (listingPubkey: string) => {
-      if (!marketplaceProgram || !publicKey) return;
+      if (!marketProgram || !publicKey) return;
       setDeactivating(listingPubkey);
       setError(null);
       try {
-        await (marketplaceProgram.methods as any)
+        await (marketProgram.methods as any)
           .deactivateListing()
           .accounts({
             authority: publicKey,
@@ -58,7 +57,7 @@ export default function VendorListingsPage() {
         setDeactivating(null);
       }
     },
-    [marketplaceProgram, publicKey, load],
+    [marketProgram, publicKey, load],
   );
 
   if (!publicKey) {

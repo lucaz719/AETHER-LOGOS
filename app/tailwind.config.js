@@ -6,19 +6,7 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {
-      colors: {
-        'glass-bg': '#0a0a0f',
-        'glass-card': '#12121a',
-        'glass-border': 'rgba(255, 255, 255, 0.15)',
-      },
-      backgroundColor: {
-        'glass': 'rgba(18, 18, 26, 0.8)',
-      },
-      backdropFilter: {
-        'glass': 'blur(8px)',
-      },
-    },
+    extend: {},
   },
   plugins: [],
 }

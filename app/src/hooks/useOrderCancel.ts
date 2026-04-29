@@ -3,18 +3,18 @@
 import { useCallback, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 
 export type CancelState = "idle" | "signing" | "confirming" | "done" | "error";
 
 export function useOrderCancel() {
-  const { marketplaceProgram, wallet } = useAnchorClient();
+  const { marketProgram, wallet } = useAnchorClient();
   const [state, setState] = useState<CancelState>("idle");
   const [error, setError] = useState<string | null>(null);
 
   const cancelOrder = useCallback(
     async (orderPubkey: string, orderId: number[], tradeAccount: string) => {
-      if (!marketplaceProgram || !wallet?.publicKey) {
+      if (!marketProgram || !wallet?.publicKey) {
         setError("Wallet not connected");
         return false;
       }
@@ -23,10 +23,10 @@ export function useOrderCancel() {
       try {
         const [orderPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("mktorder"), wallet.publicKey.toBuffer(), Buffer.from(orderId)],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
         setState("confirming");
-        await (marketplaceProgram.methods as any)
+        await (marketProgram.methods as any)
           .cancelOrder(orderId)
           .accounts({
             buyer: wallet.publicKey,
@@ -43,7 +43,7 @@ export function useOrderCancel() {
         return false;
       }
     },
-    [marketplaceProgram, wallet],
+    [marketProgram, wallet],
   );
 
   return { cancelOrder, state, error };

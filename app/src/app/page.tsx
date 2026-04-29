@@ -6,22 +6,6 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#0a0a0f] to-[#12121a]">
-      {/* Navigation Bar */}
-      <nav className="border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold bg-gradient-to-r from-purple-500 to-teal-500 bg-clip-text text-transparent">
-              AETHER-LOGOS
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="/trades" className="text-sm text-gray-300 hover:text-white transition">Trades</a>
-            <a href="/markets" className="text-sm text-gray-300 hover:text-white transition">Markets</a>
-            <WalletMultiButton />
-          </div>
-        </div>
-      </nav>
-
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 py-20 text-center">
         <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 tracking-tight">

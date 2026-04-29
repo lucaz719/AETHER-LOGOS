@@ -370,3 +370,210 @@ func parseTradeIDHex(value string) ([32]byte, error) {
 	copy(out[:], raw)
 	return out, nil
 }
+
+// Vendor API Handlers
+func VendorRegisterHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var req struct {
+		Wallet           string `json:"wallet"`
+		ShopName         string `json:"shop_name"`
+		Description      string `json:"description"`
+		VendorType       string `json:"vendor_type"`
+		Categories       string `json:"categories"`
+		EmailHash        string `json:"email_hash"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.Wallet == "" || req.ShopName == "" {
+		http.Error(w, "wallet and shop_name are required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := RegisterVendor(req.Wallet, req.ShopName, req.Description, req.VendorType, req.Categories, req.EmailHash)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			http.Error(w, "vendor already registered", http.StatusConflict)
+			return
+		}
+		log.Printf("vendor register error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":   true,
+		"vendor_id": id,
+		"wallet":    req.Wallet,
+	})
+}
+
+func VendorGetHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	const prefix = "/api/vendor/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	wallet := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+	if wallet == "" {
+		http.Error(w, "wallet is required", http.StatusBadRequest)
+		return
+	}
+
+	vendor, err := GetVendorByWallet(wallet)
+	if err != nil {
+		http.Error(w, "vendor not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(vendor)
+}
+
+// Product API Handlers
+func ProductCreateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var req struct {
+		VendorWallet string  `json:"vendor_wallet"`
+		Title        string  `json:"title"`
+		Description  string  `json:"description"`
+		PriceUsdc    float64 `json:"price_usdc"`
+		Category     string  `json:"category"`
+		ImageUrl     string  `json:"image_url"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.VendorWallet == "" || req.Title == "" || req.PriceUsdc <= 0 {
+		http.Error(w, "vendor_wallet, title, and price_usdc are required", http.StatusBadRequest)
+		return
+	}
+
+	id, err := CreateProduct(req.VendorWallet, req.Title, req.Description, req.PriceUsdc, req.Category, req.ImageUrl)
+	if err != nil {
+		log.Printf("product create error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":    true,
+		"product_id": id,
+	})
+}
+
+func ProductsListHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	category := r.URL.Query().Get("category")
+	search := r.URL.Query().Get("search")
+	vendor := r.URL.Query().Get("vendor")
+
+	var products []Product
+	var err error
+
+	if search != "" {
+		products, err = SearchProducts(search)
+	} else if category != "" {
+		products, err = GetProductsByCategory(category)
+	} else if vendor != "" {
+		products, err = GetProductsByVendor(vendor)
+	} else {
+		products, err = GetAllProducts()
+	}
+
+	if err != nil {
+		log.Printf("products list error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	if products == nil {
+		products = []Product{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"products": products,
+		"count":    len(products),
+	})
+}
+
+func ProductGetHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	const prefix = "/api/products/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	idStr := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+	if idStr == "" {
+		http.Error(w, "product id is required", http.StatusBadRequest)
+		return
+	}
+
+	var id int64
+	if _, err := fmt.Sscanf(idStr, "%d", &id); err != nil {
+		http.Error(w, "invalid product id", http.StatusBadRequest)
+		return
+	}
+
+	product, err := GetProductByID(id)
+	if err != nil {
+		http.Error(w, "product not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(product)
+}

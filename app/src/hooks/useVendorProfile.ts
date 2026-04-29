@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 
 export type VendorProfileRow = {
   pubkey: PublicKey;
@@ -22,7 +22,7 @@ export function useVendorProfile(authority?: string) {
       try {
         const [pda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), new PublicKey(authority).toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
         const info = await connection.getAccountInfo(pda);
         if (!info) { setProfile(null); return; }

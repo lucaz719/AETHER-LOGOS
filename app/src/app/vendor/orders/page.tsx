@@ -17,7 +17,7 @@ const CARRIERS = ["DHL", "FedEx", "UPS", "Maersk", "USPS"];
 
 export default function VendorOrdersPage() {
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const { orders, loading, reload } = useMarketplaceOrders("vendor", publicKey?.toBase58());
   const [trackingInputs, setTrackingInputs] = useState<Record<string, { trackingId: string; carrier: string }>>({});
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export default function VendorOrdersPage() {
 
   const handleSubmitTracking = useCallback(
     async (orderPubkey: string, tradeAccount: string, escrowTradeId: number[]) => {
-      if (!marketplaceProgram || !publicKey) return;
+      if (!marketProgram || !publicKey) return;
       const input = trackingInputs[orderPubkey] ?? { trackingId: "", carrier: "DHL" };
       if (!input.trackingId) return;
       setSubmitting(orderPubkey);
@@ -45,7 +45,7 @@ export default function VendorOrdersPage() {
         carrierObj[(input.carrier || "DHL").toLowerCase()] = {};
 
         const { getEscrowProgram } = await import("@/lib/anchor");
-        const ep = getEscrowProgram((marketplaceProgram as any).provider);
+        const ep = getEscrowProgram((marketProgram as any).provider);
         await (ep.methods as any)
           .submitTracking(escrowTradeId, input.trackingId, carrierObj)
           .accounts({ seller: publicKey, tradeAccount: tradeKey })
@@ -58,7 +58,7 @@ export default function VendorOrdersPage() {
         setSubmitting(null);
       }
     },
-    [marketplaceProgram, publicKey, trackingInputs, reload],
+    [marketProgram, publicKey, trackingInputs, reload],
   );
 
   if (!publicKey) {

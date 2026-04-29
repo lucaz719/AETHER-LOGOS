@@ -5,7 +5,7 @@ import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
 import BN from "bn.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import type { CartItem } from "@/hooks/useCart";
 
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
@@ -25,14 +25,14 @@ async function sha256Async(data: Uint8Array): Promise<ArrayBuffer> {
 export type CheckoutState = "idle" | "signing" | "confirming" | "done" | "error";
 
 export function useCheckout() {
-  const { marketplaceProgram, wallet } = useAnchorClient();
+  const { marketProgram, wallet } = useAnchorClient();
   const [state, setState] = useState<CheckoutState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txSigs, setTxSigs] = useState<string[]>([]);
 
   const checkout = useCallback(
     async (items: CartItem[]) => {
-      if (!marketplaceProgram || !wallet?.publicKey) {
+      if (!marketProgram || !wallet?.publicKey) {
         setError("Wallet not connected");
         return;
       }
@@ -55,11 +55,11 @@ export function useCheckout() {
 
           const [vendorProfilePda] = PublicKey.findProgramAddressSync(
             [Buffer.from("vendor"), vendorAuthority.toBuffer()],
-            MARKETPLACE_PROGRAM_ID,
+            MARKET_PROGRAM_ID,
           );
           const [marketplaceOrderPda] = PublicKey.findProgramAddressSync(
             [Buffer.from("mktorder"), buyerKey.toBuffer(), Buffer.from(orderIdBytes)],
-            MARKETPLACE_PROGRAM_ID,
+            MARKET_PROGRAM_ID,
           );
           const [tradeAccountPda] = PublicKey.findProgramAddressSync(
             [Buffer.from("trade"), buyerKey.toBuffer(), Buffer.from(tradeIdBytes)],
@@ -76,7 +76,7 @@ export function useCheckout() {
           const buyerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, buyerKey);
 
           setState("confirming");
-          const tx = await (marketplaceProgram.methods as any)
+          const tx = await (marketProgram.methods as any)
             .placeOrder(
               Array.from(orderIdBytes),
               Array.from(tradeIdBytes),
@@ -110,7 +110,7 @@ export function useCheckout() {
         setState("error");
       }
     },
-    [marketplaceProgram, wallet],
+    [marketProgram, wallet],
   );
 
   return { checkout, state, error, txSigs };

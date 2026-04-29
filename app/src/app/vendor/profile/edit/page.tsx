@@ -6,7 +6,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useRouter } from "next/navigation";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { Skeleton } from "@/components/Skeleton";
 
@@ -27,7 +27,7 @@ type FormState = {
 
 export default function EditVendorProfilePage() {
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const router = useRouter();
 
   const [form, setForm] = useState<FormState>({
@@ -50,16 +50,16 @@ export default function EditVendorProfilePage() {
 
   // Load existing vendor profile on mount
   useEffect(() => {
-    if (!publicKey || !marketplaceProgram) return;
+    if (!publicKey || !marketProgram) return;
 
     async function load() {
       setLoading(true);
       try {
         const [vendorProfilePda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), publicKey!.toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
-        const profile = await (marketplaceProgram!.account as any).vendorProfile.fetch(vendorProfilePda);
+        const profile = await (marketProgram!.account as any).vendorProfile.fetch(vendorProfilePda);
         const vt = profile.vendorType as Record<string, unknown>;
         const vendorType = vt ? Object.keys(vt)[0] ?? "Retailer" : "Retailer";
 
@@ -78,7 +78,7 @@ export default function EditVendorProfilePage() {
       }
     }
     void load();
-  }, [publicKey, marketplaceProgram]);
+  }, [publicKey, marketProgram]);
 
   // Image upload helper
   async function uploadImage(file: File): Promise<string> {
@@ -131,7 +131,7 @@ export default function EditVendorProfilePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!marketplaceProgram || !publicKey) return;
+    if (!marketProgram || !publicKey) return;
 
     setError(null);
     setSaving(true);
@@ -144,7 +144,7 @@ export default function EditVendorProfilePage() {
 
       const [vendorProfilePda] = PublicKey.findProgramAddressSync(
         [Buffer.from("vendor"), publicKey.toBuffer()],
-        MARKETPLACE_PROGRAM_ID,
+        MARKET_PROGRAM_ID,
       );
 
       const vtKey = form.vendorType.toLowerCase();
@@ -153,7 +153,7 @@ export default function EditVendorProfilePage() {
       const logoCidArg = form.logoCid.trim() || null;
       const bannerCidArg = form.bannerCid.trim() || null;
 
-      await (marketplaceProgram.methods as any)
+      await (marketProgram.methods as any)
         .updateVendor(
           form.shopName.trim(),
           form.shopDescription.trim(),

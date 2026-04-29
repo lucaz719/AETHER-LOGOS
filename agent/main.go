@@ -62,6 +62,15 @@ func main() {
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/api/tracking/", TrackingHandler)
 	http.HandleFunc("/marketplace/orders", MarketplaceOrdersHandler)
+	
+	// Vendor API
+	http.HandleFunc("/api/vendor/register", VendorRegisterHandler)
+	http.HandleFunc("/api/vendor/", VendorGetHandler)
+	
+	// Product API
+	http.HandleFunc("/api/vendor/products", ProductCreateHandler)
+	http.HandleFunc("/api/products", ProductsListHandler)
+	http.HandleFunc("/api/products/", ProductGetHandler)
 
 	pollIntervalSeconds := 30
 	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {
@@ -98,5 +107,20 @@ func main() {
 	}
 
 	fmt.Printf("aether-logos agent listening on :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Fatal(http.ListenAndServe(":"+port, corsMiddleware(http.DefaultServeMux)))
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		next.ServeHTTP(w, r)
+	})
 }

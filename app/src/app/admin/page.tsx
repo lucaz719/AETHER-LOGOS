@@ -5,13 +5,13 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 
 type Tab = "init" | "verify" | "review";
 
 export default function AdminPage() {
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const [tab, setTab] = useState<Tab>("init");
   const [vendorAddress, setVendorAddress] = useState("");
   const [reviewAddress, setReviewAddress] = useState("");
@@ -40,15 +40,15 @@ export default function AdminPage() {
   }
 
   async function handleInitConfig() {
-    if (!marketplaceProgram || !publicKey) return;
+    if (!marketProgram || !publicKey) return;
     setBusy(true);
     setStatus(null);
     try {
       const [configPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("config")],
-        MARKETPLACE_PROGRAM_ID,
+        MARKET_PROGRAM_ID,
       );
-      const tx = await (marketplaceProgram.methods as any)
+      const tx = await (marketProgram.methods as any)
         .initConfig()
         .accounts({
           admin: publicKey,
@@ -66,20 +66,20 @@ export default function AdminPage() {
 
   async function handleVerifyVendor(overrideAddress?: string) {
     const addressToVerify = overrideAddress || vendorAddress;
-    if (!marketplaceProgram || !publicKey || !addressToVerify.trim()) return;
+    if (!marketProgram || !publicKey || !addressToVerify.trim()) return;
     setBusy(true);
     setStatus(null);
     try {
       const vendorAuth = new PublicKey(addressToVerify.trim());
       const [configPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("config")],
-        MARKETPLACE_PROGRAM_ID,
+        MARKET_PROGRAM_ID,
       );
       const [vendorProfilePda] = PublicKey.findProgramAddressSync(
         [Buffer.from("vendor"), vendorAuth.toBuffer()],
-        MARKETPLACE_PROGRAM_ID,
+        MARKET_PROGRAM_ID,
       );
-      const tx = await (marketplaceProgram.methods as any)
+      const tx = await (marketProgram.methods as any)
         .verifyVendor()
         .accounts({
           admin: publicKey,
@@ -97,16 +97,16 @@ export default function AdminPage() {
   }
 
   async function handleCloseReview() {
-    if (!marketplaceProgram || !publicKey || !reviewAddress.trim()) return;
+    if (!marketProgram || !publicKey || !reviewAddress.trim()) return;
     setBusy(true);
     setStatus(null);
     try {
       const reviewKey = new PublicKey(reviewAddress.trim());
       const [configPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("config")],
-        MARKETPLACE_PROGRAM_ID,
+        MARKET_PROGRAM_ID,
       );
-      const tx = await (marketplaceProgram.methods as any)
+      const tx = await (marketProgram.methods as any)
         .closeReview()
         .accounts({
           admin: publicKey,

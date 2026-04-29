@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 
 export function ReviewForm({
   vendorAuthority,
@@ -14,7 +14,7 @@ export function ReviewForm({
   tradeAccountPubkey: string;
   onSuccess?: () => void;
 }) {
-  const { marketplaceProgram, wallet } = useAnchorClient();
+  const { marketProgram, wallet } = useAnchorClient();
   const [rating, setRating] = useState(5);
   const [commentCid, setCommentCid] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +25,7 @@ export function ReviewForm({
   const submit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!marketplaceProgram || !wallet?.publicKey) {
+      if (!marketProgram || !wallet?.publicKey) {
         setError("Wallet not connected");
         return;
       }
@@ -38,14 +38,14 @@ export function ReviewForm({
 
         const [vendorProfilePda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), vendorAuthKey.toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
         const [reviewPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("review"), tradeKey.toBuffer(), reviewerKey.toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
 
-        await (marketplaceProgram.methods as any)
+        await (marketProgram.methods as any)
           .submitReview(rating, commentCid.trim() || null)
           .accounts({
             reviewer: reviewerKey,
@@ -64,7 +64,7 @@ export function ReviewForm({
         setSubmitting(false);
       }
     },
-    [marketplaceProgram, wallet, vendorAuthority, tradeAccountPubkey, rating, commentCid, onSuccess],
+    [marketProgram, wallet, vendorAuthority, tradeAccountPubkey, rating, commentCid, onSuccess],
   );
 
   if (done) {

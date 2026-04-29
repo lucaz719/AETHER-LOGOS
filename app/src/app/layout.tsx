@@ -23,7 +23,7 @@ export default function RootLayout({
           <CartProvider>
             <ToastProvider>
               <NavBar />
-              <div style={{ minHeight: "calc(100vh - 60px)" }}>
+              <div style={{ minHeight: "calc(100vh - 64px)", paddingTop: 64 }}>
                 {children}
               </div>
             </ToastProvider>

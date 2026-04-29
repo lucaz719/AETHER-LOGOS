@@ -31,6 +31,29 @@ type ShipmentMilestone struct {
 	Timestamp   int64  `json:"timestamp"`
 }
 
+type Vendor struct {
+	ID           int64  `json:"id"`
+	Wallet       string `json:"wallet"`
+	ShopName     string `json:"shop_name"`
+	Description  string `json:"description"`
+	VendorType   string `json:"vendor_type"`
+	Categories   string `json:"categories"`
+	EmailHash    string `json:"email_hash"`
+	CreatedAt    string `json:"created_at"`
+}
+
+type Product struct {
+	ID            int64   `json:"id"`
+	VendorWallet  string  `json:"vendor_wallet"`
+	Title         string  `json:"title"`
+	Description   string  `json:"description"`
+	PriceUsdc     float64 `json:"price_usdc"`
+	Category      string  `json:"category"`
+	ImageUrl      string  `json:"image_url"`
+	InStock       bool    `json:"in_stock"`
+	CreatedAt     string  `json:"created_at"`
+}
+
 func InitDB(path string) error {
 	var err error
 	db, err = sql.Open("sqlite3", path)
@@ -63,6 +86,29 @@ func InitDB(path string) error {
 		timestamp INTEGER NOT NULL,
 		created_at INTEGER NOT NULL,
 		UNIQUE(shipment_id, status, description, location, timestamp)
+	);
+
+	CREATE TABLE IF NOT EXISTS vendors (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		wallet TEXT NOT NULL UNIQUE,
+		shop_name TEXT NOT NULL,
+		description TEXT,
+		vendor_type TEXT,
+		categories TEXT,
+		email_hash TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS products (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		vendor_wallet TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT,
+		price_usdc REAL NOT NULL,
+		category TEXT,
+		image_url TEXT,
+		in_stock BOOLEAN DEFAULT true,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	if _, err = db.Exec(schema); err != nil {
@@ -225,4 +271,134 @@ func GetMilestonesByShipmentID(shipmentID int64) ([]ShipmentMilestone, error) {
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+// Vendor database functions
+func RegisterVendor(wallet, shopName, description, vendorType, categories, emailHash string) (int64, error) {
+	result, err := db.Exec(
+		`INSERT INTO vendors (wallet, shop_name, description, vendor_type, categories, email_hash) VALUES (?, ?, ?, ?, ?, ?)`,
+		wallet, shopName, description, vendorType, categories, emailHash,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func GetVendorByWallet(wallet string) (*Vendor, error) {
+	var v Vendor
+	err := db.QueryRow(
+		`SELECT id, wallet, shop_name, description, vendor_type, categories, email_hash, created_at FROM vendors WHERE wallet = ?`,
+		wallet,
+	).Scan(&v.ID, &v.Wallet, &v.ShopName, &v.Description, &v.VendorType, &v.Categories, &v.EmailHash, &v.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &v, nil
+}
+
+// Product database functions
+func CreateProduct(vendorWallet, title, description string, priceUsdc float64, category, imageUrl string) (int64, error) {
+	result, err := db.Exec(
+		`INSERT INTO products (vendor_wallet, title, description, price_usdc, category, image_url, in_stock) VALUES (?, ?, ?, ?, ?, ?, true)`,
+		vendorWallet, title, description, priceUsdc, category, imageUrl,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+func GetProductByID(id int64) (*Product, error) {
+	var p Product
+	err := db.QueryRow(
+		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE id = ?`,
+		id,
+	).Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
+func GetAllProducts() ([]Product, error) {
+	rows, err := db.Query(`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE in_stock = true ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
+func GetProductsByVendor(vendorWallet string) ([]Product, error) {
+	rows, err := db.Query(
+		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE vendor_wallet = ? ORDER BY created_at DESC`,
+		vendorWallet,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
+func GetProductsByCategory(category string) ([]Product, error) {
+	rows, err := db.Query(
+		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE category = ? AND in_stock = true ORDER BY created_at DESC`,
+		category,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}
+
+func SearchProducts(searchTerm string) ([]Product, error) {
+	query := "%" + searchTerm + "%"
+	rows, err := db.Query(
+		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE (title LIKE ? OR description LIKE ?) AND in_stock = true ORDER BY created_at DESC`,
+		query, query,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
 }

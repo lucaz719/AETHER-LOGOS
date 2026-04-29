@@ -4,9 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { useCart } from "@/hooks/useCart";
-import { CartDrawer } from "@/components/CartDrawer";
-import { SearchBar } from "@/components/SearchBar";
 
 const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
@@ -19,81 +16,87 @@ const NAV_LINKS = [
 
 export function NavBar() {
   const pathname = usePathname();
-  const { items } = useCart();
-  const [cartOpen, setCartOpen] = useState(false);
-  const [theme, setTheme] = useState("dark");
+  const [mounted, setMounted] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme") || "dark";
-    setTheme(saved);
-    document.documentElement.setAttribute("data-theme", saved);
+    const saved = localStorage.getItem("theme");
+    setIsDark(saved !== "light");
+    setMounted(true);
   }, []);
 
-  const toggleTheme = () => {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    localStorage.setItem("theme", nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
-  };
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.style.backgroundColor = "#0a0a0f";
+      document.documentElement.style.color = "#ffffff";
+      document.body.style.backgroundColor = "#0a0a0f";
+    } else {
+      document.documentElement.style.backgroundColor = "#ffffff";
+      document.documentElement.style.color = "#000000";
+      document.body.style.backgroundColor = "#ffffff";
+    }
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   return (
     <>
       <header
         style={{
-          position: "sticky",
+          position: "fixed",
           top: 0,
-          zIndex: 30,
-          borderBottom: "1px solid var(--border)",
-          background: "rgba(10, 15, 26, 0.85)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          height: 60,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          borderBottom: "1px solid rgba(99, 102, 241, 0.3)",
+          background: "#0d0d14",
+          height: 64,
         }}
       >
         <nav
           style={{
-            maxWidth: 1200,
+            maxWidth: 1280,
             margin: "0 auto",
-            padding: "0 1.25rem",
+            padding: "0 1.5rem",
             height: "100%",
-            display: "flex",
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
             alignItems: "center",
-            gap: "1.5rem",
+            gap: "1rem",
           }}
         >
-          {/* Logo */}
           <Link
             href="/"
             style={{
-              fontWeight: 800,
-              fontSize: "1rem",
-              letterSpacing: "0.06em",
+              fontWeight: 700,
+              fontSize: "0.95rem",
+              letterSpacing: "0.08em",
               color: "var(--cyan)",
-              textShadow: "0 0 12px rgba(0,212,255,0.45)",
               textDecoration: "none",
+              justifySelf: "start",
               flexShrink: 0,
             }}
           >
-            ⬡ AETHER-LOGOS
+            ◯ AETHER-LOGOS
           </Link>
 
-          {/* Nav links */}
-          <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
+          <div style={{ display: "flex", gap: "0.4rem", justifySelf: "center", alignItems: "center" }}>
             {NAV_LINKS.map((link) => {
               const active = pathname === link.href || pathname.startsWith(link.href + "/");
               return (
                 <Link
                   key={link.href}
                   href={link.href}
+                  className={active ? "text-white" : "text-gray-300 hover:text-purple-400"}
                   style={{
-                    padding: "0.35rem 0.75rem",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "0.85rem",
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "var(--cyan)" : "var(--text-secondary)",
+                    padding: "0.4rem 0.7rem",
+                    borderRadius: 6,
+                    fontSize: "0.84rem",
+                    fontWeight: active ? 600 : 500,
                     textDecoration: "none",
-                    borderBottom: active ? "2px solid var(--cyan)" : "2px solid transparent",
-                    transition: "color var(--transition), border-color var(--transition)",
+                    border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
+                    background: active ? "rgba(255,255,255,0.04)" : "transparent",
+                    transition: "all var(--transition)",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {link.label}
@@ -102,83 +105,31 @@ export function NavBar() {
             })}
           </div>
 
-          {/* SearchBar */}
-          <div style={{ flex: 1, maxWidth: 350, display: "none", '@media (min-width: 768px)': { display: 'block' } } as any}>
-            <SearchBar />
-          </div>
-
-          {/* Right: Theme Toggle + Cart + Wallet */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", justifySelf: "end" }}>
+            {mounted && <WalletMultiButton />}
             <button
               aria-label="Toggle theme"
-              onClick={toggleTheme}
+              onClick={() => setIsDark((prev) => !prev)}
               style={{
                 background: "transparent",
                 border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)",
-                width: 38,
-                height: 38,
+                borderRadius: 6,
+                width: 34,
+                height: 34,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
                 color: "var(--text-secondary)",
-                fontSize: "1.1rem",
+                fontSize: "0.95rem",
                 transition: "border-color var(--transition)",
               }}
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
+              {isDark ? "☀" : "☾"}
             </button>
-            <button
-              aria-label={`Shopping cart, ${items.length} items`}
-              onClick={() => setCartOpen(true)}
-              style={{
-                position: "relative",
-                background: "transparent",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)",
-                width: 38,
-                height: 38,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "var(--text-secondary)",
-                fontSize: "1rem",
-                transition: "border-color var(--transition)",
-              }}
-            >
-              🛒
-              {items.length > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -6,
-                    background: "var(--cyan)",
-                    color: "var(--text-inverse)",
-                    borderRadius: "var(--radius-pill)",
-                    fontSize: "0.65rem",
-                    fontWeight: 700,
-                    minWidth: 18,
-                    height: 18,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                  }}
-                >
-                  {items.length}
-                </span>
-              )}
-            </button>
-
-            <WalletMultiButton />
           </div>
         </nav>
       </header>
-
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
     </>
   );
 }

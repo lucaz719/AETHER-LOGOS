@@ -5,7 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKETPLACE_PROGRAM_ID } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import Link from "next/link";
 
@@ -28,7 +28,7 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
 
 export default function NewListingPage() {
   const { publicKey } = useWallet();
-  const { marketplaceProgram } = useAnchorClient();
+  const { marketProgram } = useAnchorClient();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("Electronics");
@@ -72,7 +72,7 @@ export default function NewListingPage() {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      if (!marketplaceProgram || !publicKey) return;
+      if (!marketProgram || !publicKey) return;
       setSubmitting(true);
       setError(null);
       try {
@@ -84,14 +84,14 @@ export default function NewListingPage() {
 
         const [vendorProfilePda] = PublicKey.findProgramAddressSync(
           [Buffer.from("vendor"), publicKey.toBuffer()],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
         const [listingPda] = PublicKey.findProgramAddressSync(
           [Buffer.from("listing"), publicKey.toBuffer(), Buffer.from(listingId)],
-          MARKETPLACE_PROGRAM_ID,
+          MARKET_PROGRAM_ID,
         );
 
-        await (marketplaceProgram.methods as any)
+        await (marketProgram.methods as any)
           .createListing(
             listingId,
             title,
@@ -119,7 +119,7 @@ export default function NewListingPage() {
         setSubmitting(false);
       }
     },
-    [marketplaceProgram, publicKey, title, description, category, priceUsd, minQty, maxQty, stock, deadlineHours, requiresSig, imagesCid],
+    [marketProgram, publicKey, title, description, category, priceUsd, minQty, maxQty, stock, deadlineHours, requiresSig, imagesCid],
   );
 
   if (!publicKey) {
