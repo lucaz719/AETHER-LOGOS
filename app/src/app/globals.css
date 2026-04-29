@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* ============================================================
    AETHER-LOGOS — Dark "Lucid Techy" Design System
    ============================================================ */
