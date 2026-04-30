@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from "next/dynamic";
+
+const WalletMultiButton = dynamic(
+  () => import("@solana/wallet-adapter-react-ui").then((m) => ({ default: m.WalletMultiButton })),
+  { ssr: false, loading: () => <div style={{ width: 130, height: 38 }} /> }
+);
 
 const NAV_LINKS = [
   { href: "/marketplace", label: "Marketplace" },
@@ -11,7 +16,6 @@ const NAV_LINKS = [
   { href: "/dashboard/buyer", label: "Buyer" },
   { href: "/dashboard/seller", label: "Seller" },
   { href: "/trades", label: "Trades" },
-  { href: "/markets", label: "Markets" },
 ];
 
 export function NavBar() {
@@ -26,15 +30,9 @@ export function NavBar() {
   }, []);
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.style.backgroundColor = "#0a0a0f";
-      document.documentElement.style.color = "#ffffff";
-      document.body.style.backgroundColor = "#0a0a0f";
-    } else {
-      document.documentElement.style.backgroundColor = "#ffffff";
-      document.documentElement.style.color = "#000000";
-      document.body.style.backgroundColor = "#ffffff";
-    }
+    // Use class toggling so CSS variable theme system works correctly (L-1 fix)
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.removeAttribute('style');
     localStorage.setItem("theme", isDark ? "dark" : "light");
   }, [isDark]);
 

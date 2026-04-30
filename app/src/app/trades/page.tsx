@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { BN } from "@coral-xyz/anchor";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
@@ -32,6 +32,8 @@ function optionalString(value: unknown): string | null {
   return null;
 }
 
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? 'http://localhost:8080';
+
 export default function TradesPage() {
   const { escrowProgram, wallet, connection, provider } = useAnchorClient();
   const [amount, setAmount] = useState("1");
@@ -44,21 +46,23 @@ export default function TradesPage() {
   const [trades, setTrades] = useState<TradeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const loadTrades = useMemo(
-    () => async () => {
+  const loadTrades = useCallback(
+    async () => {
       if (!escrowProgram || !wallet?.publicKey) return;
-      const rows = (await (escrowProgram.account as any).tradeAccount.all()) as TradeRow[];
-      const own = rows.filter(
-        (r) => (r.account.buyer as PublicKey).toBase58() === wallet.publicKey.toBase58(),
-      );
-      setTrades(own);
+      const buyerBytes = wallet.publicKey.toBase58();
+      const rows = (await (escrowProgram.account as any).tradeAccount.all([
+        { memcmp: { offset: 40, bytes: buyerBytes } },
+      ])) as TradeRow[];
+      setTrades(rows);
     },
     [escrowProgram, wallet?.publicKey],
   );
 
   useEffect(() => {
     void loadTrades();
-    const id = setInterval(() => void loadTrades(), 10_000);
+    const id = setInterval(() => {
+      if (!document.hidden) void loadTrades();
+    }, 10_000);
     return () => clearInterval(id);
   }, [loadTrades]);
 
@@ -118,7 +122,7 @@ export default function TradesPage() {
         .rpc();
 
       // Register with Go agent for automated proof submission
-      fetch("http://localhost:8080/register", {
+      fetch(`${AGENT_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

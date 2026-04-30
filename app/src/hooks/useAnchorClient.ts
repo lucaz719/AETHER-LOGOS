@@ -2,14 +2,13 @@
 
 import { useMemo } from "react";
 import { AnchorProvider } from "@coral-xyz/anchor";
-import { Connection } from "@solana/web3.js";
-import { useAnchorWallet } from "@solana/wallet-adapter-react";
+import { useConnection, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { getEscrowProgram, getMarketProgram } from "@/lib/anchor";
 
 export function useAnchorClient() {
   const wallet = useAnchorWallet();
-  const endpoint = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
-  const connection = useMemo(() => new Connection(endpoint, "confirmed"), [endpoint]);
+  // Re-use the single Connection from the wallet adapter provider (M-6 fix)
+  const { connection } = useConnection();
   const provider = useMemo(
     () => (wallet ? new AnchorProvider(connection, wallet, AnchorProvider.defaultOptions()) : null),
     [connection, wallet],

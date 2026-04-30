@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
 import { Skeleton } from "@/components/Skeleton";
@@ -90,11 +91,15 @@ export default function ListingPage() {
         {/* Left: Image */}
         <div>
           {imagesCid ? (
-            <img
-              src={`${ipfsGateway}/${imagesCid}`}
-              alt={String(account.title ?? "")}
-              style={{ width: "100%", borderRadius: "var(--radius-lg)", objectFit: "cover", maxHeight: 440 }}
-            />
+            <div style={{ position: "relative", width: "100%", height: 440, borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+              <Image
+                src={`${ipfsGateway}/${imagesCid}`}
+                alt={String(account.title ?? "")}
+                fill
+                priority
+                style={{ objectFit: "cover" }}
+              />
+            </div>
           ) : (
             <div
               className="glass"

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export type CartItem = {
   listingPubkey: string;
@@ -85,7 +85,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = useCallback(() => persist([]), [persist]);
 
-  const totalUsdc = items.reduce((acc, i) => acc + i.priceUsdc * i.quantity, 0);
+  const totalUsdc = useMemo(
+    () => items.reduce((acc, i) => acc + i.priceUsdc * i.quantity, 0),
+    [items],
+  );
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, totalUsdc }}>

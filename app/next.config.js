@@ -20,5 +20,13 @@ const nextConfig = {
       }
     ],
   },
+  experimental: {
+    optimizePackageImports: [
+      '@solana/wallet-adapter-react-ui',
+      '@solana/wallet-adapter-wallets',
+      '@solana/spl-token',
+      '@coral-xyz/anchor',
+    ],
+  },
 };
 module.exports = nextConfig;

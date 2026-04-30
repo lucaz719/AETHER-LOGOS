@@ -28,6 +28,8 @@ function optionalString(value: unknown): string | undefined {
   return undefined;
 }
 
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? 'http://localhost:8080';
+
 export default function SellerDashboardPage() {
   const { escrowProgram, wallet } = useAnchorClient();
   const { orders, reload } = useSellerOrders();
@@ -63,7 +65,7 @@ export default function SellerDashboardPage() {
         .rpc();
 
       // Register with Go agent for automated proof submission
-      fetch("http://localhost:8080/register", {
+      fetch(`${AGENT_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

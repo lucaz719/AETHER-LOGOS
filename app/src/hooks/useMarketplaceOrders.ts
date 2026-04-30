@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 
 export type MarketplaceOrderRow = {
   pubkey: string;
@@ -11,8 +11,8 @@ export function useMarketplaceOrders(role: "buyer" | "vendor", pubkey?: string) 
   const [orders, setOrders] = useState<MarketplaceOrderRow[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const load = useMemo(
-    () => async () => {
+  const load = useCallback(
+    async () => {
       if (!pubkey) return;
       setLoading(true);
       try {
@@ -29,7 +29,9 @@ export function useMarketplaceOrders(role: "buyer" | "vendor", pubkey?: string) 
 
   useEffect(() => {
     void load();
-    const id = setInterval(() => void load(), 15_000);
+    const id = setInterval(() => {
+      if (!document.hidden) void load();
+    }, 15_000);
     return () => clearInterval(id);
   }, [load]);
 

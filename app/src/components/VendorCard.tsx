@@ -98,25 +98,13 @@ export function VendorCard({
   return (
     <Link href={`/marketplace/vendor/${authority}`} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div
-        className="glass"
+        className="glass vendor-card"
         style={{
           padding: '1rem',
           display: 'grid',
           gap: '0.5rem',
           cursor: 'pointer',
           transition: 'box-shadow var(--transition), border-color var(--transition), transform var(--transition)',
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = 'translateY(-2px)';
-          el.style.boxShadow = 'var(--shadow-card)';
-          el.style.borderColor = 'var(--border-accent)';
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = 'translateY(0)';
-          el.style.boxShadow = '';
-          el.style.borderColor = '';
         }}
       >
         {/* Top row: avatar + name + badges */}

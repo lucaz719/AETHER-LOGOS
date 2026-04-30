@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 export default function Home() {
   return (
@@ -44,6 +41,12 @@ export default function Home() {
             className="px-8 py-4 border border-purple-500/50 hover:border-purple-500 text-white font-semibold rounded-lg transition hover:bg-purple-500/10"
           >
             I&apos;m a Seller
+          </Link>
+          <Link
+            href="/markets"
+            className="px-8 py-4 bg-gradient-to-r from-amber-600/80 to-orange-600/80 hover:from-amber-500 hover:to-orange-500 text-white font-semibold rounded-lg transition shadow-lg hover:shadow-amber-500/40 shadow-amber-500/10 border border-amber-500/30"
+          >
+            ⚡ Hedge Markets →
           </Link>
         </div>
       </section>

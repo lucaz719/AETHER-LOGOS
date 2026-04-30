@@ -1,323 +1,399 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PublicKey } from '@solana/web3.js';
-import { useAnchorClient } from '@/hooks/useAnchorClient';
-import BN from 'bn.js';
+import { useSearchParams } from 'next/navigation';
+import { ProductCard } from '@/components/ProductCard';
+import { VendorCard } from '@/components/VendorCard';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+type ListingRecord = { pubkey: string; account: Record<string, unknown> };
+type VendorRecord  = { pubkey: string; account: Record<string, unknown> };
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function pkStr(v: unknown): string {
+  if (typeof v === 'string') return v;
+  if (v && typeof v === 'object' && 'toBase58' in (v as Record<string, unknown>)) {
+    return (v as { toBase58(): string }).toBase58();
+  }
+  return String(v ?? '');
+}
+
+function capitalize(s: string) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function catKeyStr(cat: unknown): string {
+  if (!cat || typeof cat !== 'object') return 'Other';
+  const key = Object.keys(cat as Record<string, unknown>)[0] ?? 'other';
+  return capitalize(key);
+}
+
+function vtKeyStr(vt: unknown): string {
+  if (!vt || typeof vt !== 'object') return 'Other';
+  const key = Object.keys(vt as Record<string, unknown>)[0] ?? 'other';
+  return capitalize(key);
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  'Electronics', 'Apparel', 'HomeGoods', 'Machinery', 'FoodBeverage',
-  'Chemicals', 'Automotive', 'Healthcare', 'Construction', 'Other'
+  { value: '',             label: 'All Categories', icon: '🌐' },
+  { value: 'electronics',  label: 'Electronics',    icon: '⚡' },
+  { value: 'apparel',      label: 'Apparel',         icon: '👗' },
+  { value: 'homeGoods',    label: 'Home Goods',      icon: '🏠' },
+  { value: 'machinery',    label: 'Machinery',       icon: '⚙️' },
+  { value: 'foodBeverage', label: 'Food & Beverage', icon: '🍎' },
+  { value: 'chemicals',    label: 'Chemicals',       icon: '🧪' },
+  { value: 'automotive',   label: 'Automotive',      icon: '🚗' },
+  { value: 'healthcare',   label: 'Healthcare',      icon: '💊' },
+  { value: 'construction', label: 'Construction',    icon: '🏗️' },
+  { value: 'other',        label: 'Other',           icon: '📦' },
 ];
 
-const ESCROW_PROGRAM_ID = new PublicKey("7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc");
-const DEVNET_USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+const PAGE_SIZE = 20;
 
-interface Product {
-  id: number;
-  vendor_wallet: string;
-  title: string;
-  description: string;
-  price_usdc: number;
-  category: string;
-  image_url: string;
-  in_stock: boolean;
-  created_at: string;
-}
-
-interface Vendor {
-  id: number;
-  wallet: string;
-  shop_name: string;
-  description: string;
-  vendor_type: string;
-}
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MarketplaceBrowseClient() {
-  const { publicKey } = useWallet();
-  const { escrowProgram, connection } = useAnchorClient();
-  
-  const [products, setProducts] = useState<Product[]>([]);
-  const [vendors, setVendors] = useState<Map<string, Vendor>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [buying, setBuying] = useState<number | null>(null);
+  const searchParams = useSearchParams();
 
-  // Load products on mount or filter change
+  const [listings,       setListings]       = useState<ListingRecord[]>([]);
+  const [vendorMap,      setVendorMap]      = useState<Map<string, VendorRecord>>(new Map());
+  const [featuredVendors,setFeaturedVendors]= useState<VendorRecord[]>([]);
+  const [total,          setTotal]          = useState(0);
+  const [loading,        setLoading]        = useState(true);
+
+  // local filter state
+  const [category, setCategory] = useState('');
+  const [sort,     setSort]     = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [page,     setPage]     = useState(1);
+
+  // Load featured vendors once on mount
   useEffect(() => {
-    async function loadProducts() {
+    fetch('/api/marketplace/vendors?page=1')
+      .then((r) => (r.ok ? r.json() : { vendors: [] }))
+      .then((d) => setFeaturedVendors((d.vendors ?? []).slice(0, 4)))
+      .catch(() => {});
+  }, []);
+
+  // Re-fetch listings whenever filters change
+  useEffect(() => {
+    const q = searchParams.get('q') ?? '';
+    const timer = setTimeout(async () => {
       setLoading(true);
-      setError(null);
       try {
-        let url = 'http://localhost:8080/api/products';
-        if (selectedCategory) {
-          url += `?category=${encodeURIComponent(selectedCategory)}`;
-        }
+        const params = new URLSearchParams();
+        if (category) params.set('category', category);
+        if (sort)     params.set('sort', sort);
+        if (minPrice) params.set('minPrice', minPrice);
+        if (maxPrice) params.set('maxPrice', maxPrice);
+        if (q)        params.set('search', q);
+        params.set('page', String(page));
 
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Failed to load products');
+        const res = await fetch(`/api/marketplace/listings?${params}`);
+        if (!res.ok) throw new Error('fetch failed');
+        const data = await res.json();
+        const items: ListingRecord[] = data.listings ?? [];
+        setListings(items);
+        setTotal(data.total ?? 0);
 
-        const data = await response.json();
-        const prods = data.products || [];
-        setProducts(prods);
-
-        // Load vendor info for each product
-        const vendorMap = new Map<string, Vendor>();
-        for (const prod of prods) {
-          if (!vendorMap.has(prod.vendor_wallet)) {
-            try {
-              const vendorRes = await fetch(`http://localhost:8080/api/vendor/${prod.vendor_wallet}`);
-              if (vendorRes.ok) {
-                const vendor = await vendorRes.json();
-                vendorMap.set(prod.vendor_wallet, vendor);
-              }
-            } catch { /* vendor not found */ }
+        // Enrich with vendor profiles (single parallel batch)
+        const addrs = Array.from(new Set(items.map((l) => pkStr(l.account.vendor))));
+        const vendorRes = await fetch(`/api/marketplace/vendors?page=1`);
+        if (vendorRes.ok) {
+          const vendorData = await vendorRes.json();
+          const map = new Map<string, VendorRecord>();
+          for (const v of (vendorData.vendors ?? []) as VendorRecord[]) {
+            map.set(pkStr(v.account.authority), v);
           }
+          setVendorMap(map);
         }
-        setVendors(vendorMap);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        void addrs; // consumed above via the map
+      } catch {
+        setListings([]);
+        setTotal(0);
       } finally {
         setLoading(false);
       }
-    }
-
-    const timer = setTimeout(loadProducts, 300);
+    }, 250);
     return () => clearTimeout(timer);
-  }, [selectedCategory]);
+  }, [category, sort, minPrice, maxPrice, page, searchParams]);
 
-  const handleBuyNow = useCallback(
-    async (product: Product) => {
-      if (!publicKey) {
-        setStatus({ tone: 'error', text: 'Please connect your wallet first.' });
-        return;
-      }
+  const handleCategory = useCallback((cat: string) => {
+    setCategory(cat);
+    setPage(1);
+  }, []);
 
-      if (!escrowProgram || !connection) {
-        setStatus({ tone: 'error', text: 'Escrow program is not loaded.' });
-        return;
-      }
-
-      setBuying(product.id);
-      setStatus(null);
-      try {
-        // 1. Generate random trade ID
-        const tradeId = crypto.getRandomValues(new Uint8Array(32));
-
-        // 2. Derive PDAs
-        const [tradeAccount] = PublicKey.findProgramAddressSync(
-          [Buffer.from('trade'), publicKey.toBuffer(), tradeId],
-          ESCROW_PROGRAM_ID
-        );
-
-        const [escrowVault] = PublicKey.findProgramAddressSync(
-          [Buffer.from('vault'), tradeId],
-          ESCROW_PROGRAM_ID
-        );
-
-        const [vaultAuthority] = PublicKey.findProgramAddressSync(
-          [Buffer.from('authority')],
-          ESCROW_PROGRAM_ID
-        );
-
-        // 3. Get buyer token account
-        const { getAssociatedTokenAddress } = await import('@solana/spl-token');
-        const buyerAta = await getAssociatedTokenAddress(DEVNET_USDC_MINT, publicKey);
-
-        // 4. Get seller info
-        const seller = new PublicKey(product.vendor_wallet);
-
-        // 5. Set milestone hash to zeros
-        const milestoneHash = new Uint8Array(32);
-
-        // 6. Call create_trade
-        const tx = await (escrowProgram.methods as any)
-          .createTrade(
-            Array.from(tradeId),
-            new BN(product.price_usdc * 1_000_000),
-            Array.from(milestoneHash),
-            false,
-            null
-          )
-          .accounts({
-            buyer: publicKey,
-            seller: seller,
-            tradeAccount: tradeAccount,
-            escrowVault: escrowVault,
-            vaultAuthority: vaultAuthority,
-            usdcMint: DEVNET_USDC_MINT,
-            buyerTokenAccount: buyerAta,
-            systemProgram: new PublicKey('11111111111111111111111111111111'),
-            tokenProgram: new PublicKey('TokenkegQfeZyiNwAJsyFbPUwJ7SNLhSpcQ9xQmrKjT'),
-            rent: new PublicKey('SysvarRent111111111111111111111111111111111'),
-          })
-          .rpc();
-
-        setStatus({ tone: 'success', text: `Order created. Transaction: ${tx.slice(0, 8)}...` });
-
-        // 7. Register with agent
-        try {
-          const registerRes = await fetch('http://localhost:8080/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tracking_id: '',
-              wallet: publicKey.toString(),
-              callback_url: '',
-              carrier: '',
-              trade_account: tradeAccount.toString(),
-              trade_id: Buffer.from(tradeId).toString('hex'),
-            }),
-          });
-
-          if (!registerRes.ok) {
-            console.warn('Failed to register trade with agent');
-          }
-        } catch (err) {
-          console.warn('Agent registration error:', err);
-        }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : 'Unknown error';
-        setStatus({ tone: 'error', text: `Order failed: ${errMsg}` });
-      } finally {
-        setBuying(null);
-      }
-    },
-    [publicKey, escrowProgram, connection]
-  );
-
-  if (loading) {
-    return <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>Loading products...</div>;
-  }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ color: 'var(--text-primary)', marginBottom: '1rem' }}>Browse Products</h2>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-          <button
-            onClick={() => setSelectedCategory('')}
-            style={{
-              padding: '0.4rem 0.8rem',
-              borderRadius: 'var(--radius-pill)',
-              border: !selectedCategory ? '1px solid var(--cyan)' : '1px solid var(--border)',
-              background: !selectedCategory ? 'var(--cyan-dim)' : 'transparent',
-              color: !selectedCategory ? 'var(--cyan)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-            }}
-          >
-            All
-          </button>
-          {CATEGORIES.map((cat) => (
+    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+
+      {/* ── Left Sidebar ─────────────────────────────────────────────── */}
+      <aside
+        className="glass"
+        style={{
+          width: 200,
+          flexShrink: 0,
+          padding: '1rem',
+          display: 'grid',
+          gap: '0.25rem',
+          position: 'sticky',
+          top: 80,
+        }}
+      >
+        <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.5rem' }}>
+          Categories
+        </p>
+        {CATEGORIES.map((cat) => {
+          const active = category === cat.value;
+          return (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              key={cat.value}
+              onClick={() => handleCategory(cat.value)}
               style={{
-                padding: '0.4rem 0.8rem',
-                borderRadius: 'var(--radius-pill)',
-                border: selectedCategory === cat ? '1px solid var(--cyan)' : '1px solid var(--border)',
-                background: selectedCategory === cat ? 'var(--cyan-dim)' : 'transparent',
-                color: selectedCategory === cat ? 'var(--cyan)' : 'var(--text-secondary)',
+                textAlign: 'left',
+                padding: '0.45rem 0.65rem',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                background: active ? 'var(--cyan-dim)' : 'transparent',
+                color: active ? 'var(--cyan)' : 'var(--text-secondary)',
+                fontWeight: active ? 700 : 400,
+                fontSize: '0.83rem',
                 cursor: 'pointer',
-                fontSize: '0.85rem',
+                transition: 'background var(--transition), color var(--transition)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
               }}
             >
-              {cat}
+              <span>{cat.icon}</span>
+              {cat.label}
             </button>
-          ))}
-        </div>
-      </div>
+          );
+        })}
 
-      {error && (
-        <div style={{ color: 'var(--red)', padding: '1rem', background: 'rgba(244,63,94,0.1)', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
-          Error: {error}
+        {/* Price filter */}
+        <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '0.75rem', paddingTop: '0.75rem', display: 'grid', gap: '0.5rem' }}>
+          <p style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            Price (USDC)
+          </p>
+          <input
+            className="input"
+            type="number"
+            min={0}
+            placeholder="Min"
+            value={minPrice}
+            onChange={(e) => { setMinPrice(e.target.value); setPage(1); }}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+          />
+          <input
+            className="input"
+            type="number"
+            min={0}
+            placeholder="Max"
+            value={maxPrice}
+            onChange={(e) => { setMaxPrice(e.target.value); setPage(1); }}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.6rem' }}
+          />
         </div>
-      )}
-      {status && (
+      </aside>
+
+      {/* ── Main Content ──────────────────────────────────────────────── */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+
+        {/* Featured Suppliers strip */}
+        {featuredVendors.length > 0 && (
+          <section style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
+                ⭐ Featured Suppliers
+              </h2>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>On-chain verified</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
+              {featuredVendors.map((v) => {
+                const acct = v.account;
+                const authority = pkStr(acct.authority);
+                return (
+                  <VendorCard
+                    key={v.pubkey}
+                    authority={authority}
+                    shopName={String(acct.shop_name ?? '')}
+                    shopDescription={String(acct.shop_description ?? '')}
+                    vendorType={vtKeyStr(acct.vendor_type)}
+                    isVerified={Boolean(acct.is_verified)}
+                    ratingSum={Number(acct.rating_sum ?? 0)}
+                    ratingCount={Number(acct.rating_count ?? 0)}
+                    totalSales={Number(acct.total_sales ?? 0)}
+                    logoCid={typeof acct.logo_cid === 'string' ? acct.logo_cid : undefined}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Toolbar: result count + sort */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              {loading ? '…' : `${total.toLocaleString()} product${total !== 1 ? 's' : ''}`}
+            </span>
+            {category && (
+              <span className="badge badge-cyan" style={{ cursor: 'pointer' }} onClick={() => handleCategory('')}>
+                {CATEGORIES.find((c) => c.value === category)?.label} ✕
+              </span>
+            )}
+          </div>
+          <select
+            className="input"
+            value={sort}
+            onChange={(e) => { setSort(e.target.value); setPage(1); }}
+            style={{ fontSize: '0.83rem', padding: '0.35rem 0.75rem', minWidth: 160 }}
+          >
+            <option value="">Best Match</option>
+            <option value="price_asc">Price: Low → High</option>
+            <option value="price_desc">Price: High → Low</option>
+          </select>
+        </div>
+
+        {/* Trust badges bar (Alibaba-style) */}
         <div
           style={{
-            color: status.tone === 'success' ? 'var(--green)' : 'var(--red)',
-            padding: '1rem',
-            background: status.tone === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)',
+            display: 'flex',
+            gap: '1rem',
+            flexWrap: 'wrap',
+            marginBottom: '1.25rem',
+            padding: '0.6rem 1rem',
+            background: 'rgba(0,212,255,0.04)',
+            border: '1px solid rgba(0,212,255,0.12)',
             borderRadius: 'var(--radius-md)',
-            marginBottom: '1rem',
+            fontSize: '0.78rem',
           }}
         >
-          {status.text}
+          {[
+            { icon: '🔒', text: 'On-Chain Escrow' },
+            { icon: '✓', text: 'Verified Suppliers' },
+            { icon: '⚡', text: 'Solana Speed' },
+            { icon: '🌐', text: '220+ Countries' },
+          ].map((b) => (
+            <span key={b.text} style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <span style={{ color: 'var(--cyan)' }}>{b.icon}</span> {b.text}
+            </span>
+          ))}
         </div>
-      )}
 
-      {products.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
-          No products found
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          {products.map((product) => {
-            const vendor = vendors.get(product.vendor_wallet);
-            return (
-              <div key={product.id} className="glass" style={{ padding: '1.25rem', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <h3 style={{ color: 'var(--text-primary)', fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-                    {product.title}
-                  </h3>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                    {product.description}
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem' }}>
-                  <div>
-                    <div style={{ color: 'var(--cyan)', fontSize: '1.4rem', fontWeight: 800 }}>
-                      ${product.price_usdc.toFixed(2)}
-                    </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>USDC</div>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', background: 'var(--text-muted)', color: 'var(--text-inverse)', padding: '0.25rem 0.6rem', borderRadius: 'var(--radius-sm)' }}>
-                    {product.category}
-                  </div>
-                </div>
-
-                {vendor && (
-                  <div style={{ paddingTop: '0.5rem', borderTop: '1px solid var(--border)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {vendor.shop_name}
-                  </div>
-                )}
-
-                <div style={{ marginTop: 'auto', display: 'flex', gap: '0.5rem' }}>
-                  {!publicKey ? (
-                    <WalletMultiButton />
-                  ) : (
-                    <button
-                      onClick={() => handleBuyNow(product)}
-                      disabled={buying === product.id}
-                      style={{
-                        flex: 1,
-                        padding: '0.6rem 1rem',
-                        background: buying === product.id ? 'var(--text-muted)' : 'var(--cyan)',
-                        color: buying === product.id ? 'var(--text-secondary)' : '#000',
-                        border: 'none',
-                        borderRadius: 'var(--radius-sm)',
-                        fontWeight: 700,
-                        cursor: buying === product.id ? 'not-allowed' : 'pointer',
-                        fontSize: '0.9rem',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {buying === product.id ? 'Processing...' : 'Buy Now'}
-                    </button>
-                  )}
+        {/* Product grid */}
+        {loading ? (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '1.25rem',
+            }}
+          >
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="glass" style={{ height: 300, borderRadius: 'var(--radius-md)' }}>
+                <div className="skeleton" style={{ height: 180, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0' }} />
+                <div style={{ padding: '0.75rem', display: 'grid', gap: '0.5rem' }}>
+                  <div className="skeleton" style={{ height: 16, width: '80%' }} />
+                  <div className="skeleton" style={{ height: 14, width: '60%' }} />
+                  <div className="skeleton" style={{ height: 28, width: '40%', marginTop: '0.25rem' }} />
                 </div>
               </div>
-            );
-          })}
-        </div>
-      )}
+            ))}
+          </div>
+        ) : listings.length === 0 ? (
+          <div
+            className="glass"
+            style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}
+          >
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
+            <p style={{ marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>No tokenized listings found.</p>
+            <p style={{ fontSize: '0.85rem' }}>
+              Vendors can create on-chain listings from the{' '}
+              <a href="/vendor/listings/new" style={{ color: 'var(--cyan)' }}>Vendor Dashboard</a>.
+            </p>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+              gap: '1.25rem',
+            }}
+          >
+            {listings.map((listing) => {
+              const acct = listing.account;
+              const vendorAddr = pkStr(acct.vendor);
+              const vendor = vendorMap.get(vendorAddr);
+              return (
+                <ProductCard
+                  key={listing.pubkey}
+                  pubkey={listing.pubkey}
+                  title={String(acct.title ?? '')}
+                  priceUsdc={Number(acct.price_usdc ?? 0)}
+                  minOrderQty={Number(acct.min_order_qty ?? 1)}
+                  maxOrderQty={acct.max_order_qty != null ? Number(acct.max_order_qty) : undefined}
+                  vendorName={vendor ? String(vendor.account.shop_name ?? '') : undefined}
+                  vendorAuthority={vendorAddr}
+                  category={catKeyStr(acct.category)}
+                  imagesCid={typeof acct.images_cid === 'string' ? acct.images_cid : undefined}
+                  isActive={Boolean(acct.is_active)}
+                  stockQuantity={acct.stock != null ? Number(acct.stock) : undefined}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && !loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem', flexWrap: 'wrap' }}>
+            <button
+              disabled={page === 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="btn-ghost"
+              style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+            >
+              ← Prev
+            </button>
+            {Array.from({ length: Math.min(7, totalPages) }).map((_, i) => {
+              const p = i + 1;
+              return (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  style={{
+                    padding: '0.4rem 0.75rem',
+                    fontSize: '0.85rem',
+                    borderRadius: 'var(--radius-sm)',
+                    border: p === page ? '1px solid var(--cyan)' : '1px solid var(--border)',
+                    background: p === page ? 'var(--cyan-dim)' : 'transparent',
+                    color: p === page ? 'var(--cyan)' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })}
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="btn-ghost"
+              style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
+            >
+              Next →
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

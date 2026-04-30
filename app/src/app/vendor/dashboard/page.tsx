@@ -39,6 +39,8 @@ interface TradeAccount {
   };
 }
 
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? 'http://localhost:8080';
+
 const CATEGORIES = ['Electronics', 'Apparel', 'HomeGoods', 'Machinery', 'FoodBeverage', 'Chemicals', 'Automotive', 'Healthcare'];
 
 export default function VendorDashboardPage() {
@@ -66,13 +68,13 @@ export default function VendorDashboardPage() {
     const fetchData = async () => {
       try {
         // Fetch vendor profile
-        const vendorRes = await fetch(`http://localhost:8080/api/vendor/${walletAddr}`);
+        const vendorRes = await fetch(`${AGENT_URL}/api/vendor/${walletAddr}`);
         if (vendorRes.ok) {
           const vendorData = await vendorRes.json();
           setVendor(vendorData);
 
           // Fetch products
-          const productsRes = await fetch(`http://localhost:8080/api/products?vendor=${walletAddr}`);
+          const productsRes = await fetch(`${AGENT_URL}/api/products?vendor=${walletAddr}`);
           if (productsRes.ok) {
             const productsData = await productsRes.json();
             setProducts(productsData.products || []);
@@ -105,7 +107,7 @@ export default function VendorDashboardPage() {
     setMessage(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/vendor/products', {
+      const response = await fetch(`${AGENT_URL}/api/vendor/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,7 +324,7 @@ export default function VendorDashboardPage() {
                       <td style={{ padding: '0.75rem' }}>
                         <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{product.title}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                          {product.description.slice(0, 60)}...
+                          {(product.description || '').slice(0, 60)}...
                         </div>
                       </td>
                       <td style={{ padding: '0.75rem', color: 'var(--cyan)', fontWeight: 600 }}>

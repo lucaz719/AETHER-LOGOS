@@ -119,6 +119,13 @@ a:hover {
 /* ---- Glass card ------------------------------------------ */
 
 .glass {
+  background: rgba(17, 24, 39, 0.95);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* Use .glass-overlay only for modals, drawers, and sticky overlays */
+.glass-overlay {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -487,3 +494,20 @@ select.form-input {
   .btn-primary-mobile-full { width: 100%; }
 }
 
+/* ---- Card hover effects (CSS, no JS DOM mutations) ------- */
+
+.product-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--glow-cyan), var(--shadow-card);
+  border-color: var(--border-accent);
+}
+
+.product-card:hover .product-img-wrap {
+  transform: scale(1.08);
+}
+
+.vendor-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+  border-color: var(--border-accent);
+}

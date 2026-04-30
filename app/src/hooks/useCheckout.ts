@@ -105,9 +105,11 @@ export function useCheckout() {
 
         setTxSigs(sigs);
         setState("done");
+        return { ok: true };
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
         setState("error");
+        return { ok: false };
       }
     },
     [marketProgram, wallet],

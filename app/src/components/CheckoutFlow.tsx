@@ -17,8 +17,8 @@ export function CheckoutFlow() {
 
   const handlePlaceOrders = async () => {
     setStep("approve");
-    await checkout(items);
-    if (state !== "error") {
+    const result = await checkout(items);
+    if (result?.ok) {
       clearCart();
       setStep("done");
     } else {

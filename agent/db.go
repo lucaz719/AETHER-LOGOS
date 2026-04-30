@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 var db *sql.DB
@@ -56,7 +56,7 @@ type Product struct {
 
 func InitDB(path string) error {
 	var err error
-	db, err = sql.Open("sqlite3", path)
+	db, err = sql.Open("sqlite", path)
 	if err != nil {
 		return err
 	}
@@ -114,10 +114,23 @@ func InitDB(path string) error {
 	if _, err = db.Exec(schema); err != nil {
 		return err
 	}
-	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN proof_tx_sig TEXT NOT NULL DEFAULT ''`); err != nil && err.Error() != "duplicate column name: proof_tx_sig" {
-		return err
+	// Check for duplicate column name specifically, supporting both go-sqlite3 and modernc.org/sqlite formats
+	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN proof_tx_sig TEXT NOT NULL DEFAULT ''`); err != nil {
+		errMsg := err.Error()
+		if !contains(errMsg, "duplicate column name") {
+			return err
+		}
 	}
 	return nil
+}
+
+func contains(s, substr string) bool {
+	for i := 0; i < len(s)-len(substr)+1; i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
 
 func RegisterShipment(trackingID, wallet, callbackURL, carrier, tradeAccount, tradeID string) (int64, error) {

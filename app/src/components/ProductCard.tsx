@@ -91,21 +91,6 @@ export function ProductCard({
           height: '100%',
           transition: 'box-shadow var(--transition), border-color var(--transition), transform var(--transition)',
         }}
-        onMouseEnter={(e) => {
-          if (!isActive) return;
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-3px)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--glow-cyan), var(--shadow-card)';
-          (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-accent)';
-          const imgWrap = e.currentTarget.querySelector('.product-img-wrap') as HTMLDivElement | null;
-          if (imgWrap) imgWrap.style.transform = 'scale(1.08)';
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)';
-          (e.currentTarget as HTMLDivElement).style.boxShadow = '';
-          (e.currentTarget as HTMLDivElement).style.borderColor = '';
-          const imgWrap = e.currentTarget.querySelector('.product-img-wrap') as HTMLDivElement | null;
-          if (imgWrap) imgWrap.style.transform = 'scale(1)';
-        }}
       >
         {/* Image / Placeholder */}
         <div style={{ position: 'relative', width: '100%', height: 180, flexShrink: 0, overflow: 'hidden' }}>
