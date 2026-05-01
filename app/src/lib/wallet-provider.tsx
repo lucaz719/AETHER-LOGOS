@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { PhantomWalletAdapter, SolflareWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
@@ -14,6 +14,14 @@ export function SolanaWalletProvider({ children }: { children: React.ReactNode }
     [network],
   );
 
+  // Load wallet adapter CSS only on the client, after mount, to avoid
+  // adding it to the critical rendering path for non-wallet pages.
+  useEffect(() => {
+    import("@solana/wallet-adapter-react-ui/styles.css" as string).catch(() => {
+      // CSS import may fail in some bundler configs – safe to ignore.
+    });
+  }, []);
+
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
@@ -22,3 +30,4 @@ export function SolanaWalletProvider({ children }: { children: React.ReactNode }
     </ConnectionProvider>
   );
 }
+
