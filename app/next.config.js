@@ -1,4 +1,8 @@
 /** @type {import('next').NextConfig} */
+const withBundleAnalyzer = process.env.ANALYZE === 'true'
+  ? require('@next/bundle-analyzer')({ enabled: true })
+  : (config) => config;
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -20,5 +24,28 @@ const nextConfig = {
       }
     ],
   },
+  webpack(config, { isServer }) {
+    // Split heavy Solana / Anchor bundles into separate chunks so they are
+    // only downloaded when the wallet-connected routes are visited.
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...(config.optimization.splitChunks?.cacheGroups ?? {}),
+          solana: {
+            name: 'solana-vendor',
+            test: /[\\/]node_modules[\\/](@solana|@coral-xyz|bn\.js|pino|@protobufjs)[\\/]/,
+            chunks: 'all',
+            priority: 40,
+            reuseExistingChunk: true,
+            enforce: true,
+          },
+        },
+      };
+    }
+    return config;
+  },
 };
-module.exports = nextConfig;
+
+module.exports = withBundleAnalyzer(nextConfig);
+

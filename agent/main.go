@@ -72,6 +72,23 @@ func main() {
 	http.HandleFunc("/api/products", ProductsListHandler)
 	http.HandleFunc("/api/products/", ProductGetHandler)
 
+	// User API
+	http.HandleFunc("/api/users/", userDispatch)
+	http.HandleFunc("/api/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			userDispatch(w, r)
+		} else {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Store API
+	http.HandleFunc("/api/stores", func(w http.ResponseWriter, r *http.Request) {
+		storeDispatch(w, r)
+	})
+	http.HandleFunc("/api/stores/", storeDispatch)
+	http.HandleFunc("/api/vendors/", storeDispatch)
+
 	pollIntervalSeconds := 30
 	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {
 		parsed, err := strconv.Atoi(raw)
@@ -113,7 +130,7 @@ func main() {
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		
 		if r.Method == http.MethodOptions {
