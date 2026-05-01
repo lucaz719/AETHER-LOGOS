@@ -36,10 +36,10 @@ export default function UserOrdersPage() {
   useEffect(() => {
     if (!publicKey) { setLoading(false); return; }
     // Orders come from the on-chain marketplace program via the buyer dashboard
-    // For now we use the existing buyer dashboard API route
     const load = async () => {
       try {
-        const res = await fetch(`/api/marketplace/orders?buyer=${publicKey.toBase58()}`);
+        const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
+        const res = await fetch(`${agentUrl}/api/marketplace/orders?buyer=${publicKey.toBase58()}`);
         if (res.ok) {
           const data = await res.json();
           setOrders(data.orders ?? []);

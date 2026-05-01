@@ -36,7 +36,7 @@ const USER_TYPES = ["buyer", "vendor", "both"] as const;
 
 async function hashEmail(email: string): Promise<string> {
   const data = new TextEncoder().encode(email.toLowerCase().trim());
-  const buf = await crypto.subtle.digest("SHA-256", data.buffer as ArrayBuffer);
+  const buf = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 

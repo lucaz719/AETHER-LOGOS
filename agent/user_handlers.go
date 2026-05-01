@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -339,6 +338,3 @@ func extractPathSegment(path, prefix string) string {
 	}
 	return strings.TrimSpace(s)
 }
-
-// Ensure fmt is used
-var _ = fmt.Sprintf

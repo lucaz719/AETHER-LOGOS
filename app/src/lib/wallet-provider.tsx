@@ -17,7 +17,7 @@ export function SolanaWalletProvider({ children }: { children: React.ReactNode }
   // Load wallet adapter CSS only on the client, after mount, to avoid
   // adding it to the critical rendering path for non-wallet pages.
   useEffect(() => {
-    import("@solana/wallet-adapter-react-ui/styles.css" as string).catch(() => {
+    import("@solana/wallet-adapter-react-ui/styles.css").catch(() => {
       // CSS import may fail in some bundler configs – safe to ignore.
     });
   }, []);
