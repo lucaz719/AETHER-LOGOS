@@ -38,8 +38,7 @@ export default function UserOrdersPage() {
     // Orders come from the on-chain marketplace program via the buyer dashboard
     const load = async () => {
       try {
-        const agentUrl = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
-        const res = await fetch(`${agentUrl}/api/marketplace/orders?buyer=${publicKey.toBase58()}`);
+        const res = await fetch(`${API}/api/marketplace/orders?buyer=${publicKey.toBase58()}`);
         if (res.ok) {
           const data = await res.json();
           setOrders(data.orders ?? []);

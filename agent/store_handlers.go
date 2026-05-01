@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -473,9 +472,5 @@ func StorePromotionDeleteHandler(w http.ResponseWriter, r *http.Request, storeID
 }
 
 func parseStoreID(s string) (int64, error) {
-	id, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("invalid store id: %s", s)
-	}
-	return id, nil
+	return strconv.ParseInt(s, 10, 64)
 }
