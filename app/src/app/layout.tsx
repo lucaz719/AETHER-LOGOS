@@ -4,19 +4,6 @@ import { CartProvider } from "@/hooks/useCart";
 import { ToastProvider } from "@/hooks/useToast";
 import { NavBar } from "@/components/NavBar";
 import { WalletProviderWrapper } from "@/components/WalletProviderWrapper";
-import { Inter, JetBrains_Mono } from "next/font/google";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const jetBrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "AETHER-LOGOS | Trade Settlement Protocol",
@@ -29,8 +16,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} ${inter.variable} ${jetBrainsMono.variable} antialiased`}>
+    <html lang="en" className="dark">
+      <body className="antialiased">
         <WalletProviderWrapper>
           <CartProvider>
             <ToastProvider>

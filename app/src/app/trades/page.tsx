@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
@@ -37,7 +37,7 @@ function truncateAddress(addr: string): string {
   return addr.slice(0, 6) + "..." + addr.slice(-6);
 }
 
-export default function TradesPage() {
+function TradesPageContent() {
   const searchParams = useSearchParams();
   const { escrowProgram, wallet, connection, provider } = useAnchorClient();
   const [amount, setAmount] = useState("1");
@@ -484,5 +484,17 @@ export default function TradesPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function TradesPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-background text-foreground flex items-center justify-center">
+        <p className="text-muted-foreground text-sm">Loading trade details…</p>
+      </main>
+    }>
+      <TradesPageContent />
+    </Suspense>
   );
 }

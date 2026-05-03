@@ -25,22 +25,18 @@ export function NavBar() {
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
-    setIsDark(saved !== "light");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const shouldBeDark = saved ? saved !== "light" : prefersDark;
+    setIsDark(shouldBeDark);
+    document.documentElement.classList.toggle("dark", shouldBeDark);
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.style.backgroundColor = "#0a0a0f";
-      document.documentElement.style.color = "#ffffff";
-      document.body.style.backgroundColor = "#0a0a0f";
-    } else {
-      document.documentElement.style.backgroundColor = "#ffffff";
-      document.documentElement.style.color = "#000000";
-      document.body.style.backgroundColor = "#ffffff";
-    }
+    if (!mounted) return;
+    document.documentElement.classList.toggle("dark", isDark);
     localStorage.setItem("theme", isDark ? "dark" : "light");
-  }, [isDark]);
+  }, [isDark, mounted]);
 
   return (
     <>
