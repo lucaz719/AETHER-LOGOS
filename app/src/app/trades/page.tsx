@@ -8,7 +8,7 @@ import { TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
-import { Copy, CheckCircle } from "lucide-react";
+import { Copy, CheckCircle, Info } from "lucide-react";
 
 type TradeRow = {
   pubkey: PublicKey;
@@ -40,7 +40,7 @@ function truncateAddress(addr: string): string {
 function TradesPageContent() {
   const searchParams = useSearchParams();
   const { escrowProgram, wallet, connection, provider } = useAnchorClient();
-  const [amount, setAmount] = useState("1");
+  const [quantity, setQuantity] = useState("1");
   const [seller, setSeller] = useState("");
   const [buyerTokenAccount, setBuyerTokenAccount] = useState("");
   const [sellerTokenAccount, setSellerTokenAccount] = useState("");
@@ -57,6 +57,7 @@ function TradesPageContent() {
     tier?: string;
     moq?: string;
     leadTimeDays?: string;
+    priceUsdc?: number;
   }>({});
 
   useEffect(() => {
@@ -67,17 +68,26 @@ function TradesPageContent() {
     const tier = searchParams?.get("tier");
     const moq = searchParams?.get("moq");
     const leadTimeDays = searchParams?.get("leadTimeDays");
+    const priceUsdc = searchParams?.get("priceUsdc");
 
     if (sellerWallet) setSeller(sellerWallet);
     if (usdcMintParam) setUsdcMint(usdcMintParam);
+    if (moq) setQuantity(moq);
     setTradeMetadata({
       productId: productId || undefined,
       title: title || undefined,
       tier: tier || undefined,
       moq: moq || undefined,
       leadTimeDays: leadTimeDays || undefined,
+      priceUsdc: priceUsdc ? Number(priceUsdc) : undefined,
     });
   }, [searchParams]);
+
+  const price = tradeMetadata.priceUsdc || 0;
+  const qty = Math.max(1, parseInt(quantity) || 1);
+  const subtotal = price * qty;
+  const platformFee = subtotal * 0.02;
+  const grandTotal = subtotal + platformFee;
 
   const loadTrades = useMemo(
     () => async () => {
@@ -102,7 +112,7 @@ function TradesPageContent() {
     try {
       setError(null);
       const tradeId = crypto.getRandomValues(new Uint8Array(32));
-      const amountUsdc = Math.floor(Number(amount) * 1_000_000);
+      const amountUsdc = Math.floor(grandTotal > 0 ? grandTotal * 1_000_000 : 1_000_000);
       const milestoneHash = new Uint8Array(32);
       const [tradeAccount] = PublicKey.findProgramAddressSync(
         [Buffer.from("trade"), wallet.publicKey.toBuffer(), tradeId],
@@ -269,7 +279,7 @@ function TradesPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background text-foreground pt-24">
       <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
         <header className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Create Trade</h1>
@@ -319,14 +329,20 @@ function TradesPageContent() {
 
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="block text-sm font-semibold text-foreground mb-2">Amount (USDC)</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Quantity</label>
               <input
                 type="number"
-                placeholder="e.g., 1000"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                min="1"
+                placeholder="e.g., 100"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
                 className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder-muted-foreground transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
+              {tradeMetadata.priceUsdc && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Unit Price: <span className="font-mono font-medium text-foreground">${tradeMetadata.priceUsdc.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </p>
+              )}
             </div>
 
             <div>
@@ -378,16 +394,44 @@ function TradesPageContent() {
             </div>
           </div>
 
+          {tradeMetadata.priceUsdc && (
+            <div className="mt-6 rounded-xl border border-border bg-card/50 p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Order Summary</h3>
+              <div className="space-y-2.5 text-sm text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Subtotal ({qty} items)</span>
+                  <span className="font-mono">${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Platform Fee (2%)</span>
+                  <span className="font-mono">${platformFee.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="pt-3 mt-3 border-t border-border flex justify-between font-bold text-foreground text-base">
+                  <span>Grand Total</span>
+                  <span className="font-mono">${grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 space-y-4">
-            <label className="flex cursor-pointer items-center gap-3">
-              <input
-                type="checkbox"
-                checked={signatureRequired}
-                onChange={(e) => setSignatureRequired(e.target.checked)}
-                className="h-4 w-4 rounded border-border accent-primary"
-              />
-              <span className="text-sm text-foreground">Signature required on delivery</span>
-            </label>
+            <div className="flex items-center gap-2">
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={signatureRequired}
+                  onChange={(e) => setSignatureRequired(e.target.checked)}
+                  className="h-4 w-4 rounded border-border accent-primary"
+                />
+                <span className="text-sm text-foreground">Signature required on delivery</span>
+              </label>
+              <div className="group relative flex items-center justify-center">
+                <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                <div className="absolute bottom-full left-1/2 mb-2 w-64 -translate-x-1/2 hidden rounded-lg bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg group-hover:block border border-border/50 z-50">
+                  When enabled, the shipping carrier must obtain a physical signature upon delivery. The signer's name will be extracted from the zkTLS delivery proof and stored immutably on-chain.
+                </div>
+              </div>
+            </div>
 
             <div>
               <InvoiceUpload onUploaded={setInvoiceUrl} />

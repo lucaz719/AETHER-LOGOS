@@ -1,8 +1,6 @@
 'use client';
 
-import { useState, ReactNode } from "react";
-import { CheckCircle2, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
+import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
 
 type ProductCardProps = {
   productId: string;
@@ -25,8 +23,8 @@ type ProductCardProps = {
     tier: "distributor" | "wholesaler" | "manufacturer";
     moq: number;
     leadTimeDays: number;
+    priceUsdc?: number;
   }) => void;
-  skeleton?: boolean;
 };
 
 const usdc = new Intl.NumberFormat("en-US", {
@@ -35,200 +33,89 @@ const usdc = new Intl.NumberFormat("en-US", {
 });
 
 const tierConfig = {
-  manufacturer: {
-    label: "Direct Manufacturer",
-    badge: "Lowest Price",
-    color: "from-emerald-500 to-emerald-600",
-  },
-  wholesaler: {
-    label: "Verified Wholesaler",
-    badge: "Bulk Specialist",
-    color: "from-blue-500 to-blue-600",
-  },
-  distributor: {
-    label: "Certified Distributor",
-    badge: "Fast Shipping",
-    color: "from-orange-500 to-orange-600",
-  },
+  manufacturer: { label: "Direct", badge: "Factory", bg: "bg-emerald-50 text-emerald-700 border-emerald-100", darkBg: "dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20" },
+  wholesaler: { label: "Wholesale", badge: "Bulk", bg: "bg-blue-50 text-blue-700 border-blue-100", darkBg: "dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20" },
+  distributor: { label: "Distributor", badge: "Express", bg: "bg-orange-50 text-orange-700 border-orange-100", darkBg: "dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-500/20" },
 };
 
-function SkeletonLoader() {
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="w-full"
-    >
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
-        {/* Image skeleton */}
-        <div className="aspect-video w-full bg-gray-200 dark:bg-gray-800 animate-pulse rounded-t-xl" />
-
-        {/* Content skeleton */}
-        <div className="p-5 space-y-4">
-          <div className="space-y-2">
-            <div className="h-3 bg-gray-200 dark:bg-gray-800 rounded w-32 animate-pulse" />
-            <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-48 animate-pulse" />
-          </div>
-
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-40 animate-pulse" />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-            </div>
-          </div>
-
-          <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
 export function ProductCard({
-  productId,
-  title,
-  category,
-  vendor,
-  sellerWallet,
-  sellerTier,
-  rating,
-  priceUsdc,
-  moq,
-  leadTimeDays,
-  usdcMint,
-  isVerified = true,
-  onBuy,
-  skeleton = false,
+  productId, title, category, vendor, sellerWallet, sellerTier,
+  rating, priceUsdc, moq, leadTimeDays, usdcMint, isVerified = true, onBuy,
 }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const tier = tierConfig[sellerTier];
 
-  if (skeleton) {
-    return <SkeletonLoader />;
-  }
-
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: "easeOut" }}
-      className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:shadow-md hover:-translate-y-1 transition-all duration-200"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Product Image Placeholder */}
-      <div
-        className="aspect-video w-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 relative overflow-hidden"
-        role="img"
-        aria-label={`${title} product image placeholder`}
-      >
-        <motion.div
-          className="w-full h-full flex items-center justify-center"
-          animate={{ scale: isHovered ? 1.05 : 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="text-gray-300 dark:text-gray-600 font-bold text-4xl opacity-20">
-            {category[0]}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Content */}
-      <div className="p-5 space-y-4">
-        {/* Header: Category + Badge */}
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-            {category}
-          </span>
-          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${tier.color} text-white shadow-sm`}>
-            {tier.badge}
-          </span>
+    <article className="group relative flex flex-col rounded-2xl border border-slate-200 bg-white transition-all duration-300 hover:shadow-2xl hover:border-indigo-200 dark:border-slate-800 dark:bg-slate-900/50 dark:hover:border-indigo-500/50">
+      {/* Dynamic Header */}
+      <div className="relative h-40 w-full overflow-hidden rounded-t-2xl bg-slate-50 dark:bg-slate-800/50">
+        <div className="absolute inset-0 flex items-center justify-center">
+           <div className="text-4xl font-black text-slate-200 dark:text-slate-700 select-none tracking-tighter">
+             {category.split(" ").map(w => w[0]).join("")}
+           </div>
+        </div>
+        
+        {/* Tier Badge */}
+        <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${tier.bg} ${tier.darkBg}`}>
+          <Zap size={10} className="fill-current" />
+          {tier.badge}
         </div>
 
-        {/* Title */}
-        <div>
-          <h3 className="text-lg font-bold leading-tight text-gray-900 dark:text-white">
+        {/* Verification Status */}
+        {isVerified && (
+          <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-white/90 dark:bg-slate-900/90 px-2 py-1 shadow-sm border border-slate-100 dark:border-slate-800">
+            <ShieldCheck size={12} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="text-[9px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Verified SKU</span>
+          </div>
+        )}
+      </div>
+
+      {/* Main Details */}
+      <div className="flex flex-1 flex-col p-5">
+        <div className="mb-2">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+            {category}
+          </span>
+          <h3 className="mt-1 text-sm font-bold leading-tight text-slate-900 dark:text-slate-100 line-clamp-2 min-h-[40px] group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
             {title}
           </h3>
         </div>
 
-        {/* Price Section */}
-        <div className="border-t border-gray-200 dark:border-gray-800 border-b pt-3 pb-3">
-          <div className="flex items-baseline justify-between mb-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400">
-              Price
-            </span>
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-              MOQ: {moq} units
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+        {/* Pricing Info */}
+        <div className="mt-auto pt-4 flex items-center justify-between border-t border-slate-50 dark:border-slate-800/50">
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Unit Price</p>
+            <span className="text-xl font-black text-slate-900 dark:text-white tracking-tighter">
               ${usdc.format(priceUsdc)}
             </span>
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-              {leadTimeDays}d lead
+          </div>
+          <div className="text-right">
+             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter text-right">MOQ</p>
+             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">
+              {moq} Units
             </span>
           </div>
         </div>
 
-        {/* Sold By Badge */}
-        <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-blue-50 dark:bg-gray-800 border border-blue-100 dark:border-gray-700">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Sold by</span>
-            <span className="font-semibold text-gray-900 dark:text-white truncate text-sm">
-              {vendor}
-            </span>
+        {/* Stats Row */}
+        <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 dark:bg-slate-800/50 px-3 py-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-slate-900 dark:text-white">★ {rating.toFixed(1)}</span>
+            <span className="text-[10px] text-slate-400 font-medium">{vendor}</span>
           </div>
-          {isVerified && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <CheckCircle2 size={14} className="text-green-600 dark:text-green-400" />
-              <span className="text-xs font-semibold text-green-600 dark:text-green-400">
-                Verified
-              </span>
-            </div>
-          )}
+          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">{leadTimeDays}D Delivery</span>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="p-2.5 rounded-lg bg-gray-100 dark:bg-gray-800">
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Rating</p>
-            <p className="font-mono text-sm font-bold text-gray-900 dark:text-white">
-              {rating.toFixed(1)} / 5
-            </p>
-          </div>
-          <div className="p-2.5 rounded-lg bg-gray-100 dark:bg-gray-800">
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Tier</p>
-            <p className="font-semibold text-gray-900 dark:text-white truncate text-xs">
-              {tier.label.split(" ")[0]}
-            </p>
-          </div>
-        </div>
-
-        {/* CTA Button */}
-        <motion.button
+        {/* CTA */}
+        <button
           type="button"
           onClick={() =>
-            onBuy({
-              productId,
-              title,
-              sellerWallet,
-              usdcMint,
-              tier: sellerTier,
-              moq,
-              leadTimeDays,
-            })
+            onBuy({ productId, title, sellerWallet, usdcMint, tier: sellerTier, moq, leadTimeDays, priceUsdc })
           }
-          className="w-full h-10 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold text-sm transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          className="mt-5 w-full rounded-xl bg-slate-900 py-3 text-[13px] font-bold text-white transition-all hover:bg-indigo-600 hover:shadow-xl hover:shadow-indigo-500/20 active:scale-[0.98] dark:bg-white dark:text-slate-900 dark:hover:bg-indigo-400"
         >
-          Lock in Escrow
-        </motion.button>
+          Secure Trade Asset
+        </button>
       </div>
-    </motion.article>
+    </article>
   );
 }

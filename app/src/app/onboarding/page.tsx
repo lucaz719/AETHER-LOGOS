@@ -164,7 +164,7 @@ export default function OnboardingPage() {
                 You're all set! Explore thousands of products from verified vendors globally.
               </p>
               <Link 
-                href="/marketplace" 
+                href="/dashboard" 
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
               >
                 Browse Marketplace →

@@ -2,13 +2,60 @@
 
 import { ArrowRight, Shield, Package, CheckCircle, Lock, Zap, TrendingUp, Globe } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+
+function LandingHeader() {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? "bg-background/80 backdrop-blur-xl border-b border-border/40 shadow-sm"
+          : "bg-transparent"
+      }`}
+    >
+      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+        <Link href="/" className="text-lg font-bold tracking-tight text-foreground">
+          ◯ AETHER-LOGOS
+        </Link>
+        <div className="flex items-center gap-8">
+          <div className="hidden sm:flex items-center gap-6">
+            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              How It Works
+            </a>
+            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Features
+            </a>
+            <a href="#hedge" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Risk Markets
+            </a>
+          </div>
+          <Link
+            href="/onboarding"
+            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:bg-indigo-500 hover:shadow-xl hover:shadow-indigo-500/30"
+          >
+            Launch App
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </nav>
+    </header>
+  );
+}
 
 export default function LandingPage() {
   return (
     <div className="overflow-hidden bg-background text-foreground">
+      <LandingHeader />
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
+      <section className="relative overflow-hidden px-4 pt-32 pb-20 sm:px-6 lg:px-8 lg:pt-40 lg:pb-28">
         {/* Background glow orbs */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-1/3 top-1/4 h-[480px] w-[480px] rounded-full bg-indigo-500/8 blur-[120px]" />
@@ -22,7 +69,7 @@ export default function LandingPage() {
             Enterprise-Grade B2B Procurement on Solana
           </div>
 
-          {/* Headline — escrow first, hedge markets as reveal */}
+          {/* Headline */}
           <div className="space-y-5">
             <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl leading-[1.08]">
               The{" "}
@@ -76,7 +123,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── How Escrow Works ─────────────────────────────────── */}
-      <section className="border-t border-border/40 bg-card/20 px-4 py-20 sm:px-6 lg:px-8">
+      <section id="how-it-works" className="border-t border-border/40 bg-card/20 px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-400">How it works</p>
@@ -131,8 +178,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Marketplace Features ─────────────────────────────── */}
-      <section className="px-4 py-20 sm:px-6 lg:px-8">
+      {/* ── Platform Features ─────────────────────────────── */}
+      <section id="features" className="px-4 py-20 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-6xl">
           <div className="mb-14 text-center">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-indigo-400">Platform</p>
@@ -143,36 +190,12 @@ export default function LandingPage() {
 
           <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
             {[
-              {
-                icon: Shield,
-                title: "On-Chain Escrow",
-                description: "Smart contract holds funds until delivery is cryptographically verified. Zero counterparty risk.",
-              },
-              {
-                icon: Globe,
-                title: "Tiered Vendor Network",
-                description: "Direct Manufacturers, Verified Wholesalers, and Certified Distributors — each tier with on-chain credentials.",
-              },
-              {
-                icon: Zap,
-                title: "Solana-Speed Settlement",
-                description: "Sub-second transaction finality. No delayed clearance, no banking hours, no borders.",
-              },
-              {
-                icon: Package,
-                title: "Live Shipment Tracking",
-                description: "DHL oracle integration streams tracking status directly into your escrow contract.",
-              },
-              {
-                icon: Lock,
-                title: "Dispute Resolution",
-                description: "Open a dispute at any stage. Funds stay locked until arbitration resolves — never at risk.",
-              },
-              {
-                icon: CheckCircle,
-                title: "Graphite Ledger Audit",
-                description: "Immutable on-chain record of every order, shipment event, and payment. Enterprise-grade compliance.",
-              },
+              { icon: Shield, title: "On-Chain Escrow", description: "Smart contract holds funds until delivery is cryptographically verified. Zero counterparty risk." },
+              { icon: Globe, title: "Tiered Vendor Network", description: "Direct Manufacturers, Verified Wholesalers, and Certified Distributors — each tier with on-chain credentials." },
+              { icon: Zap, title: "Solana-Speed Settlement", description: "Sub-second transaction finality. No delayed clearance, no banking hours, no borders." },
+              { icon: Package, title: "Live Shipment Tracking", description: "DHL oracle integration streams tracking status directly into your escrow contract." },
+              { icon: Lock, title: "Dispute Resolution", description: "Open a dispute at any stage. Funds stay locked until arbitration resolves — never at risk." },
+              { icon: CheckCircle, title: "Graphite Ledger Audit", description: "Immutable on-chain record of every order, shipment event, and payment. Enterprise-grade compliance." },
             ].map((feature) => (
               <div
                 key={feature.title}
@@ -190,8 +213,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Hedge Markets WOW Moment ──────────────────────────── */}
-      <section className="relative overflow-hidden border-t border-border/40 px-4 py-20 sm:px-6 lg:px-8">
-        {/* Dark dramatic background for contrast */}
+      <section id="hedge" className="relative overflow-hidden border-t border-border/40 px-4 py-20 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-indigo-950/20 to-indigo-950/30" />
           <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-600/8 blur-[140px]" />
@@ -204,7 +226,7 @@ export default function LandingPage() {
           </div>
 
           <h2 className="mb-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-tight">
-            Didn't know you could{" "}
+            Didn&apos;t know you could{" "}
             <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
               hedge logistics risk
             </span>
@@ -215,7 +237,6 @@ export default function LandingPage() {
             Trade prediction markets on delivery outcomes — customs delays, SLA breaches, transit exceptions. Your supply chain risk, quantified and traded.
           </p>
 
-          {/* Live-ish market preview cards */}
           <div className="mb-10 grid gap-4 sm:grid-cols-3">
             {[
               { event: "DHL Customs Hold", prob: 64, side: "YES", color: "text-green-400", bar: "bg-green-500" },
@@ -246,7 +267,7 @@ export default function LandingPage() {
             id="markets-explore"
             className="group inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-8 py-3.5 text-sm font-semibold text-indigo-300 backdrop-blur-sm transition-all hover:border-indigo-400/60 hover:bg-indigo-500/20 hover:text-indigo-200"
           >
-            Explore Hedge Markets
+            Explore Risk Markets
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
@@ -267,7 +288,7 @@ export default function LandingPage() {
               id="final-cta-start"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:bg-indigo-500"
             >
-              Get Started — It's Free
+              Get Started — It&apos;s Free
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link

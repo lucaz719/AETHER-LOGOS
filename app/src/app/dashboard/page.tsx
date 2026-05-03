@@ -1,11 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { TrendingUp, TrendingDown, Lock } from "lucide-react";
 import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
 import { MarketplaceFilters } from "@/components/dashboard/MarketplaceFilters";
 import { ProductCard } from "@/components/dashboard/ProductCard";
 import { useRouter } from "next/navigation";
+import { useWallet } from "@solana/wallet-adapter-react";
+import dynamic from "next/dynamic";
+
+const WalletMultiButton = dynamic(
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
+  { ssr: false }
+);
 
 const products = [
   {
@@ -209,14 +220,28 @@ const hedgeMarkets = [
   },
 ];
 
-export default function DashboardPage() {
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [mode, setMode] = useState<"marketplace" | "hedge">("marketplace");
+
+  useEffect(() => {
+    const m = searchParams.get("mode");
+    if (m === "hedge" || m === "marketplace") {
+      setMode(m);
+    }
+  }, [searchParams]);
+
+  const handleModeChange = (newMode: "marketplace" | "hedge") => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", newMode);
+    router.push(`/dashboard?${params.toString()}`);
+  };
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [selectedMarketIdx, setSelectedMarketIdx] = useState<number | null>(null);
   const [stakeAmount, setStakeAmount] = useState("100");
   const [selectedSide, setSelectedSide] = useState<"yes" | "no">("yes");
-  const [walletConnected] = useState(false);
-  const router = useRouter();
+  const { connected: walletConnected } = useWallet();
 
   const filteredProducts =
     selectedTier === "all"
@@ -255,6 +280,7 @@ export default function DashboardPage() {
     tier: string;
     moq: number;
     leadTimeDays: number;
+    priceUsdc?: number;
   }) => {
     const params = new URLSearchParams();
     params.set("productId", payload.productId);
@@ -264,52 +290,52 @@ export default function DashboardPage() {
     params.set("tier", payload.tier);
     params.set("moq", payload.moq.toString());
     params.set("leadTimeDays", payload.leadTimeDays.toString());
+    if (payload.priceUsdc) {
+      params.set("priceUsdc", payload.priceUsdc.toString());
+    }
     router.push(`/trades?${params.toString()}`);
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-        <header className="space-y-3 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Workspace</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            Escrow marketplace and hedge execution in one terminal.
-          </h1>
-          <p className="mx-auto max-w-3xl text-sm text-muted-foreground md:text-base">
-            Live procurement workflows and logistics hedge markets unified under one Graphite Ledger control surface.
-          </p>
+    <main className="min-h-screen bg-white dark:bg-slate-950 relative overflow-hidden pt-24 pb-20">
+      {/* Premium Atmospheric Backgrounds */}
+      <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[160px] pointer-events-none"></div>
+      
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Top Header Section */}
+        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="space-y-2">
+            <h1 className="text-6xl font-black tracking-tighter text-slate-950 dark:text-white">
+              {mode === "marketplace" ? "Procurement" : "Risk Desk"}
+            </h1>
+            <p className="text-lg font-bold text-slate-500 dark:text-slate-400">
+              {mode === "marketplace" 
+                ? "Global B2B sourcing with verified zkTLS delivery proof." 
+                : "Logistics outcome prediction and risk hedging terminal."}
+            </p>
+          </div>
+          
+          <div className="w-full md:w-auto">
+            <DashboardModeToggle mode={mode} onChange={handleModeChange} />
+          </div>
         </header>
 
-        <DashboardModeToggle mode={mode} onChange={setMode} />
-
-        <section className="relative min-h-[720px]">
+        <section className="relative min-h-[800px]">
           <div
             className={`transition-all duration-300 ease-in-out ${mode === "marketplace" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 -translate-x-3 opacity-0"}`}
             aria-hidden={mode !== "marketplace"}
           >
-            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
               <MarketplaceFilters
                 categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
                 selectedTier={selectedTier}
                 onTierChange={setSelectedTier}
               />
-              <div className="space-y-4">
-                <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Active RFQs</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">1,284</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Escrow TVL</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">$14.9M</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Avg Lock Time</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">21.4h</p>
-                  </div>
-                </div>
+              <div className="space-y-6">
 
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-20">
+
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 pb-20">
                   {filteredProducts.map((product) => (
                     <ProductCard
                       key={product.productId}
@@ -332,24 +358,7 @@ export default function DashboardPage() {
                 <p className="text-sm text-muted-foreground mt-1">Predict logistics outcomes and hedge your exposure</p>
               </div>
               
-              <div className="grid gap-3 rounded-lg card-elevated p-4 md:grid-cols-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Liquidity</p>
-                  <p className="font-mono text-xl font-semibold text-foreground">$5.2M</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">24h Volume</p>
-                  <p className="font-mono text-xl font-semibold text-foreground">$842K</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Active Markets</p>
-                  <p className="font-mono text-xl font-semibold text-foreground">{hedgeMarkets.length}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Avg Resolution</p>
-                  <p className="font-mono text-xl font-semibold text-foreground">2.4 days</p>
-                </div>
-              </div>
+
 
               {/* Markets Grid */}
               <div className="space-y-4">
@@ -379,36 +388,35 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        {/* Probability Bars */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="flex items-center gap-2 text-xs font-medium text-foreground">
-                              <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-                              Yes
-                            </span>
-                            <span className="font-mono text-xs font-semibold text-green-600">{market.yesProbability.toFixed(1)}%</span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                            <div
-                              className="h-full bg-gradient-to-r from-green-500 to-green-400"
-                              style={{ width: `${market.yesProbability}%` }}
-                            />
-                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-2 text-xs font-medium text-foreground">
+                                <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
+                                Yes
+                              </span>
+                              <span className="font-mono text-xs font-semibold text-purple-600">{market.yesProbability.toFixed(1)}%</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-secondary/50">
+                              <div
+                                className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
+                                style={{ width: `${market.yesProbability}%` }}
+                              />
+                            </div>
 
-                          <div className="flex items-center justify-between gap-2 pt-2">
-                            <span className="flex items-center gap-2 text-xs font-medium text-foreground">
-                              <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-                              No
-                            </span>
-                            <span className="font-mono text-xs font-semibold text-red-600">{(100 - market.yesProbability).toFixed(1)}%</span>
+                            <div className="flex items-center justify-between gap-2 pt-1">
+                              <span className="flex items-center gap-2 text-xs font-medium text-foreground">
+                                <TrendingDown className="h-3.5 w-3.5 text-rose-500" />
+                                No
+                              </span>
+                              <span className="font-mono text-xs font-semibold text-rose-600">{(100 - market.yesProbability).toFixed(1)}%</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-secondary/50">
+                              <div
+                                className="h-full bg-gradient-to-r from-rose-500 to-pink-400"
+                                style={{ width: `${100 - market.yesProbability}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                            <div
-                              className="h-full bg-gradient-to-r from-red-500 to-red-400"
-                              style={{ width: `${100 - market.yesProbability}%` }}
-                            />
-                          </div>
-                        </div>
 
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-2 border-t border-border-light pt-3">
@@ -440,10 +448,10 @@ export default function DashboardPage() {
                 />
                 
                 {/* Side-Sheet Panel */}
-                <div className="fixed right-0 top-32 h-screen w-full max-w-sm z-50 pointer-events-auto">
-                  <div className="h-full glass-header p-6 rounded-l-2xl flex flex-col shadow-2xl">
+                <div className="fixed right-0 top-24 bottom-0 w-full max-w-sm z-50 pointer-events-auto flex flex-col">
+                  <div className="glass-header rounded-l-2xl flex flex-col shadow-2xl h-full overflow-hidden p-6">
                     {/* Header */}
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-6 flex-shrink-0">
                       <h3 className="font-semibold text-foreground">Place Hedge</h3>
                       <button
                         onClick={() => setSelectedMarketIdx(-1)}
@@ -457,7 +465,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto space-y-4">
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                       {/* Market Details */}
                       <div className="card-plain p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground mb-2">Market</p>
@@ -473,7 +481,7 @@ export default function DashboardPage() {
                             onClick={() => setSelectedSide("yes")}
                             className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${
                               selectedSide === "yes"
-                                ? "border-green-500 bg-green-500/10 text-green-700"
+                                ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
                                 : "border-border-light bg-secondary text-muted-foreground hover:border-green-300"
                             }`}
                           >
@@ -486,7 +494,7 @@ export default function DashboardPage() {
                             onClick={() => setSelectedSide("no")}
                             className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${
                               selectedSide === "no"
-                                ? "border-red-500 bg-red-500/10 text-red-700"
+                                ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
                                 : "border-border-light bg-secondary text-muted-foreground hover:border-red-300"
                             }`}
                           >
@@ -512,29 +520,26 @@ export default function DashboardPage() {
                       </div>
 
                       {/* Payout Estimate */}
-                      <div className="card-elevated p-4 bg-gradient-to-br from-green-50 to-green-50/50 border-green-200">
+                      <div className="card-elevated p-4 bg-gradient-to-br from-green-50 dark:from-green-950/20 to-green-50/50 dark:to-green-950/10 border border-green-200 dark:border-green-900/30">
                         <p className="text-xs text-muted-foreground mb-1.5 font-semibold">Potential Payout</p>
-                        <p className="font-mono text-2xl font-bold text-green-700">
+                        <p className="font-mono text-2xl font-bold text-green-700 dark:text-green-400">
                           ${(Number(stakeAmount) * (selectedSide === "yes" ? 1.55 : 2.1)).toFixed(2)}
                         </p>
-                        <p className="text-xs text-green-600 mt-2">
+                        <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                           ROI: {(((selectedSide === "yes" ? 1.55 : 2.1) - 1) * 100).toFixed(0)}%
                         </p>
                       </div>
                     </div>
 
-                    {/* Footer CTA */}
-                    <div className="pt-4 border-t border-border-light space-y-2 mt-4">
+                    {/* Footer CTA - Sticky */}
+                    <div className="pt-4 border-t border-border-light space-y-2 mt-4 flex-shrink-0">
                       {!walletConnected ? (
-                        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-center">
-                          <p className="text-sm text-amber-700 flex items-center justify-center gap-2">
-                            <Lock className="h-4 w-4" />
-                            Connect wallet to trade
-                          </p>
+                        <div className="w-full flex justify-center py-1 [&>.wallet-adapter-button]:w-full [&>.wallet-adapter-button]:justify-center [&>.wallet-adapter-button]:!bg-indigo-600 [&>.wallet-adapter-button]:hover:!bg-indigo-500 [&>.wallet-adapter-button]:!h-11 [&>.wallet-adapter-button]:!rounded-lg [&>.wallet-adapter-button]:!text-sm [&>.wallet-adapter-button]:!font-bold [&>.wallet-adapter-button]:transition-all">
+                          <WalletMultiButton />
                         </div>
                       ) : (
-                        <button className="w-full h-11 rounded-lg bg-primary text-primary-foreground font-semibold transition-all duration-200 hover:shadow-lg active:scale-95">
-                          Place Hedge
+                        <button className="w-full h-11 rounded-lg bg-indigo-600 text-white font-semibold transition-all duration-200 hover:shadow-lg hover:bg-indigo-500 active:scale-95">
+                          Confirm Hedge
                         </button>
                       )}
                     </div>
@@ -546,5 +551,13 @@ export default function DashboardPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center text-muted-foreground">Initializing AETHER Dashboard...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

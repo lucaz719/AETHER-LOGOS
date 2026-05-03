@@ -108,27 +108,6 @@ export function NavBar() {
           </div>
         </div>
 
-        {/* Bottom Row: Navigation Links */}
-        <div className="flex items-center gap-1 border-t border-border/40 h-12 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-          <Link
-            href="/dashboard"
-            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/marketplace"
-            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
-          >
-            Procurement
-          </Link>
-          <Link
-            href="/dashboard?mode=hedge"
-            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
-          >
-            Risk Desk
-          </Link>
-        </div>
       </div>
     </nav>
   );
