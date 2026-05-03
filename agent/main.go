@@ -31,10 +31,22 @@ func main() {
 	}
 
 	dhlClient = carrier.NewDHLClient(os.Getenv("DHL_API_KEY"))
+	mockProof := false
+	if raw := os.Getenv("MOCK_PROOF"); raw != "" {
+		parsed, err := strconv.ParseBool(raw)
+		if err != nil {
+			log.Fatalf("invalid MOCK_PROOF: %q", raw)
+		}
+		mockProof = parsed
+	}
 	reclaimClient = proof.NewReclaimClient(
 		os.Getenv("RECLAIM_APP_ID"),
 		os.Getenv("RECLAIM_APP_SECRET"),
+		mockProof,
 	)
+	if mockProof {
+		log.Printf("MOCK_PROOF enabled: using mock reclaim zkTLS flow")
+	}
 
 	// Accept both SOLANA_RPC (agent-native) and SOLANA_RPC_URL (.env.example name).
 	rpcURL := os.Getenv("SOLANA_RPC")
@@ -62,11 +74,11 @@ func main() {
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/api/tracking/", TrackingHandler)
 	http.HandleFunc("/marketplace/orders", MarketplaceOrdersHandler)
-	
+
 	// Vendor API
 	http.HandleFunc("/api/vendor/register", VendorRegisterHandler)
 	http.HandleFunc("/api/vendor/", VendorGetHandler)
-	
+
 	// Product API
 	http.HandleFunc("/api/vendor/products", ProductCreateHandler)
 	http.HandleFunc("/api/products", ProductsListHandler)
@@ -132,12 +144,12 @@ func corsMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		
+
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
+
 		next.ServeHTTP(w, r)
 	})
 }

@@ -35,8 +35,11 @@ const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 const USER_TYPES = ["buyer", "vendor", "both"] as const;
 
 async function hashEmail(email: string): Promise<string> {
-  const data = new TextEncoder().encode(email.toLowerCase().trim());
-  const buf = await crypto.subtle.digest("SHA-256", data);
+  const encoded = new TextEncoder().encode(email.toLowerCase().trim());
+  // Create an ArrayBuffer-backed view so subtle.digest receives a BufferSource
+  // compatible with current TypeScript DOM lib typings.
+  const data = new Uint8Array(encoded);
+  const buf = await crypto.subtle.digest("SHA-256", data.buffer);
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 

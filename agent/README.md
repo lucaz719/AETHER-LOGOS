@@ -12,6 +12,12 @@ go run .
 
 The server listens on port **8080** by default. Override with `PORT=9090 go run .`
 
+## Environment
+
+- `RECLAIM_APP_ID` and `RECLAIM_APP_SECRET` enable the real Reclaim zkTLS flow.
+- `MOCK_PROOF=true` enables hackathon mock mode, bypasses Reclaim network calls,
+  and returns a synthetic proof payload after a short delay.
+
 ## API
 
 | Method | Path        | Description                              |

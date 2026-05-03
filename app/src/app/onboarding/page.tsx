@@ -6,6 +6,9 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useVendorProfile } from "@/hooks/useVendorProfile";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ShoppingCart, Store, Lock, Package, TrendingUp, Zap } from "lucide-react";
+
+type SellerTier = "distributor" | "wholesaler" | "manufacturer" | null;
 
 export default function OnboardingPage() {
   const { publicKey } = useWallet();
@@ -14,6 +17,14 @@ export default function OnboardingPage() {
 
   const [path, setPath] = useState<"none" | "buyer" | "vendor">("none");
   const [step, setStep] = useState(1);
+  const [sellerTier, setSellerTier] = useState<SellerTier>(null);
+  const [formData, setFormData] = useState({
+    businessName: "",
+    industry: "",
+    shopName: "",
+    categories: "",
+    tierData: {} as Record<string, string>,
+  });
 
   // Auto-forward if wallet connects and they have a vendor profile
   useEffect(() => {
@@ -22,23 +33,23 @@ export default function OnboardingPage() {
     }
   }, [publicKey, profile, loading, router]);
 
-  // Step 1: Connect Wallet (handled implicitly by rendering if !publicKey)
-
   if (!publicKey) {
     return (
-      <main className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-        <div className="glass" style={{ textAlign: "center", padding: "4rem", maxWidth: 600 }}>
-          <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👋</div>
-          <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.5rem" }}>
+      <main className="page-container flex items-center justify-center min-h-[80vh]">
+        <div className="glass rounded-lg border border-border bg-card p-16 text-center max-w-2xl shadow-sm">
+          <div className="mb-4 flex justify-center">
+            <Zap className="h-12 w-12 text-primary" />
+          </div>
+          <h1 className="mb-2 text-4xl font-bold text-foreground">
             Welcome to AETHER-LOGOS
           </h1>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "2rem", fontSize: "1.1rem" }}>
+          <p className="mb-8 text-lg text-muted-foreground">
             The secure, escrow-backed marketplace for global trade on Solana.
           </p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          <div className="flex justify-center">
             <WalletMultiButton />
           </div>
-          <p style={{ marginTop: "1.5rem", color: "var(--text-muted)", fontSize: "0.85rem" }}>
+          <p className="mt-6 text-sm text-muted-foreground">
             Connect your wallet to get started.
           </p>
         </div>
@@ -48,47 +59,49 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <main className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-        <div style={{ color: "var(--text-muted)" }}>Loading your profile...</div>
+      <main className="page-container flex items-center justify-center min-h-[80vh]">
+        <div className="text-muted-foreground">Loading your profile...</div>
       </main>
     );
   }
 
-  // Step 2: Choose Path
+  // Step 1: Choose Path
   if (path === "none") {
     return (
-      <main className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-        <div className="glass" style={{ textAlign: "center", padding: "3rem", maxWidth: 700 }}>
-          <h2 style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1rem" }}>
-            How will you use the marketplace?
+      <main className="page-container flex items-center justify-center min-h-[80vh]">
+        <div className="glass rounded-lg border border-border bg-card p-12 text-center max-w-4xl shadow-sm">
+          <h2 className="mb-4 text-3xl font-bold text-foreground">
+            How will you use AETHER-LOGOS?
           </h2>
-          <p style={{ color: "var(--text-secondary)", marginBottom: "2.5rem" }}>
+          <p className="mb-12 text-muted-foreground">
             Select your primary role. You can always change this later.
           </p>
           
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem" }}>
+          <div className="grid gap-6 md:grid-cols-2">
             <button 
               onClick={() => { setPath("buyer"); setStep(1); }}
-              className="glass" 
-              style={{ padding: "2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", cursor: "pointer", transition: "all var(--transition)", border: "1px solid var(--border)", background: "var(--bg-surface)" }}
-              onMouseOver={(e) => e.currentTarget.style.borderColor = "var(--cyan)"}
-              onMouseOut={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+              className="rounded-lg border border-border bg-background p-8 text-left transition-colors hover:border-primary hover:bg-muted"
             >
-              <div style={{ fontSize: "3rem" }}>🛍️</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>I want to Buy</h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>Browse products, place orders, and pay securely using escrow.</p>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <ShoppingCart className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-foreground">I want to Buy</h3>
+              <p className="text-sm text-muted-foreground">
+                Browse products, place orders, and pay securely using escrow.
+              </p>
             </button>
             
             <button 
               onClick={() => { setPath("vendor"); setStep(1); }}
-              className="glass" 
-              style={{ padding: "2rem", display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", cursor: "pointer", transition: "all var(--transition)", border: "1px solid var(--border)", background: "var(--bg-surface)" }}
-              onMouseOver={(e) => e.currentTarget.style.borderColor = "var(--purple)"}
-              onMouseOut={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+              className="rounded-lg border border-border bg-background p-8 text-left transition-colors hover:border-primary hover:bg-muted"
             >
-              <div style={{ fontSize: "3rem" }}>🏪</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text-primary)" }}>I want to Sell</h3>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", margin: 0 }}>Register a shop, list products, and fulfill global orders.</p>
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                <Store className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="mb-2 text-xl font-bold text-foreground">I want to Sell</h3>
+              <p className="text-sm text-muted-foreground">
+                Register a shop, list products, and fulfill global orders.
+              </p>
             </button>
           </div>
         </div>
@@ -99,47 +112,61 @@ export default function OnboardingPage() {
   // Buyer Path
   if (path === "buyer") {
     return (
-      <main className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-        <div className="glass" style={{ padding: "3rem", maxWidth: 600, width: "100%" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)" }}>
-              {step === 1 ? "Secure Escrow" : "Ready to Browse"}
+      <main className="page-container flex items-center justify-center min-h-[80vh]">
+        <div className="glass rounded-lg border border-border bg-card p-12 max-w-2xl w-full shadow-sm">
+          <div className="mb-8 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-foreground">
+              {step === 1 ? "Secure Escrow Explained" : "Ready to Browse"}
             </h2>
-            <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Step {step} of 2</div>
+            <div className="text-sm text-muted-foreground">Step {step} of 2</div>
           </div>
           
           {step === 1 && (
             <div>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "2rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--cyan-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--cyan)" }}>💰</div>
-                  <div style={{ color: "var(--text-muted)" }}>→</div>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--purple-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--purple)" }}>🔒</div>
-                  <div style={{ color: "var(--text-muted)" }}>→</div>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--green-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--green)" }}>📦</div>
+              <div className="mb-8 flex items-center justify-center gap-3">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <TrendingUp className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Lock className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-muted-foreground">→</div>
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Package className="h-8 w-8 text-primary" />
                 </div>
               </div>
-              <p style={{ color: "var(--text-secondary)", marginBottom: "1rem", lineHeight: 1.6 }}>
+              <p className="mb-4 text-muted-foreground">
                 Every purchase on AETHER-LOGOS is protected by smart contract escrow.
               </p>
-              <ul style={{ color: "var(--text-muted)", fontSize: "0.9rem", display: "grid", gap: "0.75rem", paddingLeft: "1.2rem", marginBottom: "2.5rem" }}>
+              <ul className="mb-8 space-y-2 border-l-2 border-border pl-4 text-sm text-muted-foreground">
                 <li>Your funds are locked safely when you place an order.</li>
                 <li>The vendor ships the goods and provides tracking.</li>
                 <li>Funds are only released once delivery is verified.</li>
               </ul>
-              <button onClick={() => setStep(2)} className="btn-primary" style={{ width: "100%", padding: "0.75rem" }}>
+              <button 
+                onClick={() => setStep(2)} 
+                className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
+              >
                 Continue
               </button>
             </div>
           )}
 
           {step === 2 && (
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🎉</div>
-              <p style={{ color: "var(--text-secondary)", marginBottom: "2.5rem", lineHeight: 1.6 }}>
+            <div className="text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <ShoppingCart className="h-8 w-8 text-primary" />
+                </div>
+              </div>
+              <p className="mb-8 text-muted-foreground">
                 You're all set! Explore thousands of products from verified vendors globally.
               </p>
-              <Link href="/marketplace" className="btn-primary" style={{ display: "block", textDecoration: "none", padding: "0.75rem" }}>
+              <Link 
+                href="/marketplace" 
+                className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
+              >
                 Browse Marketplace →
               </Link>
             </div>
@@ -151,54 +178,160 @@ export default function OnboardingPage() {
 
   // Vendor Path
   if (path === "vendor") {
-    return (
-      <main className="page-container" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "80vh" }}>
-        <div className="glass" style={{ padding: "3rem", maxWidth: 600, width: "100%" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "var(--text-primary)" }}>
-              {step === 1 ? "Set Up Your Shop" : "Zero Counterparty Risk"}
-            </h2>
-            <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Step {step} of 2</div>
-          </div>
-          
-          {step === 1 && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "2rem", fontSize: "3rem" }}>
-                🏗️
-              </div>
-              <p style={{ color: "var(--text-secondary)", marginBottom: "1rem", lineHeight: 1.6 }}>
-                To start selling, you'll need to register your vendor profile on-chain.
-              </p>
-              <ul style={{ color: "var(--text-muted)", fontSize: "0.9rem", display: "grid", gap: "0.75rem", paddingLeft: "1.2rem", marginBottom: "2.5rem" }}>
-                <li>Add your shop details, logo, and categories.</li>
-                <li>Gain a verified badge after admin review.</li>
-                <li>Reach a global audience with instant crypto settlements.</li>
-              </ul>
-              <button onClick={() => setStep(2)} className="btn-primary" style={{ width: "100%", padding: "0.75rem" }}>
-                Continue
-              </button>
-            </div>
-          )}
+    // Step 1: Seller Tier Selection
+    if (step === 1 && !sellerTier) {
+      return (
+        <main className="page-container flex items-center justify-center min-h-[80vh]">
+          <div className="glass rounded-lg border border-border bg-card p-12 max-w-3xl w-full shadow-sm">
+            <h2 className="mb-4 text-2xl font-bold text-foreground">Choose Your Seller Tier</h2>
+            <p className="mb-8 text-muted-foreground">
+              Select the tier that best describes your business. Each tier offers different MOQ and lead time defaults.
+            </p>
 
-          {step === 2 && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: "2rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--purple-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--purple)" }}>🔒</div>
-                  <div style={{ color: "var(--text-muted)" }}>→</div>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--cyan-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--cyan)" }}>🚚</div>
-                  <div style={{ color: "var(--text-muted)" }}>→</div>
-                  <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--green-dim)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.5rem", color: "var(--green)" }}>💵</div>
+            <div className="grid gap-6 md:grid-cols-3">
+              {[
+                {
+                  id: "distributor",
+                  title: "Certified Distributor",
+                  description: "Fast local shipping, lower MOQs. Best for regional stockists.",
+                  features: ["Lower MOQ", "Faster delivery", "Regional focus"],
+                },
+                {
+                  id: "wholesaler",
+                  title: "Verified Wholesaler",
+                  description: "Bulk B2B trading with moderate lead times.",
+                  features: ["Moderate MOQ", "Standard lead time", "Bulk specialist"],
+                },
+                {
+                  id: "manufacturer",
+                  title: "Direct Manufacturer",
+                  description: "Direct source with custom lead times. Highest trust.",
+                  features: ["Higher MOQ", "Custom lead times", "Lowest price"],
+                },
+              ].map((tier) => (
+                <button
+                  key={tier.id}
+                  onClick={() => setSellerTier(tier.id as SellerTier)}
+                  className="rounded-lg border-2 border-border bg-background p-6 text-left transition-all hover:border-primary hover:bg-muted"
+                >
+                  <h3 className="mb-2 text-lg font-bold text-foreground">{tier.title}</h3>
+                  <p className="mb-4 text-sm text-muted-foreground">{tier.description}</p>
+                  <ul className="space-y-1">
+                    {tier.features.map((feature) => (
+                      <li key={feature} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="h-1 w-1 rounded-full bg-primary"></div>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </button>
+              ))}
+            </div>
+          </div>
+        </main>
+      );
+    }
+
+    // Step 2+: Tier-Specific Form
+    return (
+      <main className="page-container flex items-center justify-center min-h-[80vh]">
+        <div className="glass rounded-lg border border-border bg-card p-12 max-w-2xl w-full shadow-sm">
+          <div className="mb-8 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-foreground">Complete Your Profile</h2>
+            <div className="text-sm text-muted-foreground">Step {step} of 3</div>
+          </div>
+
+          <form className="space-y-6">
+            {step === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Shop Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Global Tech Supplies"
+                    value={formData.shopName}
+                    onChange={(e) => setFormData({ ...formData, shopName: e.target.value })}
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Product Categories</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Electronics, Industrial"
+                    value={formData.categories}
+                    onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
                 </div>
               </div>
-              <p style={{ color: "var(--text-secondary)", marginBottom: "2.5rem", lineHeight: 1.6 }}>
-                When a buyer orders, their payment is secured in an on-chain escrow vault. Once the order is delivered, you get paid automatically. No chargebacks, no delays.
-              </p>
-              <Link href="/vendor/register" className="btn-primary" style={{ display: "block", textAlign: "center", textDecoration: "none", padding: "0.75rem" }}>
-                Register Shop Profile →
-              </Link>
+            )}
+
+            {step === 3 && sellerTier === "distributor" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Distribution Region</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Southeast Asia, North America"
+                    value={formData.tierData.region || ""}
+                    onChange={(e) => setFormData({ ...formData, tierData: { ...formData.tierData, region: e.target.value } })}
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            )}
+
+            {step === 3 && sellerTier === "wholesaler" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Bulk Capacity (units/month)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g., 50000"
+                    value={formData.tierData.capacity || ""}
+                    onChange={(e) => setFormData({ ...formData, tierData: { ...formData.tierData, capacity: e.target.value } })}
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            )}
+
+            {step === 3 && sellerTier === "manufacturer" && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Factory Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Shanghai, China"
+                    value={formData.tierData.location || ""}
+                    onChange={(e) => setFormData({ ...formData, tierData: { ...formData.tierData, location: e.target.value } })}
+                    className="w-full rounded-md border border-border bg-background px-4 py-2 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (step > 2) setStep(step - 1);
+                  else setSellerTier(null);
+                }}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => step < 3 ? setStep(step + 1) : router.push("/vendor/dashboard")}
+                className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
+              >
+                {step === 3 ? "Complete Setup" : "Continue"}
+              </button>
             </div>
-          )}
+          </form>
         </div>
       </main>
     );

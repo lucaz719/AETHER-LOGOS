@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -40,21 +41,48 @@ type ReclaimClient struct {
 	AppID     string
 	AppSecret string
 	Client    *http.Client
+	MockMode  bool
+
+	mu           sync.Mutex
+	mockSessions map[string]mockSessionData
 }
 
-func NewReclaimClient(appID, appSecret string) *ReclaimClient {
+type mockSessionData struct {
+	TrackingNumber string
+	ExpectedStatus string
+}
+
+func NewReclaimClient(appID, appSecret string, mockMode bool) *ReclaimClient {
 	return &ReclaimClient{
 		AppID:     appID,
 		AppSecret: appSecret,
 		Client:    &http.Client{Timeout: 30 * time.Second},
+		MockMode:  mockMode,
 	}
 }
 
 func (r *ReclaimClient) IsConfigured() bool {
+	if r.MockMode {
+		return true
+	}
 	return strings.TrimSpace(r.AppID) != "" && strings.TrimSpace(r.AppSecret) != ""
 }
 
 func (r *ReclaimClient) CreateVerificationRequest(trackingNumber, expectedStatus string) (string, string, error) {
+	if r.MockMode {
+		sessionID := fmt.Sprintf("mock-session-%d", time.Now().UnixNano())
+		r.mu.Lock()
+		if r.mockSessions == nil {
+			r.mockSessions = make(map[string]mockSessionData)
+		}
+		r.mockSessions[sessionID] = mockSessionData{
+			TrackingNumber: trackingNumber,
+			ExpectedStatus: expectedStatus,
+		}
+		r.mu.Unlock()
+		return sessionID, "https://mock.reclaim.local/verification/" + sessionID, nil
+	}
+
 	if !r.IsConfigured() {
 		return "", "", fmt.Errorf("reclaim credentials are missing")
 	}
@@ -96,6 +124,50 @@ func (r *ReclaimClient) CreateVerificationRequest(trackingNumber, expectedStatus
 }
 
 func (r *ReclaimClient) PollForProof(ctx context.Context, sessionID string) (*ReclaimProof, error) {
+	if r.MockMode {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("timeout waiting for proof")
+		case <-time.After(2 * time.Second):
+		}
+
+		r.mu.Lock()
+		session, ok := r.mockSessions[sessionID]
+		r.mu.Unlock()
+		if !ok {
+			return nil, fmt.Errorf("mock session not found: %s", sessionID)
+		}
+
+		now := uint32(time.Now().Unix())
+		return &ReclaimProof{
+			Identifier: "mock-reclaim-proof",
+			ClaimData: ClaimData{
+				Provider:   "dhl-tracking",
+				Parameters: fmt.Sprintf(`{"trackingNumber":"%s","expectedStatus":"%s"}`, session.TrackingNumber, session.ExpectedStatus),
+				Owner:      "0xmock-owner",
+				TimestampS: now,
+				Context:    "hackathon-mock-zktls",
+				Identifier: sessionID,
+				Epoch:      1,
+			},
+			Signatures: []string{
+				"0xmocksignaturedeadbeef001",
+				"0xmocksignaturedeadbeef002",
+			},
+			Witnesses: []WitnessData{
+				{ID: "mock-witness-1", URL: "https://mock.reclaim.local/witness/1"},
+				{ID: "mock-witness-2", URL: "https://mock.reclaim.local/witness/2"},
+			},
+			PublicData: map[string]string{
+				"trackingNumber": session.TrackingNumber,
+				"expectedStatus": session.ExpectedStatus,
+				"sessionId":      sessionID,
+				"carrier":        "dhl",
+				"mode":           "mock",
+			},
+		}, nil
+	}
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 

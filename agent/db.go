@@ -2,9 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 var db *sql.DB
@@ -56,7 +57,7 @@ type Product struct {
 
 func InitDB(path string) error {
 	var err error
-	db, err = sql.Open("sqlite3", path)
+	db, err = sql.Open("sqlite", path)
 	if err != nil {
 		return err
 	}
@@ -210,10 +211,10 @@ func InitDB(path string) error {
 	if _, err = db.Exec(schema); err != nil {
 		return err
 	}
-	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN proof_tx_sig TEXT NOT NULL DEFAULT ''`); err != nil && err.Error() != "duplicate column name: proof_tx_sig" {
+	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN proof_tx_sig TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
 	}
-	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN store_id INTEGER`); err != nil && err.Error() != "duplicate column name: store_id" {
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN store_id INTEGER`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
 	}
 	return nil

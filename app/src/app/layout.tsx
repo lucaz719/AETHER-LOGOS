@@ -3,16 +3,20 @@ import "./globals.css";
 import { CartProvider } from "@/hooks/useCart";
 import { ToastProvider } from "@/hooks/useToast";
 import { NavBar } from "@/components/NavBar";
-import dynamic from "next/dynamic";
+import { WalletProviderWrapper } from "@/components/WalletProviderWrapper";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
-// Lazy-load the heavy Solana wallet provider.  It is only needed on
-// wallet-connected pages, so deferring it cuts the initial parse cost for
-// every public / non-wallet page significantly (wallet adapter + web3.js
-// accounts for the majority of the 950+ module load reported).
-const SolanaWalletProvider = dynamic(
-  () => import("@/lib/wallet-provider").then((m) => ({ default: m.SolanaWalletProvider })),
-  { ssr: false }
-);
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "AETHER-LOGOS | Trade Settlement Protocol",
@@ -26,8 +30,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <SolanaWalletProvider>
+      <body className={`${inter.className} ${inter.variable} ${jetBrainsMono.variable} antialiased`}>
+        <WalletProviderWrapper>
           <CartProvider>
             <ToastProvider>
               <NavBar />
@@ -36,7 +40,7 @@ export default function RootLayout({
               </div>
             </ToastProvider>
           </CartProvider>
-        </SolanaWalletProvider>
+        </WalletProviderWrapper>
       </body>
     </html>
   );

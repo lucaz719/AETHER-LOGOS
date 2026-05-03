@@ -1,134 +1,213 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
+import { useState } from "react";
+import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
+import { HedgeCard } from "@/components/dashboard/HedgeCard";
+import { MarketplaceFilters } from "@/components/dashboard/MarketplaceFilters";
+import { ProductCard } from "@/components/dashboard/ProductCard";
+import { useRouter } from "next/navigation";
+
+const products = [
+  {
+    productId: "prod-001",
+    title: "IP67 Industrial Router Module",
+    category: "Industrial Components",
+    vendor: "Nordic Mobility Supply",
+    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
+    sellerTier: "distributor" as const,
+    rating: 4.9,
+    priceUsdc: 489,
+    moq: 50,
+    leadTimeDays: 6,
+    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
+  },
+  {
+    productId: "prod-002",
+    title: "Cold Chain Sensor Array (Gen 4)",
+    category: "IoT Hardware",
+    vendor: "Pacific Transit Systems",
+    sellerWallet: "7kA2mQ9sB5cP1dE8jN6vL3hF4gR2wT5u",
+    sellerTier: "manufacturer" as const,
+    rating: 4.8,
+    priceUsdc: 1720,
+    moq: 10,
+    leadTimeDays: 14,
+    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
+  },
+  {
+    productId: "prod-003",
+    title: "Secure Container Lock Controller",
+    category: "Security Systems",
+    vendor: "Anchor Field Devices",
+    sellerWallet: "3mX7kL2pQ9sB4vE1jH8nF5gD2rT6aW9c",
+    sellerTier: "wholesaler" as const,
+    rating: 4.7,
+    priceUsdc: 265,
+    moq: 100,
+    leadTimeDays: 4,
+    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
+  },
+  {
+    productId: "prod-004",
+    title: "EMI Shield Gasket Roll (100m)",
+    category: "Industrial Components",
+    vendor: "Nordic Mobility Supply",
+    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
+    sellerTier: "distributor" as const,
+    rating: 4.6,
+    priceUsdc: 320,
+    moq: 30,
+    leadTimeDays: 3,
+    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
+  },
+];
+
+const hedgeMarkets = [
+  {
+    marketType: "DHL Customs Event",
+    title: "Will the shipment be held at Customs for > 48 hours?",
+    yesProbability: 64.2,
+    liquidity: 860000,
+    expiry: "Resolves 2026-05-05 18:00 UTC",
+    verificationSignal: "DHL event code: customs-clearance + hold duration",
+  },
+  {
+    marketType: "DHL Delivery SLA",
+    title: "Will the delivery be completed before 2026-05-07 12:00 UTC?",
+    yesProbability: 58.4,
+    liquidity: 420000,
+    expiry: "Resolves 2026-05-07 12:00 UTC",
+    verificationSignal: "DHL delivered timestamp vs target deadline",
+  },
+  {
+    marketType: "DHL Transit Exception",
+    title: "Will the shipment encounter a 'Transit Exception'?",
+    yesProbability: 33.6,
+    liquidity: 510000,
+    expiry: "Resolves 2026-05-06 20:00 UTC",
+    verificationSignal: "DHL status stream includes TRANSIT_EXCEPTION",
+  },
+];
 
 export default function Home() {
+  const [mode, setMode] = useState<"marketplace" | "hedge">("marketplace");
+  const [selectedTier, setSelectedTier] = useState<string>("all");
+  const router = useRouter();
+
+  const filteredProducts =
+    selectedTier === "all"
+      ? products
+      : products.filter((p) => p.sellerTier === selectedTier);
+
+  const handleProductBuy = (payload: {
+    productId: string;
+    title: string;
+    sellerWallet: string;
+    usdcMint: string;
+    tier: string;
+    moq: number;
+    leadTimeDays: number;
+  }) => {
+    // Navigate to trade creation page with payload
+    const params = new URLSearchParams();
+    params.set("productId", payload.productId);
+    params.set("title", payload.title);
+    params.set("sellerWallet", payload.sellerWallet);
+    params.set("usdcMint", payload.usdcMint);
+    params.set("tier", payload.tier);
+    params.set("moq", payload.moq.toString());
+    params.set("leadTimeDays", payload.leadTimeDays.toString());
+    router.push(`/trades?${params.toString()}`);
+  };
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#0a0a0f] to-[#12121a]">
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20 text-center">
-        <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 tracking-tight">
-          Trustless Trade Settlement on Solana
-        </h1>
-        <p className="text-xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed">
-          Atomic escrow with cryptographic proof of delivery. Settle global trade in seconds without intermediaries.
-        </p>
-
-        {/* Stats Bar */}
-        <div className="grid grid-cols-3 gap-4 mb-16 max-w-3xl mx-auto">
-          <div className="bg-[#12121a] border border-white/10 rounded-lg px-6 py-4 backdrop-blur">
-            <div className="text-3xl font-bold text-purple-400">$2.5T</div>
-            <div className="text-sm text-gray-400 mt-1">Financing Gap</div>
-          </div>
-          <div className="bg-[#12121a] border border-white/10 rounded-lg px-6 py-4 backdrop-blur">
-            <div className="text-3xl font-bold text-teal-400">220+</div>
-            <div className="text-sm text-gray-400 mt-1">Countries Covered</div>
-          </div>
-          <div className="bg-[#12121a] border border-white/10 rounded-lg px-6 py-4 backdrop-blur">
-            <div className="text-3xl font-bold text-purple-400">&lt;30s</div>
-            <div className="text-sm text-gray-400 mt-1">Settlement Time</div>
-          </div>
-        </div>
-
-        {/* CTA Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link
-            href="/dashboard/buyer"
-            className="px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold rounded-lg transition shadow-lg hover:shadow-purple-500/50 shadow-purple-500/20"
-          >
-            I&apos;m a Buyer
-          </Link>
-          <Link
-            href="/dashboard/seller"
-            className="px-8 py-4 border border-purple-500/50 hover:border-purple-500 text-white font-semibold rounded-lg transition hover:bg-purple-500/10"
-          >
-            I&apos;m a Seller
-          </Link>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <h2 className="text-4xl font-bold text-white mb-16 text-center">How It Works</h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Feature 1 */}
-          <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 backdrop-blur hover:border-purple-500/30 transition">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mb-6">
-              <span className="text-white text-xl font-bold">1</span>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-4">Atomic Escrow</h3>
-            <p className="text-gray-400 leading-relaxed">
-              Buyer locks USDC in a secure PDA vault. Funds are held until cryptographic proof of delivery is verified.
-            </p>
-          </div>
-
-          {/* Feature 2 */}
-          <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 backdrop-blur hover:border-teal-500/30 transition">
-            <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center mb-6">
-              <span className="text-white text-xl font-bold">2</span>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-4">zkTLS Proofs</h3>
-            <p className="text-gray-400 leading-relaxed">
-              Agent monitors carrier APIs and generates cryptographic proofs from delivery signatures using zkTLS protocol.
-            </p>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 backdrop-blur hover:border-purple-500/30 transition">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-teal-500 rounded-lg flex items-center justify-center mb-6">
-              <span className="text-white text-xl font-bold">3</span>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-4">Prediction Markets</h3>
-            <p className="text-gray-400 leading-relaxed">
-              Parimutuel markets let participants hedge shipping risk. Win proportional payouts based on market prediction accuracy.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Process Steps */}
-      <section className="max-w-7xl mx-auto px-6 py-20 bg-[#12121a]/50 rounded-2xl border border-white/10 mb-20">
-        <h2 className="text-3xl font-bold text-white mb-12 text-center">The Settlement Process</h2>
-        <div className="grid md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="w-12 h-12 bg-purple-500/20 border border-purple-500/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-purple-400 font-bold">→</span>
-            </div>
-            <h4 className="font-semibold text-white mb-2">Create</h4>
-            <p className="text-sm text-gray-400">Buyer creates trade and locks USDC</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-teal-500/20 border border-teal-500/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-teal-400 font-bold">→</span>
-            </div>
-            <h4 className="font-semibold text-white mb-2">Ship</h4>
-            <p className="text-sm text-gray-400">Seller submits tracking info</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-purple-500/20 border border-purple-500/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-purple-400 font-bold">→</span>
-            </div>
-            <h4 className="font-semibold text-white mb-2">Prove</h4>
-            <p className="text-sm text-gray-400">Agent verifies delivery with proof</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 bg-green-500/20 border border-green-500/50 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-green-400 font-bold">✓</span>
-            </div>
-            <h4 className="font-semibold text-white mb-2">Settle</h4>
-            <p className="text-sm text-gray-400">Funds released to seller</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-12 px-6">
-        <div className="max-w-7xl mx-auto text-center">
-          <p className="text-gray-500 text-sm">
-            Built for the Solana Frontier Hackathon 2026
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        <header className="space-y-3 text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">AETHER-LOGOS Demo Dashboard</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+            Escrow marketplace and hedge execution in one terminal.
+          </h1>
+          <p className="mx-auto max-w-3xl text-sm text-muted-foreground md:text-base">
+            Live procurement workflows and logistics hedge markets unified under one Graphite Ledger control surface.
           </p>
-        </div>
-      </footer>
+        </header>
+
+        <DashboardModeToggle mode={mode} onChange={setMode} />
+
+        <section className="relative min-h-[720px]">
+          <div
+            className={`transition-all duration-300 ease-in-out ${mode === "marketplace" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 -translate-x-3 opacity-0"}`}
+            aria-hidden={mode !== "marketplace"}
+          >
+            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+              <MarketplaceFilters
+                categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
+                selectedTier={selectedTier}
+                onTierChange={setSelectedTier}
+              />
+              <div className="space-y-4">
+                <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Active RFQs</p>
+                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">1,284</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Escrow TVL</p>
+                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">$14.9M</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Avg Lock Time</p>
+                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">21.4h</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredProducts.map((product) => (
+                    <ProductCard
+                      key={product.productId}
+                      {...product}
+                      onBuy={handleProductBuy}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`transition-all duration-300 ease-in-out ${mode === "hedge" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 translate-x-3 opacity-0"}`}
+            aria-hidden={mode !== "hedge"}
+          >
+            <div className="space-y-4">
+              <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Open Hedge Positions</p>
+                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">742</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">24h Hedge Volume</p>
+                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">$2.3M</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Avg Fill</p>
+                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">118ms</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Risk Coverage</p>
+                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">93.2%</p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {hedgeMarkets.map((market) => (
+                  <HedgeCard key={market.title} {...market} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

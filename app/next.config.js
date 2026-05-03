@@ -25,6 +25,14 @@ const nextConfig = {
     ],
   },
   webpack(config, { isServer }) {
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      {
+        module: /ox[\\/]_esm[\\/]tempo[\\/]internal[\\/]virtualMasterPool/,
+        message: /Critical dependency/,
+      },
+    ];
+
     // Split heavy Solana / Anchor bundles into separate chunks so they are
     // only downloaded when the wallet-connected routes are visited.
     if (!isServer) {
@@ -34,7 +42,7 @@ const nextConfig = {
           ...(config.optimization.splitChunks?.cacheGroups ?? {}),
           solana: {
             name: 'solana-vendor',
-            test: /[\\/]node_modules[\\/](@solana|@coral-xyz|bn\.js|pino|@protobufjs)[\\/]/,
+            test: /[\\/]node_modules[\\/](@solana|@coral-xyz|bn\.js|pino|@protobufjs|@walletconnect|@reown)[\\/]/,
             chunks: 'all',
             priority: 40,
             reuseExistingChunk: true,
