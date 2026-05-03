@@ -1,135 +1,135 @@
 'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useTheme } from 'next-themes';
+import { ShoppingCart, Moon, Sun } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { useCart } from '@/hooks/useCart';
 
-// Lazy-load WalletMultiButton so the heavy Solana adapter chunk is only
-// fetched after the page hydrates, not during the initial HTML parse.
+// Dynamically import wallet button to avoid hydration issues
 const WalletMultiButton = dynamic(
-  () => import("@solana/wallet-adapter-react-ui").then((m) => ({ default: m.WalletMultiButton })),
-  { ssr: false, loading: () => null }
+  async () => {
+    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
+    return { default: WalletMultiButton };
+  },
+  { ssr: false }
 );
 
-const NAV_LINKS = [
-  { href: "/dashboard", label: "Marketplace" },
-  { href: "/markets", label: "Markets" },
-  { href: "/onboarding", label: "Get Started" },
-];
-
 export function NavBar() {
-  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  const { theme, setTheme } = useTheme();
+  const { items } = useCart();
+  const cartCount = items.length;
 
   useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const shouldBeDark = saved ? saved !== "light" : prefersDark;
-    setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle("dark", shouldBeDark);
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!mounted) return;
-    document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
-  }, [isDark, mounted]);
+  if (!mounted) {
+    return (
+      <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-8">
+              <div className="h-8 w-24 bg-muted rounded animate-pulse" />
+              <div className="hidden h-8 w-48 bg-muted rounded animate-pulse md:block" />
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-24 bg-muted rounded animate-pulse" />
+              <div className="h-10 w-10 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
-    <>
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 50,
-          borderBottom: "1px solid rgba(99, 102, 241, 0.3)",
-          background: "#0d0d14",
-          height: 64,
-        }}
-      >
-        <nav
-          style={{
-            maxWidth: 1280,
-            margin: "0 auto",
-            padding: "0 1.5rem",
-            height: "100%",
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
-            alignItems: "center",
-            gap: "1rem",
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              fontWeight: 700,
-              fontSize: "0.95rem",
-              letterSpacing: "0.08em",
-              color: "var(--cyan)",
-              textDecoration: "none",
-              justifySelf: "start",
-              flexShrink: 0,
-            }}
-          >
-            ◯ AETHER-LOGOS
+    <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Single Row: Logo | Search | Utilities */}
+        <div className="flex h-16 items-center justify-between gap-4">
+          {/* Logo */}
+          <Link href="/" className="flex-shrink-0">
+            <div className="text-lg font-bold tracking-tighter text-foreground">
+              AETHER
+            </div>
           </Link>
 
-          <div style={{ display: "flex", gap: "0.4rem", justifySelf: "center", alignItems: "center" }}>
-            {NAV_LINKS.map((link) => {
-              const active = pathname === link.href || pathname.startsWith(link.href + "/");
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={active ? "text-white" : "text-gray-300 hover:text-purple-400"}
-                  style={{
-                    padding: "0.4rem 0.7rem",
-                    borderRadius: 6,
-                    fontSize: "0.84rem",
-                    fontWeight: active ? 600 : 500,
-                    textDecoration: "none",
-                    border: active ? "1px solid rgba(255,255,255,0.14)" : "1px solid transparent",
-                    background: active ? "rgba(255,255,255,0.04)" : "transparent",
-                    transition: "all var(--transition)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+          {/* Search Bar - Hidden on mobile, visible on sm+ */}
+          <div className="hidden flex-1 max-w-sm md:block">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search products, markets..."
+                readOnly
+                className="w-full rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-foreground placeholder-muted-foreground cursor-pointer transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 transform rounded border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+                ⌘K
+              </kbd>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", justifySelf: "end" }}>
-            {mounted && <WalletMultiButton />}
-            <button
-              aria-label="Toggle theme"
-              onClick={() => setIsDark((prev) => !prev)}
-              style={{
-                background: "transparent",
-                border: "1px solid var(--border)",
-                borderRadius: 6,
-                width: 34,
-                height: 34,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "var(--text-secondary)",
-                fontSize: "0.95rem",
-                transition: "border-color var(--transition)",
-              }}
+          {/* Right Utilities: Wallet + Cart + Theme */}
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Wallet Button - Wrapped with styling override */}
+            <div className="wallet-button-wrapper">
+              <WalletMultiButton />
+            </div>
+
+            {/* Cart Button */}
+            <Link
+              href="/cart"
+              className="relative p-2 rounded-lg hover:bg-secondary transition"
+              aria-label="Shopping cart"
             >
-              {isDark ? "☀" : "☾"}
+              <ShoppingCart className="h-5 w-5 text-foreground" />
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="p-2 rounded-lg hover:bg-secondary transition"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-foreground" />
+              ) : (
+                <Moon className="h-5 w-5 text-foreground" />
+              )}
             </button>
           </div>
-        </nav>
-      </header>
-    </>
+        </div>
+
+        {/* Bottom Row: Navigation Links */}
+        <div className="flex items-center gap-1 border-t border-border/40 h-12 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <Link
+            href="/dashboard"
+            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
+          >
+            Dashboard
+          </Link>
+          <Link
+            href="/marketplace"
+            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
+          >
+            Procurement
+          </Link>
+          <Link
+            href="/dashboard?mode=hedge"
+            className="px-3 py-2 text-sm font-medium text-foreground hover:text-primary transition flex items-center gap-2"
+          >
+            Risk Desk
+          </Link>
+        </div>
+      </div>
+    </nav>
   );
 }

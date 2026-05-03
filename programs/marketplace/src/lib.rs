@@ -49,10 +49,11 @@ pub enum OrderStatus {
 #[account]
 pub struct MarketplaceConfig {
     pub admin: Pubkey,
+    pub platform_fee_treasury: Pubkey,
     pub bump: u8,
 }
 
-const MARKETPLACE_CONFIG_SPACE: usize = 8 + 32 + 1;
+const MARKETPLACE_CONFIG_SPACE: usize = 8 + 32 + 32 + 1;
 
 /// Vendor shop profile.
 /// PDA seeds: ["vendor", authority]

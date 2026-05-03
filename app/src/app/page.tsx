@@ -242,7 +242,7 @@ export default function LandingPage() {
           </div>
 
           <Link
-            href="/markets"
+            href="/dashboard"
             id="markets-explore"
             className="group inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-8 py-3.5 text-sm font-semibold text-indigo-300 backdrop-blur-sm transition-all hover:border-indigo-400/60 hover:bg-indigo-500/20 hover:text-indigo-200"
           >

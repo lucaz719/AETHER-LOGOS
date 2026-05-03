@@ -3,17 +3,26 @@
 import { useState } from "react";
 import { useCart } from "@/hooks/useCart";
 import { useCheckout } from "@/hooks/useCheckout";
+import { useSolPrice, formatUsd, usdToLamports } from "@/hooks/useSolPrice";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
 
 type Step = "review" | "approve" | "confirm" | "done";
+type PaymentMethod = "usdc" | "sol";
 
 export function CheckoutFlow() {
   const { items, totalUsdc, clearCart } = useCart();
   const { checkout, state, error, txSigs } = useCheckout();
   const { connected } = useWallet();
+  const { solPriceUsd, error: priceError } = useSolPrice();
   const [step, setStep] = useState<Step>("review");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("usdc");
+
+  const totalUsdDecimal = totalUsdc / 1_000_000;
+  const platformFeeUsd = paymentMethod === "usdc" ? totalUsdDecimal * 0.02 : totalUsdDecimal * 0.02;
+  const totalWithFeeUsd = totalUsdDecimal + platformFeeUsd;
+  const requiredLamports = usdToLamports(totalWithFeeUsd, solPriceUsd);
 
   const handlePlaceOrders = async () => {
     setStep("approve");
@@ -47,7 +56,7 @@ export function CheckoutFlow() {
           <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>✅</div>
           <h2 style={{ color: "var(--green)", marginBottom: "0.5rem" }}>Order placed!</h2>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1rem" }}>
-            {txSigs.length} order(s) created. USDC locked in escrow vault.
+            {txSigs.length} order(s) created. {paymentMethod === "usdc" ? "USDC" : "SOL"} locked in escrow vault.
           </p>
           
           {txSigs.length > 0 && (
@@ -96,6 +105,64 @@ export function CheckoutFlow() {
 
       <h2 style={{ color: "var(--text-primary)", margin: 0 }}>Checkout</h2>
 
+      {/* Payment method toggle */}
+      <div className="glass" style={{ padding: "1rem", display: "flex", gap: "0.75rem", borderRadius: "var(--radius-md)" }}>
+        <button
+          onClick={() => setPaymentMethod("usdc")}
+          style={{
+            flex: 1,
+            padding: "0.65rem",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            background: paymentMethod === "usdc" ? "var(--cyan)" : "transparent",
+            color: paymentMethod === "usdc" ? "var(--bg-base)" : "var(--text-secondary)",
+            fontWeight: paymentMethod === "usdc" ? 700 : 500,
+            fontSize: "0.9rem",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          💵 USDC
+        </button>
+        <button
+          onClick={() => setPaymentMethod("sol")}
+          style={{
+            flex: 1,
+            padding: "0.65rem",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            background: paymentMethod === "sol" ? "var(--violet)" : "transparent",
+            color: paymentMethod === "sol" ? "white" : "var(--text-secondary)",
+            fontWeight: paymentMethod === "sol" ? 700 : 500,
+            fontSize: "0.9rem",
+            cursor: "pointer",
+            transition: "all 0.2s",
+          }}
+        >
+          ◎ SOL
+        </button>
+      </div>
+
+      {/* SOL price ticker */}
+      {paymentMethod === "sol" && (
+        <div
+          style={{
+            background: "rgba(167,107,207,0.08)",
+            border: "1px solid rgba(167,107,207,0.25)",
+            borderRadius: "var(--radius-md)",
+            padding: "0.75rem 1rem",
+            fontSize: "0.82rem",
+            color: "var(--violet)",
+          }}
+        >
+          {priceError ? (
+            <span>⚠️ Unable to fetch SOL price</span>
+          ) : (
+            <span>1 SOL = {formatUsd(solPriceUsd)}</span>
+          )}
+        </div>
+      )}
+
       {/* Order summary */}
       <div className="glass" style={{ overflow: "hidden" }}>
         <div
@@ -130,6 +197,24 @@ export function CheckoutFlow() {
             </div>
           </div>
         ))}
+
+        {/* Platform fee line item */}
+        <div
+          style={{
+            padding: "0.7rem 1rem",
+            display: "flex",
+            justifyContent: "space-between",
+            borderBottom: "1px solid var(--border)",
+            fontSize: "0.88rem",
+          }}
+        >
+          <span style={{ color: "var(--text-secondary)" }}>Platform Fee (2%)</span>
+          <span style={{ color: "var(--amber)", fontWeight: 600 }}>
+            {paymentMethod === "usdc" ? `$${platformFeeUsd.toFixed(2)}` : `$${platformFeeUsd.toFixed(2)}`}
+          </span>
+        </div>
+
+        {/* Total */}
         <div
           style={{
             padding: "0.7rem 1rem",
@@ -139,7 +224,13 @@ export function CheckoutFlow() {
           }}
         >
           <span style={{ color: "var(--text-secondary)" }}>Total</span>
-          <span style={{ color: "var(--cyan)", fontSize: "1.05rem" }}>${(totalUsdc / 1_000_000).toFixed(2)} USDC</span>
+          {paymentMethod === "usdc" ? (
+            <span style={{ color: "var(--cyan)", fontSize: "1.05rem" }}>${totalWithFeeUsd.toFixed(2)} USDC</span>
+          ) : (
+            <span style={{ color: "var(--violet)", fontSize: "1.05rem" }}>
+              {(requiredLamports / 1_000_000_000).toFixed(6)} SOL ({formatUsd(totalWithFeeUsd)})
+            </span>
+          )}
         </div>
       </div>
 
@@ -192,6 +283,8 @@ export function CheckoutFlow() {
             ? "⏳ Waiting for signature…"
             : state === "confirming"
             ? "⏳ Confirming…"
+            : paymentMethod === "sol"
+            ? "⚡ Lock SOL & Checkout"
             : "🔒 Place Order & Lock Funds"}
         </button>
       )}

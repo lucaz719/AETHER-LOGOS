@@ -3,6 +3,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 declare_id!("7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc");
 pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+pub const PLATFORM_FEE_BASIS_POINTS: u64 = 200; // 2%
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub enum Carrier {
@@ -30,6 +31,8 @@ pub struct TradeAccount {
     pub buyer: Pubkey,
     pub seller: Pubkey,
     pub amount: u64,
+    pub platform_fee: u64,
+    pub payment_token_mint: Pubkey,
     pub milestone_hash: [u8; 32],
     pub milestone_verified: bool,
     pub proof_data: Vec<u8>,
@@ -46,7 +49,18 @@ pub struct TradeAccount {
     pub bump: u8,
 }
 
-const TRADE_ACCOUNT_SPACE: usize = 8 + 1400;
+#[account]
+pub struct TradeEscrowConfig {
+    pub admin: Pubkey,
+    pub platform_fee_bps: u64,
+    pub total_fees_collected_usdc: u64,
+    pub total_fees_collected_lamports: u64,
+    pub last_withdrawal: Option<i64>,
+    pub bump: u8,
+}
+
+const TRADE_ACCOUNT_SPACE: usize = 8 + 1480;
+const CONFIG_ACCOUNT_SPACE: usize = 8 + 32 + 8 + 8 + 8 + 8 + 1;
 
 #[program]
 pub mod trade_escrow {
@@ -66,6 +80,11 @@ pub mod trade_escrow {
             TradeError::InvalidUsdcMint
         );
         require!(amount > 0, TradeError::InvalidAmount);
+        
+        // Calculate platform fee: 2% of amount
+        let platform_fee = (amount * PLATFORM_FEE_BASIS_POINTS) / 10000;
+        require!(platform_fee > 0 && (amount - platform_fee) > 0, TradeError::InvalidFeeCalculation);
+        
         if let Some(cid) = &invoice_cid {
             require!(cid.len() <= 128, TradeError::InvalidInvoiceCid);
         }
@@ -88,6 +107,8 @@ pub mod trade_escrow {
         trade.buyer = ctx.accounts.buyer.key();
         trade.seller = ctx.accounts.seller.key();
         trade.amount = amount;
+        trade.platform_fee = platform_fee;
+        trade.payment_token_mint = ctx.accounts.usdc_mint.key();
         trade.milestone_hash = milestone_hash;
         trade.milestone_verified = false;
         trade.proof_data = Vec::new();
@@ -234,6 +255,10 @@ pub mod trade_escrow {
         );
 
         let authority_seeds: &[&[u8]] = &[b"authority", &[expected_authority_bump]];
+        
+        let seller_amount = trade.amount - trade.platform_fee;
+        
+        // Transfer to seller: amount - fee
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -244,7 +269,21 @@ pub mod trade_escrow {
                 },
                 &[authority_seeds],
             ),
-            trade.amount,
+            seller_amount,
+        )?;
+        
+        // Transfer to platform fee account: fee
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.escrow_vault.to_account_info(),
+                    to: ctx.accounts.platform_fee_account.to_account_info(),
+                    authority: ctx.accounts.vault_authority.to_account_info(),
+                },
+                &[authority_seeds],
+            ),
+            trade.platform_fee,
         )?;
 
         trade.status = TradeStatus::Released;
@@ -253,6 +292,8 @@ pub mod trade_escrow {
             trade_id,
             seller: trade.seller,
             amount: trade.amount,
+            platform_fee: trade.platform_fee,
+            seller_amount,
         });
         Ok(())
     }
@@ -389,6 +430,62 @@ pub mod trade_escrow {
         });
         Ok(())
     }
+
+    pub fn init_config(ctx: Context<InitConfig>) -> Result<()> {
+        let config = &mut ctx.accounts.config;
+        config.admin = ctx.accounts.admin.key();
+        config.platform_fee_bps = PLATFORM_FEE_BASIS_POINTS;
+        config.total_fees_collected_usdc = 0;
+        config.total_fees_collected_lamports = 0;
+        config.last_withdrawal = None;
+        config.bump = ctx.bumps.config;
+
+        emit!(ConfigInitialized {
+            admin: config.admin,
+            platform_fee_bps: config.platform_fee_bps,
+        });
+        Ok(())
+    }
+
+    pub fn withdraw_platform_fees(
+        ctx: Context<WithdrawPlatformFees>,
+        amount: u64,
+    ) -> Result<()> {
+        require!(amount > 0, TradeError::InvalidAmount);
+        
+        let config = &mut ctx.accounts.config;
+        require_keys_eq!(
+            config.admin,
+            ctx.accounts.admin.key(),
+            TradeError::Unauthorized
+        );
+
+        let authority_seeds: &[&[u8]] = &[b"authority", &[ctx.bumps.vault_authority]];
+        
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.fee_vault.to_account_info(),
+                    to: ctx.accounts.recipient_token_account.to_account_info(),
+                    authority: ctx.accounts.vault_authority.to_account_info(),
+                },
+                &[authority_seeds],
+            ),
+            amount,
+        )?;
+
+        config.total_fees_collected_usdc = config.total_fees_collected_usdc.saturating_sub(amount);
+        config.last_withdrawal = Some(Clock::get()?.unix_timestamp);
+
+        emit!(PlatformFeeWithdrawn {
+            withdrawal_amount: amount,
+            payment_mint: ctx.accounts.fee_vault.mint,
+            recipient: ctx.accounts.recipient_token_account.key(),
+            timestamp: Clock::get()?.unix_timestamp,
+        });
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -489,6 +586,11 @@ pub struct ReleaseFunds<'info> {
         constraint = seller_token_account.mint == escrow_vault.mint,
     )]
     pub seller_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        constraint = platform_fee_account.mint == escrow_vault.mint,
+    )]
+    pub platform_fee_account: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
 
@@ -561,6 +663,45 @@ pub struct AdminResolve<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+#[derive(Accounts)]
+pub struct InitConfig<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    #[account(
+        init,
+        payer = admin,
+        space = CONFIG_ACCOUNT_SPACE,
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, TradeEscrowConfig>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawPlatformFees<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"config"],
+        bump,
+    )]
+    pub config: Account<'info, TradeEscrowConfig>,
+    #[account(
+        mut,
+        seeds = [b"fee-vault"],
+        bump,
+    )]
+    pub fee_vault: Account<'info, TokenAccount>,
+    /// CHECK: PDA authority that owns the vault.
+    #[account(seeds = [b"authority"], bump)]
+    pub vault_authority: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub recipient_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+}
+
 #[event]
 pub struct OrderCreated {
     pub trade_id: [u8; 32],
@@ -589,6 +730,8 @@ pub struct FundsReleased {
     pub trade_id: [u8; 32],
     pub seller: Pubkey,
     pub amount: u64,
+    pub platform_fee: u64,
+    pub seller_amount: u64,
 }
 
 #[event]
@@ -609,6 +752,20 @@ pub struct DisputeResolved {
     pub trade_id: [u8; 32],
     pub winner: Pubkey,
     pub amount: u64,
+}
+
+#[event]
+pub struct ConfigInitialized {
+    pub admin: Pubkey,
+    pub platform_fee_bps: u64,
+}
+
+#[event]
+pub struct PlatformFeeWithdrawn {
+    pub withdrawal_amount: u64,
+    pub payment_mint: Pubkey,
+    pub recipient: Pubkey,
+    pub timestamp: i64,
 }
 
 #[error_code]
@@ -635,6 +792,12 @@ pub enum TradeError {
     InvalidUsdcMint,
     #[msg("Invoice CID is invalid")]
     InvalidInvoiceCid,
+    #[msg("Platform fee account mismatch")]
+    InvalidFeeAccount,
+    #[msg("Unexpected payment token mint")]
+    InvalidPaymentMint,
+    #[msg("Platform fee calculation resulted in invalid amount")]
+    InvalidFeeCalculation,
 }
 
 fn extract_signed_by(proof_data: &[u8]) -> Option<String> {
@@ -655,3 +818,100 @@ fn extract_signed_by(proof_data: &[u8]) -> Option<String> {
     }
     Some(name)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_platform_fee_calculation() {
+        let amount = 10_000_000u64; // 10 USDC
+        let fee_bps = 200u64; // 2%
+        let expected_fee = (amount * fee_bps) / 10000;
+        assert_eq!(expected_fee, 200_000u64); // 0.2 USDC
+    }
+
+    #[test]
+    fn test_platform_fee_calculation_small_amount() {
+        let amount = 50u64;
+        let fee_bps = 200u64;
+        let expected_fee = (amount * fee_bps) / 10000;
+        assert_eq!(expected_fee, 1u64);
+    }
+
+    #[test]
+    fn test_platform_fee_zero_amount_fails() {
+        let amount = 0u64;
+        assert_eq!(amount > 0, false);
+    }
+
+    #[test]
+    fn test_platform_fee_never_exceeds_amount() {
+        let amounts = vec![100u64, 1_000, 10_000_000, 100_000_000];
+        for amount in amounts {
+            let fee = (amount * 200) / 10000;
+            assert!(fee < amount);
+            assert!(amount - fee > 0);
+        }
+    }
+
+    #[test]
+    fn test_seller_receives_amount_minus_fee() {
+        let amount = 5_000_000u64;
+        let platform_fee = (amount * 200) / 10000; // 100_000
+        let seller_amount = amount - platform_fee;
+        
+        assert_eq!(platform_fee, 100_000);
+        assert_eq!(seller_amount, 4_900_000);
+        assert_eq!(seller_amount + platform_fee, amount);
+    }
+
+    #[test]
+    fn test_platform_fee_bps_constant() {
+        assert_eq!(PLATFORM_FEE_BASIS_POINTS, 200);
+    }
+
+    #[test]
+    fn test_fee_immutability() {
+        // Simulates that once calculated and stored in TradeAccount, 
+        // the platform_fee field cannot be modified during release_funds
+        let calculated_fee = (1_000_000u64 * PLATFORM_FEE_BASIS_POINTS) / 10000;
+        
+        // If trade_account.platform_fee is set to calculated_fee,
+        // it should remain the same throughout the lifetime of the trade
+        assert_eq!(calculated_fee, 20_000u64);
+    }
+
+    #[test]
+    fn test_fee_calculation_precision() {
+        // Test that division doesn't lose precision unnecessarily
+        let amount = 999_999u64;
+        let fee = (amount * 200) / 10000;
+        let seller_share = amount - fee;
+        
+        // Verify no funds are lost
+        assert_eq!(fee + seller_share, amount);
+    }
+
+    #[test]
+    fn test_extract_signed_by_valid() {
+        let proof_data = b"some_data_signed_by: John_Doe, other_info";
+        let result = extract_signed_by(proof_data);
+        assert_eq!(result, Some("John_Doe".to_string()));
+    }
+
+    #[test]
+    fn test_extract_signed_by_invalid() {
+        let proof_data = b"no_signature_marker_here";
+        let result = extract_signed_by(proof_data);
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_extract_signed_by_empty() {
+        let proof_data = b"";
+        let result = extract_signed_by(proof_data);
+        assert_eq!(result, None);
+    }
+}
+

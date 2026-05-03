@@ -18,120 +18,163 @@
 }
 
 /* ============================================================
-   AETHER-LOGOS — Dark "Lucid Techy" Design System
+   AETHER-LOGOS — Motta V5 Premium Fintech-Marketplace
+   Design System: 3-Layer Depth + Glassmorphism + Micro-Interactions
    ============================================================ */
 
 :root {
-  /* Light mode — Graphite Ledger */
-  --background: #f8fafc;
-  --foreground: #111827;
-  --card: #ffffff;
-  --card-foreground: #111827;
-  --popover: #ffffff;
-  --popover-foreground: #111827;
-  --primary: #334155;
-  --primary-foreground: #f8fafc;
-  --secondary: #eef2f7;
-  --secondary-foreground: #111827;
-  --muted: #eef2f7;
-  --muted-foreground: #475569;
-  --accent: #e8edf4;
-  --accent-foreground: #111827;
-  --destructive: #b91c1c;
-  --destructive-foreground: #f8fafc;
-  --border: #d6dee8;
-  --input: #f8fafc;
-  --ring: #334155;
-  --radius: 0.5rem;
+  /* ---- 3-Layer Depth System -------------------------------- */
+  /* Layer 1: Base Surface (White) */
+  --bg-base: #FFFFFF;
+  
+  /* Layer 2: Subtle Surface (Soft Grey for Headers/Sidebars) */
+  --bg-subtle: #F8F9FA;
+  
+  /* Layer 3: Elevated Cards (White with subtle borders + hover shadow) */
+  --bg-card: #FFFFFF;
+  --bg-card-border: rgba(0, 0, 0, 0.05);
+  --bg-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --bg-card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
 
-  /* Legacy aliases used across the app */
-  --bg: var(--background);
-  --text: var(--foreground);
-  --bg-base: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-elevated: #eef2f7;
-  --bg-hover: #e8edf4;
-  --border-accent: #334155;
-  --border-hover: #1f2937;
-  --cyan: #334155;
-  --cyan-dim: rgba(51, 65, 85, 0.12);
-  --violet: #64748b;
-  --violet-dim: rgba(100, 116, 139, 0.12);
-  --green: #15803d;
-  --green-dim: rgba(21, 128, 61, 0.12);
-  --amber: #b45309;
-  --red: #b91c1c;
-  --text-primary: #111827;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --text-inverse: #f8fafc;
+  /* Interactive States */
+  --bg-hover: #F8F9FA;
+  --bg-focus: rgba(0, 102, 255, 0.08);
 
-  /* Typography */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+  /* ---- Color Palette ---------------------------------------- */
+  --background: #FFFFFF;
+  --foreground: #1A1A1A;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  
+  /* Primary: Electric Blue */
+  --primary: #0066FF;
+  --primary-foreground: #FFFFFF;
+  --primary-light: rgba(0, 102, 255, 0.08);
+  --primary-dim: rgba(0, 102, 255, 0.06);
+  
+  /* Secondary: Soft Grey */
+  --secondary: #F5F5F5;
+  --secondary-foreground: #1A1A1A;
+  
+  /* Neutral */
+  --muted: #F5F5F5;
+  --muted-foreground: #666666;
+  
+  /* Accent: Yellow/Orange for Risk/Sale */
+  --accent: #F39C12;
+  --accent-foreground: #FFFFFF;
+  --accent-light: rgba(243, 156, 18, 0.12);
+  --accent-subtle: rgba(243, 156, 18, 0.08);
+  
+  /* Status Colors */
+  --destructive: #DC3545;
+  --destructive-foreground: #FFFFFF;
+  --success: #27AE60;
+  --success-foreground: #FFFFFF;
+  --warning: #F39C12;
+  --warning-foreground: #FFFFFF;
+  
+  /* Borders */
+  --border: #E5E5E5;
+  --border-light: rgba(0, 0, 0, 0.03);
+  --border-accent: #0066FF;
+  
+  /* Form */
+  --input: #FFFFFF;
+  --input-border: #E5E5E5;
+  --input-background: #F8F9FA;
+  --ring: #0066FF;
+  
+  /* Text */
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-inverse: #FFFFFF;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  /* ---- Typography ------------------------------------------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  --line-height-tight: 1.4;
+  --line-height-normal: 1.6;
+  --line-height-relaxed: 1.8;
+
+  /* ---- Radius (Subtle, Refined) ---- */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-pill: 9999px;
 
-  /* Shadows */
-  --glow-cyan: 0 0 0 rgba(0, 0, 0, 0);
-  --glow-violet: 0 0 0 rgba(0, 0, 0, 0);
-  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  /* ---- Shadows (Elevated Depth) ---- */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.12);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 
-  /* Transitions */
+  /* ---- Glassmorphism ---------------------------------------- */
+  --glass-blur: blur(8px);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.05);
+
+  /* ---- Micro-Interactions ----------------------------------- */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Legacy Aliases (Backward Compatibility) ------------- */
+  --bg: var(--background);
+  --text: var(--foreground);
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #F5F5F5;
+  --border-hover: #0066FF;
+  --cyan: #0066FF;
+  --cyan-dim: rgba(0, 102, 255, 0.08);
+  --violet: #6C5CE7;
+  --violet-dim: rgba(108, 92, 231, 0.08);
+  --green: #27AE60;
+  --green-dim: rgba(39, 174, 96, 0.08);
+  --amber: #F39C12;
+  --red: #DC3545;
+  
+  /* ---- Z-Index Stack ---------------------------------------- */
+  --z-nav: 50;
+  --z-modal: 100;
+  --z-tooltip: 110;
+  --z-dropdown: 60;
+  
+  /* ---- Transition Fallback ---------------------------------- */
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dark {
-  /* Dark mode — Graphite Ledger */
-  --background: #0b0f17;
-  --foreground: #e7ecf4;
-  --card: #131a24;
-  --card-foreground: #e7ecf4;
-  --popover: #16202f;
-  --popover-foreground: #e7ecf4;
-  --primary: #8f9fb8;
-  --primary-foreground: #0b0f17;
-  --secondary: #1a2230;
-  --secondary-foreground: #e7ecf4;
-  --muted: #1a2230;
-  --muted-foreground: #97a6ba;
-  --accent: #202a3a;
-  --accent-foreground: #e7ecf4;
-  --destructive: #ef4444;
-  --destructive-foreground: #f8fafc;
-  --border: #253043;
-  --input: #131a24;
-  --ring: #8f9fb8;
-  --radius: 0.5rem;
+  /* Dark Mode: Premium Dark Fintech Aesthetic */
+  --bg-base: #0d0d14;
+  --bg-subtle: #1a1a24;
+  --bg-card: #16161f;
+  --bg-card-border: rgba(255, 255, 255, 0.08);
+  --bg-card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --bg-card-shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 
-  /* Legacy aliases used across the app */
-  --bg: var(--background);
-  --text: var(--foreground);
-  --bg-base: #0b0f17;
-  --bg-surface: #131a24;
-  --bg-elevated: #1a2230;
-  --bg-hover: #202a3a;
-  --border-accent: #8f9fb8;
-  --border-hover: #c2ccd9;
-  --cyan: #8f9fb8;
-  --cyan-dim: rgba(143, 159, 184, 0.14);
-  --violet: #9ca9bd;
-  --violet-dim: rgba(156, 169, 189, 0.14);
-  --green: #22c55e;
-  --green-dim: rgba(34, 197, 94, 0.16);
-  --amber: #f59e0b;
-  --red: #ef4444;
-  --text-primary: #e7ecf4;
-  --text-secondary: #c0ccde;
-  --text-muted: #97a6ba;
-  --text-inverse: #0b0f17;
-  --glow-cyan: 0 0 0 rgba(0, 0, 0, 0);
-  --glow-violet: 0 0 0 rgba(0, 0, 0, 0);
-  --shadow-card: 0 1px 2px rgba(2, 6, 23, 0.5), 0 12px 30px rgba(2, 6, 23, 0.35);
+  --background: #0d0d14;
+  --foreground: #EDEDED;
+  --card: #16161f;
+  --card-foreground: #EDEDED;
+  --popover: #16161f;
+  --popover-foreground: #EDEDED;
+
+  --secondary: #1a1a24;
+  --secondary-foreground: #EDEDED;
+
+  --muted: #2a2a35;
+  --muted-foreground: #999999;
+
+  --border: #2a2a35;
+  --border-light: rgba(255, 255, 255, 0.08);
 }
 
 /* ---- Reset & base ---------------------------------------- */
@@ -414,32 +457,163 @@ select.form-input {
 
 /* ---- Wallet adapter button override ---------------------- */
 
+/* ---- Glassmorphism & Card Utilities (Motta V5) ----------- */
+
+.glass-header {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
+  border-radius: 0;
+  transition: backdrop-filter var(--transition-base), background var(--transition-base);
+}
+
+.glass-header.scrolling {
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.card-elevated {
+  background: var(--bg-card);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg);
+  transition: box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.card-elevated:hover {
+  box-shadow: var(--bg-card-shadow-hover);
+  border-color: var(--border);
+}
+
+.card-plain {
+  background: var(--bg-card);
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow var(--transition-base), transform var(--transition-base);
+}
+
+.card-plain:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: background var(--transition-base), color var(--transition-base);
+}
+
+.badge-pill-accent {
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+.badge-pill-primary {
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid rgba(0, 102, 255, 0.2);
+}
+
+.badge-pill-success {
+  background: rgba(39, 174, 96, 0.1);
+  color: var(--success);
+  border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.badge-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--success);
+  font-weight: 600;
+}
+
+/* ---- Typography Enhancements ----------------------------- */
+
+body {
+  line-height: var(--line-height-normal);
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: var(--line-height-tight);
+}
+
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.875rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.125rem; }
+h6 { font-size: 1rem; }
+
+p { margin: 0; }
+
+small { font-size: 0.875rem; color: var(--text-secondary); }
+
+.text-muted { color: var(--text-muted); font-size: 0.85rem; }
+
+/* ---- Wallet adapter button override ---------------------- */
+
+.wallet-button-wrapper {
+  display: flex;
+  align-items: center;
+}
+
 .wallet-adapter-button {
-  background: rgba(99, 102, 241, 0.12) !important;
-  color: #e7ecf4 !important;
-  border: 1px solid rgba(99, 102, 241, 0.3) !important;
-  border-radius: 10px !important;
-  font-size: 0.85rem !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border: 1px solid var(--primary) !important;
+  border-radius: 8px !important;
+  font-size: 0.875rem !important;
   font-weight: 600 !important;
-  height: 38px !important;
+  height: 40px !important;
   padding: 0 1rem !important;
-  transition: background 0.2s ease, box-shadow 0.2s ease !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
 }
 
 .wallet-adapter-button:not([disabled]):hover {
-  background: rgba(99, 102, 241, 0.22) !important;
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.5) !important;
+  background: #0052CC !important;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+.wallet-adapter-button:active {
+  transform: translateY(0) !important;
+}
+
+.dark .wallet-adapter-button {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  border: 1px solid rgba(0, 102, 255, 0.5) !important;
 }
 
 .wallet-adapter-button-trigger {
-  background: rgba(99, 102, 241, 0.12) !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
 }
 
-/* Modal overlay */
+/* Modal overlay - Light mode */
 .wallet-adapter-modal-wrapper {
-  background: #0f1219 !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 16px !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dark .wallet-adapter-modal-wrapper {
+  background: var(--bg-card) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6) !important;
 }
 
