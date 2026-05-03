@@ -13,9 +13,9 @@ const WalletMultiButton = dynamic(
 );
 
 const NAV_LINKS = [
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/vendor/stores", label: "Stores" },
-  { href: "/user/dashboard", label: "My Account" },
+  { href: "/dashboard", label: "Marketplace" },
+  { href: "/markets", label: "Markets" },
+  { href: "/onboarding", label: "Get Started" },
 ];
 
 export function NavBar() {

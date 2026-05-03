@@ -1,266 +1,275 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { BN } from "@coral-xyz/anchor";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
-import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKET_PROGRAM_ID } from "@/lib/anchor";
+import { useState } from "react";
+import { TrendingUp, TrendingDown, Lock } from "lucide-react";
 
-type MarketApiResponse = {
-  markets: Array<Record<string, unknown>>;
-  updatedAt: string;
-};
+const hedgeMarkets = [
+  {
+    marketType: "DHL Customs Event",
+    title: "Will the shipment be held at Customs for > 48 hours?",
+    yesProbability: 64.2,
+    yesLiquidity: 860000,
+    noLiquidity: 520000,
+    expiry: "2026-05-05 18:00 UTC",
+    verificationSignal: "DHL event code: customs-clearance + hold duration",
+    riskLevel: "high" as const,
+  },
+  {
+    marketType: "DHL Delivery SLA",
+    title: "Will the delivery be completed before 2026-05-07 12:00 UTC?",
+    yesProbability: 58.4,
+    yesLiquidity: 420000,
+    noLiquidity: 310000,
+    expiry: "2026-05-07 12:00 UTC",
+    verificationSignal: "DHL delivered timestamp vs target deadline",
+    riskLevel: "medium" as const,
+  },
+  {
+    marketType: "DHL Transit Exception",
+    title: "Will the shipment encounter a 'Transit Exception'?",
+    yesProbability: 33.6,
+    yesLiquidity: 510000,
+    noLiquidity: 1020000,
+    expiry: "2026-05-06 20:00 UTC",
+    verificationSignal: "DHL status stream includes TRANSIT_EXCEPTION",
+    riskLevel: "low" as const,
+  },
+  {
+    marketType: "Weather Delay",
+    title: "Will weather delays push delivery by more than 24 hours?",
+    yesProbability: 22.1,
+    yesLiquidity: 280000,
+    noLiquidity: 975000,
+    expiry: "2026-05-08 06:00 UTC",
+    verificationSignal: "Weather service data + carrier delay logs",
+    riskLevel: "low" as const,
+  },
+];
 
 export default function MarketsPage() {
-  const { marketProgram, wallet } = useAnchorClient();
-  const [marketsResponse, setMarketsResponse] = useState<MarketApiResponse | null>(null);
-  const [marketAccount, setMarketAccount] = useState("");
-  const [shipmentTwin, setShipmentTwin] = useState("");
-  const [marketVault, setMarketVault] = useState("");
-  const [userTokenAccount, setUserTokenAccount] = useState("");
-  const [stakeAmount, setStakeAmount] = useState("1");
+  const [selectedMarketIdx, setSelectedMarketIdx] = useState<number | null>(null);
+  const [stakeAmount, setStakeAmount] = useState("100");
   const [selectedSide, setSelectedSide] = useState<"yes" | "no">("yes");
-  const [onChainStats, setOnChainStats] = useState<{ yes: number; no: number }>({ yes: 0, no: 0 });
-  const [error, setError] = useState<string | null>(null);
+  const [walletConnected] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      const res = await fetch("/api/markets");
-      const json = (await res.json()) as MarketApiResponse;
-      setMarketsResponse(json);
-    };
-    void load();
-  }, []);
+  const selectedMarket = selectedMarketIdx !== null ? hedgeMarkets[selectedMarketIdx] : null;
 
-  useEffect(() => {
-    const loadStats = async () => {
-      if (!marketProgram || !marketAccount) return;
-      try {
-        const market = (await (marketProgram.account as any).marketAccount.fetch(
-          new PublicKey(marketAccount),
-        )) as Record<string, unknown>;
-        setOnChainStats({
-          yes: Number(market.totalYes ?? 0),
-          no: Number(market.totalNo ?? 0),
-        });
-      } catch {
-        setOnChainStats({ yes: 0, no: 0 });
-      }
-    };
-    void loadStats();
-  }, [marketAccount, marketProgram]);
-
-  const placeHedge = async () => {
-    if (!marketProgram || !wallet?.publicKey) return;
-    try {
-      setError(null);
-      const [hedgePosition] = PublicKey.findProgramAddressSync(
-        [Buffer.from("position"), new PublicKey(marketAccount).toBuffer(), wallet.publicKey.toBuffer()],
-        MARKET_PROGRAM_ID,
-      );
-      await marketProgram.methods
-        .placeHedge(selectedSide === "yes" ? { yes: {} } : { no: {} }, new BN(Math.floor(Number(stakeAmount) * 1_000_000)))
-        .accounts({
-          user: wallet.publicKey,
-          marketAccount: new PublicKey(marketAccount),
-          hedgePosition,
-          marketVault: new PublicKey(marketVault),
-          userTokenAccount: new PublicKey(userTokenAccount),
-          systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          rent: SYSVAR_RENT_PUBKEY,
-        })
-        .rpc();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "place hedge failed");
+  const getRiskColor = (level: "low" | "medium" | "high") => {
+    switch (level) {
+      case "low":
+        return "text-green-400";
+      case "medium":
+        return "text-amber-400";
+      case "high":
+        return "text-red-400";
     }
   };
 
-  const total = onChainStats.yes + onChainStats.no;
-  const yesOdds = total === 0 ? 50 : (onChainStats.yes / total) * 100;
-  const noOdds = total === 0 ? 50 : (onChainStats.no / total) * 100;
+  const getRiskBgColor = (level: "low" | "medium" | "high") => {
+    switch (level) {
+      case "low":
+        return "bg-green-500/10 border border-green-500/30";
+      case "medium":
+        return "bg-amber-500/10 border border-amber-500/30";
+      case "high":
+        return "bg-red-500/10 border border-red-500/30";
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f]">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-[#12121a]/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Hedge Markets</h1>
-              <p className="text-gray-400 mt-2">Trade risk prediction markets and hedge against logistics volatility</p>
-            </div>
-            <WalletMultiButton />
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8 space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-foreground">Hedge Markets Terminal</h1>
+            <p className="text-muted-foreground">Real-time logistics risk prediction markets. Trade probabilities on shipment outcomes.</p>
           </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {error && (
-          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400">
-            {error}
-          </div>
-        )}
-
-        {/* Market Setup */}
-        <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 mb-12">
-          <h2 className="text-2xl font-bold text-white mb-8">Market Configuration</h2>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="grid gap-3 rounded-lg border border-border/50 bg-card/30 p-4 backdrop-blur-sm md:grid-cols-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Market Account</label>
-              <input
-                type="text"
-                placeholder="Market address"
-                value={marketAccount}
-                onChange={(e) => setMarketAccount(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Total Liquidity</p>
+              <p className="font-mono text-xl font-semibold text-foreground">$5.2M</p>
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Shipment Twin</label>
-              <input
-                type="text"
-                placeholder="Twin address"
-                value={shipmentTwin}
-                onChange={(e) => setShipmentTwin(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">24h Volume</p>
+              <p className="font-mono text-xl font-semibold text-foreground">$842K</p>
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Market Vault</label>
-              <input
-                type="text"
-                placeholder="Vault address"
-                value={marketVault}
-                onChange={(e) => setMarketVault(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Active Markets</p>
+              <p className="font-mono text-xl font-semibold text-foreground">{hedgeMarkets.length}</p>
             </div>
-
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Your USDC Token Account</label>
-              <input
-                type="text"
-                placeholder="Token account"
-                value={userTokenAccount}
-                onChange={(e) => setUserTokenAccount(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
+              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Avg Resolution</p>
+              <p className="font-mono text-xl font-semibold text-foreground">2.4 days</p>
             </div>
           </div>
         </div>
 
-        {/* Market Overview */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Live Odds */}
-          <div className="bg-[#12121a] border border-white/10 rounded-xl p-8">
-            <h3 className="text-lg font-bold text-white mb-8">Live Market Odds</h3>
+        <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+          {/* Markets Grid */}
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground">Available Markets</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {hedgeMarkets.map((market, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedMarketIdx(idx)}
+                  className={`group relative rounded-lg border transition-all backdrop-blur-sm ${
+                    selectedMarketIdx === idx
+                      ? "border-primary/80 bg-primary/10 shadow-lg shadow-primary/20"
+                      : "border-border/50 bg-card/30 hover:border-primary/50 hover:bg-card/50"
+                  }`}
+                >
+                  <div className="space-y-4 p-5 text-left">
+                    {/* Header */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{market.marketType}</p>
+                        <h3 className="font-semibold text-foreground leading-snug">{market.title}</h3>
+                      </div>
+                      <div className={`shrink-0 rounded px-2.5 py-1 text-xs font-semibold ${getRiskBgColor(market.riskLevel)}`}>
+                        <span className={getRiskColor(market.riskLevel)}>
+                          {market.riskLevel.charAt(0).toUpperCase() + market.riskLevel.slice(1)} Risk
+                        </span>
+                      </div>
+                    </div>
 
-            <div className="space-y-6">
-              {/* YES odds */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-green-400 font-semibold">YES Delivery</span>
-                  <span className="text-2xl font-bold text-white">{yesOdds.toFixed(1)}%</span>
-                </div>
-                <div className="h-3 bg-[#0a0a0f] rounded-full overflow-hidden border border-white/10">
-                  <div
-                    className="h-full bg-gradient-to-r from-green-500 to-green-600 transition-all duration-300"
-                    style={{ width: `${yesOdds}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">{onChainStats.yes.toLocaleString()} USDC wagered</p>
-              </div>
+                    {/* Probability Bars */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2 text-xs font-medium text-foreground">
+                          <TrendingUp className="h-3.5 w-3.5 text-green-400" />
+                          Yes
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-green-400">{market.yesProbability.toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full bg-gradient-to-r from-green-500 to-green-400"
+                          style={{ width: `${market.yesProbability}%` }}
+                        />
+                      </div>
 
-              {/* NO odds */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-red-400 font-semibold">NO Delivery</span>
-                  <span className="text-2xl font-bold text-white">{noOdds.toFixed(1)}%</span>
-                </div>
-                <div className="h-3 bg-[#0a0a0f] rounded-full overflow-hidden border border-white/10">
-                  <div
-                    className="h-full bg-gradient-to-r from-red-500 to-red-600 transition-all duration-300"
-                    style={{ width: `${noOdds}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">{onChainStats.no.toLocaleString()} USDC wagered</p>
-              </div>
+                      <div className="flex items-center justify-between gap-2 pt-2">
+                        <span className="flex items-center gap-2 text-xs font-medium text-foreground">
+                          <TrendingDown className="h-3.5 w-3.5 text-red-400" />
+                          No
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-red-400">{(100 - market.yesProbability).toFixed(1)}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full bg-gradient-to-r from-red-500 to-red-400"
+                          style={{ width: `${100 - market.yesProbability}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-2 border-t border-border/30 pt-3">
+                      <div className="text-left">
+                        <p className="text-xs text-muted-foreground">Liquidity</p>
+                        <p className="font-mono text-xs font-semibold text-foreground">
+                          ${((market.yesLiquidity + market.noLiquidity) / 1_000_000).toFixed(1)}M
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Expires</p>
+                        <p className="font-mono text-xs font-semibold text-foreground">Soon</p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
+          </div>
 
-            {marketsResponse && (
-              <p className="text-xs text-gray-500 mt-8 border-t border-white/10 pt-4">
-                Last updated: {new Date(marketsResponse.updatedAt).toLocaleTimeString()}
-              </p>
+          {/* Trade Panel */}
+          <div className="lg:sticky lg:top-20">
+            {selectedMarket ? (
+              <div className="rounded-lg border border-primary/50 bg-card/50 p-6 backdrop-blur-sm">
+                <h3 className="font-semibold text-foreground mb-4">Place Hedge</h3>
+
+                <div className="space-y-4">
+                  {/* Market Details */}
+                  <div className="space-y-2 rounded-lg bg-background/50 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Market</p>
+                    <p className="text-sm text-foreground">{selectedMarket.title}</p>
+                  </div>
+
+                  {/* Side Selection */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Prediction</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setSelectedSide("yes")}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          selectedSide === "yes"
+                            ? "border-green-500/50 bg-green-500/10 text-green-400"
+                            : "border-border/30 bg-background/50 text-muted-foreground hover:border-green-500/30"
+                        }`}
+                      >
+                        YES - {selectedMarket.yesProbability.toFixed(1)}%
+                      </button>
+                      <button
+                        onClick={() => setSelectedSide("no")}
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+                          selectedSide === "no"
+                            ? "border-red-500/50 bg-red-500/10 text-red-400"
+                            : "border-border/30 bg-background/50 text-muted-foreground hover:border-red-500/30"
+                        }`}
+                      >
+                        NO - {(100 - selectedMarket.yesProbability).toFixed(1)}%
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Stake Amount */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Amount (USDC)</p>
+                    <input
+                      type="number"
+                      min="1"
+                      value={stakeAmount}
+                      onChange={(e) => setStakeAmount(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder-muted-foreground transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    />
+                  </div>
+
+                  {/* Payout Estimate */}
+                  <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Potential Payout</p>
+                    <p className="font-mono text-lg font-semibold text-green-400">
+                      ${(Number(stakeAmount) * (selectedSide === "yes" ? 1.55 : 2.1)).toFixed(2)}
+                    </p>
+                  </div>
+
+                  {/* CTA */}
+                  {!walletConnected ? (
+                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                      <p className="text-sm text-amber-400 flex items-center justify-center gap-2">
+                        <Lock className="h-4 w-4" />
+                        Connect wallet to trade
+                      </p>
+                    </div>
+                  ) : (
+                    <button className="w-full rounded-lg bg-primary px-4 py-2 font-semibold text-primary-foreground transition hover:shadow-lg hover:shadow-primary/20">
+                      Place Hedge
+                    </button>
+                  )}
+                </div>
+
+                {/* Market Info */}
+                <div className="mt-4 border-t border-border/30 pt-3 space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Verification</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{selectedMarket.verificationSignal}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border/50 bg-card/30 p-8 text-center backdrop-blur-sm">
+                <p className="text-sm text-muted-foreground">Select a market to place a hedge</p>
+              </div>
             )}
-          </div>
-
-          {/* Place Hedge Form */}
-          <div className="bg-[#12121a] border border-white/10 rounded-xl p-8">
-            <h3 className="text-lg font-bold text-white mb-8">Place Hedge</h3>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-3">Stake Amount (USDC)</label>
-                <input
-                  type="number"
-                  placeholder="e.g., 100"
-                  value={stakeAmount}
-                  onChange={(e) => setStakeAmount(e.target.value)}
-                  className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition"
-                />
-              </div>
-
-              {/* Prediction Toggle */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-300 mb-3">Your Prediction</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setSelectedSide("yes")}
-                    className={`py-3 px-4 rounded-lg font-semibold transition ${
-                      selectedSide === "yes"
-                        ? "bg-green-500/30 border border-green-500 text-green-300"
-                        : "bg-[#0a0a0f] border border-white/10 text-gray-400 hover:border-white/20"
-                    }`}
-                  >
-                    YES - Delivered
-                  </button>
-                  <button
-                    onClick={() => setSelectedSide("no")}
-                    className={`py-3 px-4 rounded-lg font-semibold transition ${
-                      selectedSide === "no"
-                        ? "bg-red-500/30 border border-red-500 text-red-300"
-                        : "bg-[#0a0a0f] border border-white/10 text-gray-400 hover:border-white/20"
-                    }`}
-                  >
-                    NO - Not Delivered
-                  </button>
-                </div>
-              </div>
-
-              {/* Payout Display */}
-              <div className="bg-[#0a0a0f] border border-white/10 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-2">Your potential payout at current odds</p>
-                <p className="text-2xl font-bold text-white">
-                  {((Number(stakeAmount) / (selectedSide === "yes" ? yesOdds : noOdds)) * 100).toFixed(2)} USDC
-                </p>
-              </div>
-
-              <button
-                onClick={() => void placeHedge()}
-                disabled={!wallet}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition shadow-lg hover:shadow-purple-500/50 shadow-purple-500/20"
-              >
-                Place Hedge
-              </button>
-            </div>
           </div>
         </div>
       </div>

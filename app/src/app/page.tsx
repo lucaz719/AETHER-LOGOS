@@ -1,213 +1,271 @@
 "use client";
 
-import { useState } from "react";
-import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
-import { HedgeCard } from "@/components/dashboard/HedgeCard";
-import { MarketplaceFilters } from "@/components/dashboard/MarketplaceFilters";
-import { ProductCard } from "@/components/dashboard/ProductCard";
-import { useRouter } from "next/navigation";
+import { ArrowRight, Shield, TrendingUp, Zap, CheckCircle, Lock } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-const products = [
-  {
-    productId: "prod-001",
-    title: "IP67 Industrial Router Module",
-    category: "Industrial Components",
-    vendor: "Nordic Mobility Supply",
-    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
-    sellerTier: "distributor" as const,
-    rating: 4.9,
-    priceUsdc: 489,
-    moq: 50,
-    leadTimeDays: 6,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-002",
-    title: "Cold Chain Sensor Array (Gen 4)",
-    category: "IoT Hardware",
-    vendor: "Pacific Transit Systems",
-    sellerWallet: "7kA2mQ9sB5cP1dE8jN6vL3hF4gR2wT5u",
-    sellerTier: "manufacturer" as const,
-    rating: 4.8,
-    priceUsdc: 1720,
-    moq: 10,
-    leadTimeDays: 14,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-003",
-    title: "Secure Container Lock Controller",
-    category: "Security Systems",
-    vendor: "Anchor Field Devices",
-    sellerWallet: "3mX7kL2pQ9sB4vE1jH8nF5gD2rT6aW9c",
-    sellerTier: "wholesaler" as const,
-    rating: 4.7,
-    priceUsdc: 265,
-    moq: 100,
-    leadTimeDays: 4,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-004",
-    title: "EMI Shield Gasket Roll (100m)",
-    category: "Industrial Components",
-    vendor: "Nordic Mobility Supply",
-    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
-    sellerTier: "distributor" as const,
-    rating: 4.6,
-    priceUsdc: 320,
-    moq: 30,
-    leadTimeDays: 3,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-];
+export default function LandingPage() {
+  const [isScrolled, setIsScrolled] = useState(false);
 
-const hedgeMarkets = [
-  {
-    marketType: "DHL Customs Event",
-    title: "Will the shipment be held at Customs for > 48 hours?",
-    yesProbability: 64.2,
-    liquidity: 860000,
-    expiry: "Resolves 2026-05-05 18:00 UTC",
-    verificationSignal: "DHL event code: customs-clearance + hold duration",
-  },
-  {
-    marketType: "DHL Delivery SLA",
-    title: "Will the delivery be completed before 2026-05-07 12:00 UTC?",
-    yesProbability: 58.4,
-    liquidity: 420000,
-    expiry: "Resolves 2026-05-07 12:00 UTC",
-    verificationSignal: "DHL delivered timestamp vs target deadline",
-  },
-  {
-    marketType: "DHL Transit Exception",
-    title: "Will the shipment encounter a 'Transit Exception'?",
-    yesProbability: 33.6,
-    liquidity: 510000,
-    expiry: "Resolves 2026-05-06 20:00 UTC",
-    verificationSignal: "DHL status stream includes TRANSIT_EXCEPTION",
-  },
-];
-
-export default function Home() {
-  const [mode, setMode] = useState<"marketplace" | "hedge">("marketplace");
-  const [selectedTier, setSelectedTier] = useState<string>("all");
-  const router = useRouter();
-
-  const filteredProducts =
-    selectedTier === "all"
-      ? products
-      : products.filter((p) => p.sellerTier === selectedTier);
-
-  const handleProductBuy = (payload: {
-    productId: string;
-    title: string;
-    sellerWallet: string;
-    usdcMint: string;
-    tier: string;
-    moq: number;
-    leadTimeDays: number;
-  }) => {
-    // Navigate to trade creation page with payload
-    const params = new URLSearchParams();
-    params.set("productId", payload.productId);
-    params.set("title", payload.title);
-    params.set("sellerWallet", payload.sellerWallet);
-    params.set("usdcMint", payload.usdcMint);
-    params.set("tier", payload.tier);
-    params.set("moq", payload.moq.toString());
-    params.set("leadTimeDays", payload.leadTimeDays.toString());
-    router.push(`/trades?${params.toString()}`);
-  };
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
-        <header className="space-y-3 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">AETHER-LOGOS Demo Dashboard</p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            Escrow marketplace and hedge execution in one terminal.
-          </h1>
-          <p className="mx-auto max-w-3xl text-sm text-muted-foreground md:text-base">
-            Live procurement workflows and logistics hedge markets unified under one Graphite Ledger control surface.
-          </p>
-        </header>
-
-        <DashboardModeToggle mode={mode} onChange={setMode} />
-
-        <section className="relative min-h-[720px]">
-          <div
-            className={`transition-all duration-300 ease-in-out ${mode === "marketplace" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 -translate-x-3 opacity-0"}`}
-            aria-hidden={mode !== "marketplace"}
+    <div className="overflow-hidden bg-background text-foreground">
+      {/* Navigation */}
+      <nav
+        className={`sticky top-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "border-b border-border/50 bg-background/95 backdrop-blur-md"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-cyan-500/80 to-blue-600/80 blur-sm" />
+            <span className="font-semibold tracking-tight text-foreground">AETHER-LOGOS</span>
+          </div>
+          <div className="hidden gap-6 md:flex">
+            <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/markets" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Markets
+            </Link>
+            <Link href="/onboarding" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Get Started
+            </Link>
+          </div>
+          <Link
+            href="/onboarding"
+            className="group inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:shadow-lg hover:shadow-primary/20"
           >
-            <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <MarketplaceFilters
-                categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
-                selectedTier={selectedTier}
-                onTierChange={setSelectedTier}
-              />
-              <div className="space-y-4">
-                <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Active RFQs</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">1,284</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Escrow TVL</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">$14.9M</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Avg Lock Time</p>
-                    <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">21.4h</p>
-                  </div>
-                </div>
+            Start Trading
+            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Link>
+        </div>
+      </nav>
 
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.productId}
-                      {...product}
-                      onBuy={handleProductBuy}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
+      {/* Hero Section */}
+      <section className="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
+        {/* Animated background gradient orbs */}
+        <div className="absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-gradient-to-r from-cyan-500/10 to-blue-500/10 blur-3xl" />
+          <div className="absolute right-1/4 top-1/3 h-96 w-96 rounded-full bg-gradient-to-r from-blue-500/10 to-indigo-500/10 blur-3xl" />
+        </div>
+
+        <div className="mx-auto max-w-4xl space-y-8 text-center">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/50 px-4 py-2 text-xs font-medium text-muted-foreground backdrop-blur-sm">
+            <span className="h-2 w-2 rounded-full bg-green-500/80" />
+            Enterprise-Grade B2B Logistics
           </div>
 
-          <div
-            className={`transition-all duration-300 ease-in-out ${mode === "hedge" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 translate-x-3 opacity-0"}`}
-            aria-hidden={mode !== "hedge"}
-          >
-            <div className="space-y-4">
-              <div className="grid gap-3 rounded-lg border border-border bg-card p-4 shadow-sm md:grid-cols-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Open Hedge Positions</p>
-                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">742</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">24h Hedge Volume</p>
-                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">$2.3M</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Avg Fill</p>
-                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">118ms</p>
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-[0.08em] text-muted-foreground">Risk Coverage</p>
-                  <p className="font-mono text-xl font-semibold tabular-nums text-card-foreground">93.2%</p>
-                </div>
-              </div>
+          {/* Hero Headline */}
+          <div className="space-y-4">
+            <h1 className="text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
+              Escrow <span className="bg-gradient-to-r from-cyan-400/80 to-blue-500/80 bg-clip-text text-transparent">Marketplace</span> meets <span className="bg-gradient-to-r from-blue-400/80 to-cyan-500/80 bg-clip-text text-transparent">Hedge Markets</span>
+            </h1>
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground sm:text-xl">
+              Execute verified procurement workflows with on-chain escrow settlement and logistics risk hedging. Built for enterprises that demand trust, speed, and transparency.
+            </p>
+          </div>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {hedgeMarkets.map((market) => (
-                  <HedgeCard key={market.title} {...market} />
-                ))}
-              </div>
+          {/* CTA Buttons */}
+          <div className="flex flex-col gap-4 pt-8 sm:flex-row sm:justify-center">
+            <Link
+              href="/onboarding"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-8 py-3 font-semibold text-primary-foreground transition-all hover:shadow-xl hover:shadow-primary/20"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Start Trading
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+              <div className="absolute inset-0 -z-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 transition-opacity group-hover:opacity-100" />
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card/50 px-8 py-3 font-semibold text-foreground transition-all hover:border-primary hover:bg-card backdrop-blur-sm"
+            >
+              View Markets
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 pt-12 sm:gap-6">
+            <div className="rounded-lg border border-border/50 bg-card/30 p-4 backdrop-blur-sm">
+              <p className="font-mono text-2xl font-bold text-foreground">$14.9M</p>
+              <p className="text-xs text-muted-foreground">Escrow TVL</p>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-card/30 p-4 backdrop-blur-sm">
+              <p className="font-mono text-2xl font-bold text-foreground">1,284</p>
+              <p className="text-xs text-muted-foreground">Active RFQs</p>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-card/30 p-4 backdrop-blur-sm">
+              <p className="font-mono text-2xl font-bold text-foreground">21.4h</p>
+              <p className="text-xs text-muted-foreground">Avg Lock Time</p>
             </div>
           </div>
-        </section>
-      </div>
-    </main>
+        </div>
+      </section>
+
+      {/* How It Works */}
+      <section className="border-t border-border/50 bg-card/20 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">How It Works</h2>
+            <p className="mt-4 text-muted-foreground">Three steps to verified procurement with on-chain settlement.</p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {[
+              {
+                step: 1,
+                title: "Connect Wallet",
+                description: "Link your wallet to verify your identity and access the marketplace.",
+                icon: Lock,
+              },
+              {
+                step: 2,
+                title: "Browse & Order",
+                description: "Discover verified vendors, compare pricing tiers, and negotiate terms.",
+                icon: Zap,
+              },
+              {
+                step: 3,
+                title: "Escrow Releases",
+                description: "Funds held in verified smart contracts. Automatic settlement on fulfillment.",
+                icon: CheckCircle,
+              },
+            ].map((item, idx) => (
+              <div key={idx} className="group relative">
+                <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 opacity-0 blur transition-opacity group-hover:opacity-100" />
+                <div className="relative space-y-4 rounded-lg border border-border/50 bg-background p-6 backdrop-blur-sm transition-all group-hover:border-primary/50 group-hover:bg-card/50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/20">
+                      <span className="font-semibold text-primary">{item.step}</span>
+                    </div>
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{item.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Enterprise Features</h2>
+            <p className="mt-4 text-muted-foreground">Built for scale, security, and trust.</p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: Shield,
+                title: "On-Chain Escrow",
+                description: "Verified smart contract settlement. Zero counterparty risk.",
+              },
+              {
+                icon: TrendingUp,
+                title: "Logistics Hedging",
+                description: "Hedge delivery delays and customs risks with prediction markets.",
+              },
+              {
+                icon: Lock,
+                title: "Verified Vendors",
+                description: "All sellers audited on-chain. Cryptographic proof of performance.",
+              },
+              {
+                icon: Zap,
+                title: "Instant Settlement",
+                description: "Solana-speed transaction finality. No delayed clearance.",
+              },
+              {
+                icon: CheckCircle,
+                title: "Graphite Ledger",
+                description: "Enterprise-grade audit trail. Every transaction immutable.",
+              },
+              {
+                icon: ArrowRight,
+                title: "API Integration",
+                description: "RESTful APIs for ERP systems. Webhook notifications.",
+              },
+            ].map((feature, idx) => (
+              <div
+                key={idx}
+                className="group rounded-lg border border-border/50 bg-card/30 p-6 transition-all hover:border-primary/50 hover:bg-card/60 backdrop-blur-sm"
+              >
+                <feature.icon className="h-6 w-6 text-primary transition-transform group-hover:scale-110" />
+                <h3 className="mt-4 font-semibold text-foreground">{feature.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="relative border-t border-border/50 px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-4xl text-center">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Ready to start trading?</h2>
+          <p className="mt-4 text-muted-foreground">Join enterprise buyers and sellers on the most secure B2B marketplace.</p>
+
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
+            <Link
+              href="/onboarding"
+              className="group inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-8 py-3 font-semibold text-primary-foreground transition-all hover:shadow-lg hover:shadow-primary/20"
+            >
+              Get Started Now
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card/50 px-8 py-3 font-semibold text-foreground transition-all hover:border-primary hover:bg-card backdrop-blur-sm"
+            >
+              View Dashboard
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border/50 bg-card/30 px-4 py-8 sm:px-6 lg:px-8 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 md:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="h-6 w-6 rounded-lg bg-gradient-to-br from-cyan-500/80 to-blue-600/80 blur-sm" />
+            <span className="font-semibold tracking-tight text-foreground">AETHER-LOGOS</span>
+          </div>
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <a href="#" className="hover:text-foreground transition-colors">
+              Docs
+            </a>
+            <a href="#" className="hover:text-foreground transition-colors">
+              API
+            </a>
+            <a href="#" className="hover:text-foreground transition-colors">
+              Support
+            </a>
+            <a href="#" className="hover:text-foreground transition-colors">
+              Terms
+            </a>
+          </div>
+        </div>
+        <div className="mt-8 border-t border-border/50 pt-8 text-center text-xs text-muted-foreground">
+          <p>© 2026 AETHER-LOGOS. Built on Solana. Enterprise logistics settled on-chain.</p>
+        </div>
+      </footer>
+    </div>
   );
 }

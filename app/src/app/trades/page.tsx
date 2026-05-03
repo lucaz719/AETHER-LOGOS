@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BN } from "@coral-xyz/anchor";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
+import { Copy, CheckCircle } from "lucide-react";
 
 type TradeRow = {
   pubkey: PublicKey;
@@ -32,17 +33,51 @@ function optionalString(value: unknown): string | null {
   return null;
 }
 
+function truncateAddress(addr: string): string {
+  return addr.slice(0, 6) + "..." + addr.slice(-6);
+}
+
 export default function TradesPage() {
+  const searchParams = useSearchParams();
   const { escrowProgram, wallet, connection, provider } = useAnchorClient();
   const [amount, setAmount] = useState("1");
   const [seller, setSeller] = useState("");
   const [buyerTokenAccount, setBuyerTokenAccount] = useState("");
   const [sellerTokenAccount, setSellerTokenAccount] = useState("");
-  const [usdcMint, setUsdcMint] = useState("");
+  const [usdcMint, setUsdcMint] = useState("EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi");
   const [signatureRequired, setSignatureRequired] = useState(true);
   const [invoiceUrl, setInvoiceUrl] = useState("");
   const [trades, setTrades] = useState<TradeRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
+
+  const [tradeMetadata, setTradeMetadata] = useState<{
+    productId?: string;
+    title?: string;
+    tier?: string;
+    moq?: string;
+    leadTimeDays?: string;
+  }>({});
+
+  useEffect(() => {
+    const sellerWallet = searchParams?.get("sellerWallet");
+    const usdcMintParam = searchParams?.get("usdcMint");
+    const productId = searchParams?.get("productId");
+    const title = searchParams?.get("title");
+    const tier = searchParams?.get("tier");
+    const moq = searchParams?.get("moq");
+    const leadTimeDays = searchParams?.get("leadTimeDays");
+
+    if (sellerWallet) setSeller(sellerWallet);
+    if (usdcMintParam) setUsdcMint(usdcMintParam);
+    setTradeMetadata({
+      productId: productId || undefined,
+      title: title || undefined,
+      tier: tier || undefined,
+      moq: moq || undefined,
+      leadTimeDays: leadTimeDays || undefined,
+    });
+  }, [searchParams]);
 
   const loadTrades = useMemo(
     () => async () => {
@@ -117,7 +152,6 @@ export default function TradesPage() {
         })
         .rpc();
 
-      // Register with Go agent for automated proof submission
       fetch("http://localhost:8080/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -235,99 +269,146 @@ export default function TradesPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0a0f]">
-      {/* Header */}
-      <div className="border-b border-white/10 bg-[#12121a]/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-white">Create Trade</h1>
-              <p className="text-gray-400 mt-2">Lock USDC in escrow and initiate a trade settlement</p>
-            </div>
-            <WalletMultiButton />
-          </div>
-        </div>
-      </div>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 pb-10 pt-8 sm:px-6 lg:px-8">
+        <header className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Create Trade</h1>
+          <p className="text-muted-foreground">Lock USDC in escrow and initiate settlement</p>
+        </header>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
         {error && (
-          <div className="mb-8 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400">
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
             {error}
           </div>
         )}
 
-        {/* Create Trade Form */}
-        <div className="bg-[#12121a] border border-white/10 rounded-xl p-8 mb-12">
-          <h2 className="text-2xl font-bold text-white mb-8">Create New Trade</h2>
+        {tradeMetadata.title && (
+          <div className="rounded-lg border border-primary/50 bg-card/50 p-6 backdrop-blur-sm">
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Product</p>
+                <p className="text-lg font-semibold text-foreground">{tradeMetadata.title}</p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Seller Tier</p>
+                  <p className="font-mono text-sm text-foreground capitalize">{tradeMetadata.tier}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">MOQ</p>
+                  <p className="font-mono text-sm text-foreground">{tradeMetadata.moq} units</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Lead Time</p>
+                  <p className="font-mono text-sm text-foreground">{tradeMetadata.leadTimeDays} days</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Product ID</p>
+                  <p className="font-mono text-xs text-muted-foreground">{tradeMetadata.productId}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="rounded-lg border border-border/50 bg-card/30 p-8 backdrop-blur-sm">
+          <div className="mb-8 space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Create New Trade</h2>
+            <p className="text-sm text-muted-foreground">Complete the escrow settlement for your order</p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Amount (USDC)</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Amount (USDC)</label>
               <input
                 type="number"
                 placeholder="e.g., 1000"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition"
+                className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder-muted-foreground transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">Seller Wallet</label>
-              <input
-                type="text"
-                placeholder="Solana address"
-                value={seller}
-                onChange={(e) => setSeller(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
+              <label className="block text-sm font-semibold text-foreground mb-2">Seller Wallet</label>
+              <div className="relative flex items-center rounded-lg border border-border bg-card px-4 py-2.5">
+                <code className="flex-1 text-xs font-mono text-muted-foreground">{seller ? truncateAddress(seller) : "Not set"}</code>
+                {seller && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(seller);
+                      setCopiedAddr(seller);
+                      setTimeout(() => setCopiedAddr(null), 2000);
+                    }}
+                    className="ml-2 p-1 hover:bg-primary/10 rounded transition"
+                    title="Copy full address"
+                  >
+                    {copiedAddr === seller ? (
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Auto-filled from marketplace</p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-3">USDC Mint Address</label>
-              <input
-                type="text"
-                placeholder="Mint address"
-                value={usdcMint}
-                onChange={(e) => setUsdcMint(e.target.value)}
-                className="w-full bg-[#0a0a0f] border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/50 transition text-xs"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={signatureRequired}
-                  onChange={(e) => setSignatureRequired(e.target.checked)}
-                  className="w-5 h-5 accent-purple-500"
-                />
-                <span className="text-sm text-gray-300">Signature required on delivery</span>
-              </label>
+              <label className="block text-sm font-semibold text-foreground mb-2">USDC Mint</label>
+              <div className="relative flex items-center rounded-lg border border-border bg-card px-4 py-2.5">
+                <code className="flex-1 text-xs font-mono text-muted-foreground">{truncateAddress(usdcMint)}</code>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(usdcMint);
+                    setCopiedAddr(usdcMint);
+                    setTimeout(() => setCopiedAddr(null), 2000);
+                  }}
+                  className="ml-2 p-1 hover:bg-primary/10 rounded transition"
+                  title="Copy full address"
+                >
+                  {copiedAddr === usdcMint ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">Devnet USDC</p>
             </div>
           </div>
 
-          <div className="mb-8">
-            <InvoiceUpload onUploaded={setInvoiceUrl} />
+          <div className="mt-6 space-y-4">
+            <label className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={signatureRequired}
+                onChange={(e) => setSignatureRequired(e.target.checked)}
+                className="h-4 w-4 rounded border-border accent-primary"
+              />
+              <span className="text-sm text-foreground">Signature required on delivery</span>
+            </label>
+
+            <div>
+              <InvoiceUpload onUploaded={setInvoiceUrl} />
+            </div>
           </div>
 
           <button
             onClick={() => void createTrade()}
             disabled={!wallet}
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition shadow-lg hover:shadow-purple-500/50 shadow-purple-500/20"
+            className="mt-8 w-full rounded-lg bg-primary px-6 py-3 font-semibold text-primary-foreground transition-all hover:shadow-lg hover:shadow-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Create Trade
+            {wallet ? "Create Trade" : "Connect Wallet to Continue"}
           </button>
         </div>
 
-        {/* Active Trades */}
-        <div className="bg-[#12121a] border border-white/10 rounded-xl p-8">
-          <h2 className="text-2xl font-bold text-white mb-8">Active Trades</h2>
+        <div className="mt-12 space-y-4">
+          <h2 className="text-2xl font-bold text-foreground">Active Trades</h2>
 
           {trades.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">No active trades yet. Create your first trade above.</p>
+            <div className="rounded-lg border border-border/50 bg-card/30 p-12 text-center backdrop-blur-sm">
+              <p className="text-muted-foreground">No active trades yet. Create your first trade above.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -341,39 +422,39 @@ export default function TradesPage() {
                 return (
                   <div
                     key={trade.pubkey.toBase58()}
-                    className="bg-[#0a0a0f] border border-white/10 rounded-lg p-6 hover:border-white/20 transition"
+                    className="rounded-lg border border-border/50 bg-card/30 p-6 transition hover:border-primary/50 hover:bg-card/50 backdrop-blur-sm"
                   >
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="mb-4 flex items-start justify-between">
                       <div>
-                        <h3 className="text-lg font-semibold text-white">Trade {tradeId}</h3>
-                        <p className="text-xs text-gray-500 mt-1">{trade.pubkey.toBase58()}</p>
+                        <h3 className="text-lg font-semibold text-foreground">Trade {tradeId}</h3>
+                        <p className="mt-1 font-mono text-xs text-muted-foreground">{trade.pubkey.toBase58()}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(status)}`}>
+                      <span className={`rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(status)}`}>
                         {formatStatus(status)}
                       </span>
                     </div>
 
-                    <div className="flex flex-wrap gap-4 mb-6 text-sm">
+                    <div className="mb-6 flex flex-wrap gap-4 text-sm">
                       {invoiceCid && (
                         <a
                           href={`https://gateway.pinata.cloud/ipfs/${invoiceCid}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-purple-400 hover:text-purple-300 transition"
+                          className="text-primary transition hover:text-primary/80"
                         >
                           View Invoice
                         </a>
                       )}
                       {pastDeadline && (
-                        <span className="text-yellow-400">Past deadline</span>
+                        <span className="text-amber-400">Past deadline</span>
                       )}
                     </div>
 
-                    <div className="flex gap-3 flex-wrap">
+                    <div className="flex flex-wrap gap-3">
                       {status === "verified" && (
                         <button
                           onClick={() => void releaseFunds(trade)}
-                          className="px-4 py-2 bg-green-600/20 hover:bg-green-600/30 border border-green-500/50 text-green-400 rounded-lg font-medium transition"
+                          className="rounded-lg border border-green-500/50 bg-green-600/20 px-4 py-2 font-medium text-green-400 transition hover:bg-green-600/30"
                         >
                           Release Funds
                         </button>
@@ -381,7 +462,7 @@ export default function TradesPage() {
                       {(status === "awaitingShipment" || status === "inTransit") && (
                         <button
                           onClick={() => void openDispute(trade)}
-                          className="px-4 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/50 text-red-400 rounded-lg font-medium transition"
+                          className="rounded-lg border border-red-500/50 bg-red-600/20 px-4 py-2 font-medium text-red-400 transition hover:bg-red-600/30"
                         >
                           Open Dispute
                         </button>
@@ -389,7 +470,7 @@ export default function TradesPage() {
                       {status === "awaitingShipment" && pastDeadline && (
                         <button
                           onClick={() => void cancelTrade(trade)}
-                          className="px-4 py-2 bg-gray-600/20 hover:bg-gray-600/30 border border-gray-500/50 text-gray-400 rounded-lg font-medium transition"
+                          className="rounded-lg border border-border bg-card px-4 py-2 font-medium text-muted-foreground transition hover:bg-card/80"
                         >
                           Cancel Trade
                         </button>
