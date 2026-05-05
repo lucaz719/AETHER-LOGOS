@@ -9,15 +9,16 @@ type DashboardModeToggleProps = {
 
 export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps) {
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-white/10 bg-gray-100/80 dark:bg-white/5 backdrop-blur-md p-1.5 shadow-inner min-w-[320px]">
+    // Uses CSS tokens → theme-aware automatically in both light and dark
+    <div className="rounded-xl border border-border bg-secondary backdrop-blur-md p-1.5 shadow-inner min-w-[320px]">
       <div className="relative flex items-center">
         <span
           aria-hidden="true"
           className={`absolute inset-y-0 left-0 w-1/2 rounded-lg transition-all duration-300 ease-out ${
             mode === "hedge" 
-              ? "translate-x-full bg-purple-600 shadow-purple-500/20" 
-              : "translate-x-0 bg-indigo-600 shadow-indigo-500/20"
-          } shadow-lg`}
+              ? "translate-x-full bg-purple-600 shadow-lg shadow-purple-500/20" 
+              : "translate-x-0 bg-indigo-600 shadow-lg shadow-indigo-500/20"
+          }`}
         />
         <button
           type="button"
@@ -25,7 +26,7 @@ export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps
           className={`relative z-10 flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-all duration-200 ${
             mode === "marketplace"
               ? "text-white"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <ShoppingCart className="h-4 w-4" aria-hidden="true" />
@@ -37,7 +38,7 @@ export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps
           className={`relative z-10 flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-all duration-200 ${
             mode === "hedge"
               ? "text-white"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <TrendingUp className="h-4 w-4" aria-hidden="true" />

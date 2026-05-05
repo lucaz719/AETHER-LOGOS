@@ -4,20 +4,37 @@ import { useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useVendorProfile } from "@/hooks/useVendorProfile";
+import { useOnboardingStore } from "@/lib/stores/onboardingStore";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, Store, Lock, Package, TrendingUp, Zap } from "lucide-react";
 
-type SellerTier = "distributor" | "wholesaler" | "manufacturer" | null;
+const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 export default function OnboardingPage() {
   const { publicKey } = useWallet();
   const { profile, loading } = useVendorProfile(publicKey?.toBase58());
   const router = useRouter();
 
-  const [path, setPath] = useState<"none" | "buyer" | "vendor">("none");
-  const [step, setStep] = useState(1);
-  const [sellerTier, setSellerTier] = useState<SellerTier>(null);
+  // Use Zustand store for persistence
+  const path = useOnboardingStore((state) => state.userRole);
+  const setPath = useOnboardingStore((state) => state.setUserRole);
+  const sellerTier = useOnboardingStore((state) => state.sellerTier);
+  const setSellerTier = useOnboardingStore((state) => state.setSellerTier);
+  const currentStep = useOnboardingStore((state) => state.currentStep);
+  const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
+  const markOnboardingComplete = useOnboardingStore((state) => state.markOnboardingComplete);
+
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     businessName: "",
     industry: "",
@@ -26,12 +43,69 @@ export default function OnboardingPage() {
     tierData: {} as Record<string, string>,
   });
 
+  const completeVendorSetup = async () => {
+    if (!publicKey || !sellerTier) return;
+    if (!formData.shopName.trim()) {
+      setSubmitError("Shop name is required.");
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const slug = slugify(formData.shopName);
+      if (!slug) {
+        setSubmitError("Shop name must include letters or numbers.");
+        return;
+      }
+
+      const response = await fetch(`${API}/api/stores`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_wallet: publicKey.toBase58(),
+          slug,
+          store_name: formData.shopName.trim(),
+          description: "",
+          store_type: sellerTier,
+          categories: formData.categories.trim(),
+        }),
+      });
+
+      if (!response.ok && response.status !== 409) {
+        throw new Error(await response.text());
+      }
+
+      // Mark onboarding complete in store
+      markOnboardingComplete();
+      router.push("/vendor/dashboard");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Failed to create store.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // Auto-forward if wallet connects and they have a vendor profile
   useEffect(() => {
     if (publicKey && profile && !loading) {
+      markOnboardingComplete();
       router.push("/vendor/dashboard");
     }
-  }, [publicKey, profile, loading, router]);
+  }, [publicKey, profile, loading, router, markOnboardingComplete]);
+
+  // Auto-redirect if already onboarded
+  useEffect(() => {
+    if (publicKey && path === null) {
+      // If path is null and wallet is connected, check if we should redirect
+      // This handles the case where user was already onboarded in a previous session
+      // The useVendorProfile hook will determine if they're a vendor
+      if (profile && !loading) {
+        markOnboardingComplete();
+        router.push("/vendor/dashboard");
+      }
+    }
+  }, [publicKey, loading]);
 
   if (!publicKey) {
     return (
@@ -66,7 +140,7 @@ export default function OnboardingPage() {
   }
 
   // Step 1: Choose Path
-  if (path === "none") {
+  if (path === null) {
     return (
       <main className="page-container flex items-center justify-center min-h-[80vh]">
         <div className="glass rounded-lg border border-border bg-card p-12 text-center max-w-4xl shadow-sm">
@@ -79,7 +153,7 @@ export default function OnboardingPage() {
           
           <div className="grid gap-6 md:grid-cols-2">
             <button 
-              onClick={() => { setPath("buyer"); setStep(1); }}
+              onClick={() => { setPath("buyer"); setCurrentStep(1); }}
               className="rounded-lg border border-border bg-background p-8 text-left transition-colors hover:border-primary hover:bg-muted"
             >
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -92,7 +166,7 @@ export default function OnboardingPage() {
             </button>
             
             <button 
-              onClick={() => { setPath("vendor"); setStep(1); }}
+              onClick={() => { setPath("seller"); setCurrentStep(1); }}
               className="rounded-lg border border-border bg-background p-8 text-left transition-colors hover:border-primary hover:bg-muted"
             >
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -116,12 +190,12 @@ export default function OnboardingPage() {
         <div className="glass rounded-lg border border-border bg-card p-12 max-w-2xl w-full shadow-sm">
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-foreground">
-              {step === 1 ? "Secure Escrow Explained" : "Ready to Browse"}
+              {currentStep === 1 ? "Secure Escrow Explained" : "Ready to Browse"}
             </h2>
-            <div className="text-sm text-muted-foreground">Step {step} of 2</div>
+            <div className="text-sm text-muted-foreground">Step {currentStep} of 2</div>
           </div>
           
-          {step === 1 && (
+          {currentStep === 1 && (
             <div>
               <div className="mb-8 flex items-center justify-center gap-3">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -145,7 +219,7 @@ export default function OnboardingPage() {
                 <li>Funds are only released once delivery is verified.</li>
               </ul>
               <button 
-                onClick={() => setStep(2)} 
+                onClick={() => setCurrentStep(2)} 
                 className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
               >
                 Continue
@@ -153,7 +227,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 2 && (
+          {currentStep === 2 && (
             <div className="text-center">
               <div className="mb-4 flex justify-center">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -163,12 +237,15 @@ export default function OnboardingPage() {
               <p className="mb-8 text-muted-foreground">
                 You're all set! Explore thousands of products from verified vendors globally.
               </p>
-              <Link 
-                href="/dashboard" 
+              <button
+                onClick={() => {
+                  markOnboardingComplete();
+                  router.push("/stores");
+                }}
                 className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
               >
                 Browse Marketplace →
-              </Link>
+              </button>
             </div>
           )}
         </div>
@@ -177,9 +254,9 @@ export default function OnboardingPage() {
   }
 
   // Vendor Path
-  if (path === "vendor") {
+  if (path === "seller") {
     // Step 1: Seller Tier Selection
-    if (step === 1 && !sellerTier) {
+    if (currentStep === 1 && !sellerTier) {
       return (
         <main className="page-container flex items-center justify-center min-h-[80vh]">
           <div className="glass rounded-lg border border-border bg-card p-12 max-w-3xl w-full shadow-sm">
@@ -211,7 +288,10 @@ export default function OnboardingPage() {
               ].map((tier) => (
                 <button
                   key={tier.id}
-                  onClick={() => setSellerTier(tier.id as SellerTier)}
+                  onClick={() => {
+                    setSellerTier(tier.id as any);
+                    setCurrentStep(2);
+                  }}
                   className="rounded-lg border-2 border-border bg-background p-6 text-left transition-all hover:border-primary hover:bg-muted"
                 >
                   <h3 className="mb-2 text-lg font-bold text-foreground">{tier.title}</h3>
@@ -238,11 +318,11 @@ export default function OnboardingPage() {
         <div className="glass rounded-lg border border-border bg-card p-12 max-w-2xl w-full shadow-sm">
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-foreground">Complete Your Profile</h2>
-            <div className="text-sm text-muted-foreground">Step {step} of 3</div>
+            <div className="text-sm text-muted-foreground">Step {currentStep} of 3</div>
           </div>
 
           <form className="space-y-6">
-            {step === 2 && (
+            {currentStep === 2 && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-2">Shop Name</label>
@@ -267,7 +347,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {step === 3 && sellerTier === "distributor" && (
+            {currentStep === 3 && sellerTier === "distributor" && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-2">Distribution Region</label>
@@ -282,7 +362,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {step === 3 && sellerTier === "wholesaler" && (
+            {currentStep === 3 && sellerTier === "wholesaler" && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-2">Bulk Capacity (units/month)</label>
@@ -297,7 +377,7 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {step === 3 && sellerTier === "manufacturer" && (
+            {currentStep === 3 && sellerTier === "manufacturer" && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-foreground mb-2">Factory Location</label>
@@ -316,7 +396,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (step > 2) setStep(step - 1);
+                  if (currentStep > 2) setCurrentStep(currentStep - 1);
                   else setSellerTier(null);
                 }}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-md border border-border bg-background text-sm font-semibold text-foreground transition-colors hover:bg-muted"
@@ -325,12 +405,22 @@ export default function OnboardingPage() {
               </button>
               <button
                 type="button"
-                onClick={() => step < 3 ? setStep(step + 1) : router.push("/vendor/dashboard")}
+                onClick={() => {
+                  if (currentStep < 3) {
+                    setCurrentStep(currentStep + 1);
+                    return;
+                  }
+                  void completeVendorSetup();
+                }}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:opacity-95"
+                disabled={submitting}
               >
-                {step === 3 ? "Complete Setup" : "Continue"}
+                {currentStep === 3 ? (submitting ? "Creating Store..." : "Complete Setup") : "Continue"}
               </button>
             </div>
+            {submitError && (
+              <p className="text-sm text-red-600">{submitError}</p>
+            )}
           </form>
         </div>
       </main>

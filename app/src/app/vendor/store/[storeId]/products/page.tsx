@@ -13,10 +13,15 @@ interface Product {
   vendor_wallet: string;
   title: string;
   description: string;
+  short_description: string;
   price_usdc: number;
   category: string;
   image_url: string;
   in_stock: boolean;
+  moq: number;
+  lead_time_days: number;
+  rating: number;
+  seller_tier: "distributor" | "wholesaler" | "manufacturer";
   created_at: string;
 }
 
@@ -31,7 +36,19 @@ export default function StoreProductsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ title: "", description: "", priceUsdc: "", category: "Electronics", imageUrl: "", inStock: true });
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    shortDescription: "",
+    priceUsdc: "",
+    category: "Electronics",
+    imageUrl: "",
+    inStock: true,
+    moq: "1",
+    leadTimeDays: "7",
+    rating: "4.5",
+    sellerTier: "wholesaler" as "distributor" | "wholesaler" | "manufacturer",
+  });
 
   const loadProducts = useCallback(async () => {
     try {
@@ -47,7 +64,19 @@ export default function StoreProductsPage() {
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const resetForm = () => {
-    setForm({ title: "", description: "", priceUsdc: "", category: "Electronics", imageUrl: "", inStock: true });
+    setForm({
+      title: "",
+      description: "",
+      shortDescription: "",
+      priceUsdc: "",
+      category: "Electronics",
+      imageUrl: "",
+      inStock: true,
+      moq: "1",
+      leadTimeDays: "7",
+      rating: "4.5",
+      sellerTier: "wholesaler",
+    });
     setEditId(null);
     setError(null);
   };
@@ -59,15 +88,26 @@ export default function StoreProductsPage() {
     try {
       const price = parseFloat(form.priceUsdc);
       if (isNaN(price) || price <= 0) throw new Error("Price must be a positive number.");
+      const moq = parseInt(form.moq, 10);
+      const leadTimeDays = parseInt(form.leadTimeDays, 10);
+      const rating = parseFloat(form.rating);
+      if (isNaN(moq) || moq <= 0) throw new Error("MOQ must be a positive integer.");
+      if (isNaN(leadTimeDays) || leadTimeDays <= 0) throw new Error("Lead time must be a positive integer.");
+      if (isNaN(rating) || rating <= 0 || rating > 5) throw new Error("Rating must be between 0 and 5.");
 
       const body = {
         owner_wallet: wallet,
         title: form.title,
         description: form.description,
+        short_description: form.shortDescription,
         price_usdc: price,
         category: form.category,
         image_url: form.imageUrl,
         in_stock: form.inStock,
+        moq,
+        lead_time_days: leadTimeDays,
+        rating,
+        seller_tier: form.sellerTier,
       };
 
       let res: Response;
@@ -95,7 +135,19 @@ export default function StoreProductsPage() {
   }, [wallet, storeId, form, editId, loadProducts]);
 
   const handleEdit = (p: Product) => {
-    setForm({ title: p.title, description: p.description, priceUsdc: String(p.price_usdc), category: p.category, imageUrl: p.image_url, inStock: p.in_stock });
+    setForm({
+      title: p.title,
+      description: p.description,
+      shortDescription: p.short_description || "",
+      priceUsdc: String(p.price_usdc),
+      category: p.category,
+      imageUrl: p.image_url,
+      inStock: p.in_stock,
+      moq: String(p.moq ?? 1),
+      leadTimeDays: String(p.lead_time_days ?? 7),
+      rating: String(p.rating ?? 4.5),
+      sellerTier: p.seller_tier || "wholesaler",
+    });
     setEditId(p.id);
     setShowForm(true);
   };
@@ -141,6 +193,10 @@ export default function StoreProductsPage() {
               <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Description</label>
               <textarea className="input" style={{ ...inputStyle, minHeight: 72, resize: "vertical" }} placeholder="Describe your product…" maxLength={512} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
+            <div>
+              <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Short Description</label>
+              <input className="input" style={inputStyle} placeholder="Short summary for marketplace card" maxLength={160} value={form.shortDescription} onChange={(e) => setForm({ ...form, shortDescription: e.target.value })} />
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Category</label>
@@ -151,6 +207,28 @@ export default function StoreProductsPage() {
               <div>
                 <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Image URL</label>
                 <input type="url" className="input" style={inputStyle} placeholder="https://…" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "1rem" }}>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>MOQ</label>
+                <input required type="number" min="1" className="input" style={inputStyle} value={form.moq} onChange={(e) => setForm({ ...form, moq: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Lead Days</label>
+                <input required type="number" min="1" className="input" style={inputStyle} value={form.leadTimeDays} onChange={(e) => setForm({ ...form, leadTimeDays: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Rating</label>
+                <input required type="number" min="0" max="5" step="0.1" className="input" style={inputStyle} value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })} />
+              </div>
+              <div>
+                <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.3rem" }}>Seller Tier</label>
+                <select className="input" style={inputStyle} value={form.sellerTier} onChange={(e) => setForm({ ...form, sellerTier: e.target.value as "distributor" | "wholesaler" | "manufacturer" })}>
+                  <option value="distributor">Distributor</option>
+                  <option value="wholesaler">Wholesaler</option>
+                  <option value="manufacturer">Manufacturer</option>
+                </select>
               </div>
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer" }}>
@@ -178,7 +256,9 @@ export default function StoreProductsPage() {
             <div key={p.id} className="glass" style={{ padding: "1rem 1.25rem", borderRadius: "var(--radius-md)", display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: "1rem", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.9rem" }}>{p.title}</div>
-                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>{p.category} · ${p.price_usdc.toFixed(2)} USDC</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
+                  {p.category} · ${p.price_usdc.toFixed(2)} USDC · MOQ {p.moq} · {p.lead_time_days}d · ★{p.rating.toFixed(1)} · {p.seller_tier}
+                </div>
               </div>
               <span style={{ padding: "0.2rem 0.6rem", borderRadius: "var(--radius-pill)", fontSize: "0.72rem", fontWeight: 700, color: p.in_stock ? "var(--green)" : "var(--red)", background: p.in_stock ? "var(--green-dim)" : "rgba(239,68,68,0.1)", border: `1px solid ${p.in_stock ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}` }}>
                 {p.in_stock ? "In Stock" : "Out of Stock"}

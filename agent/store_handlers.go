@@ -32,9 +32,26 @@ func storeDispatch(w http.ResponseWriter, r *http.Request) {
 	if path == "/api/stores" || path == "/api/stores/" {
 		if r.Method == http.MethodPost {
 			StoreCreateHandler(w, r)
+		} else if r.Method == http.MethodGet {
+			StoreListHandler(w, r)
 		} else {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
+		return
+	}
+
+	// GET /api/stores/slug/:slug
+	if strings.HasPrefix(tail, "slug/") {
+		slug := strings.TrimSpace(strings.TrimPrefix(tail, "slug/"))
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if slug == "" {
+			http.Error(w, "slug is required", http.StatusBadRequest)
+			return
+		}
+		StoreGetBySlugHandler(w, r, slug)
 		return
 	}
 
@@ -100,6 +117,21 @@ func storeDispatch(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GET /api/stores
+func StoreListHandler(w http.ResponseWriter, r *http.Request) {
+	stores, err := GetAllStores()
+	if err != nil {
+		log.Printf("store list error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if stores == nil {
+		stores = []Store{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"stores": stores, "count": len(stores)})
+}
+
 // POST /api/stores
 func StoreCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -149,6 +181,18 @@ func StoreGetHandler(w http.ResponseWriter, r *http.Request, storeID int64) {
 		return
 	}
 	_ = RecordStoreView(storeID)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(store)
+}
+
+// GET /api/stores/slug/:slug
+func StoreGetBySlugHandler(w http.ResponseWriter, r *http.Request, slug string) {
+	store, err := GetStoreBySlug(slug)
+	if err != nil {
+		http.Error(w, "store not found", http.StatusNotFound)
+		return
+	}
+	_ = RecordStoreView(store.ID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(store)
 }
@@ -291,12 +335,17 @@ func StoreProductsHandler(w http.ResponseWriter, r *http.Request, storeID int64)
 
 	case http.MethodPost:
 		var req struct {
-			OwnerWallet string  `json:"owner_wallet"`
-			Title       string  `json:"title"`
-			Description string  `json:"description"`
-			PriceUsdc   float64 `json:"price_usdc"`
-			Category    string  `json:"category"`
-			ImageUrl    string  `json:"image_url"`
+			OwnerWallet      string  `json:"owner_wallet"`
+			Title            string  `json:"title"`
+			Description      string  `json:"description"`
+			ShortDescription string  `json:"short_description"`
+			PriceUsdc        float64 `json:"price_usdc"`
+			Category         string  `json:"category"`
+			ImageUrl         string  `json:"image_url"`
+			MOQ              int64   `json:"moq"`
+			LeadTimeDays     int64   `json:"lead_time_days"`
+			Rating           float64 `json:"rating"`
+			SellerTier       string  `json:"seller_tier"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -306,8 +355,20 @@ func StoreProductsHandler(w http.ResponseWriter, r *http.Request, storeID int64)
 			http.Error(w, "owner_wallet, title and price_usdc are required", http.StatusBadRequest)
 			return
 		}
-		id, err := CreateStoreProduct(storeID, req.OwnerWallet, req.Title, req.Description,
-			req.PriceUsdc, req.Category, req.ImageUrl)
+		if req.MOQ <= 0 {
+			req.MOQ = 1
+		}
+		if req.LeadTimeDays <= 0 {
+			req.LeadTimeDays = 7
+		}
+		if req.Rating <= 0 {
+			req.Rating = 4.5
+		}
+		if req.SellerTier == "" {
+			req.SellerTier = "wholesaler"
+		}
+		id, err := CreateStoreProduct(storeID, req.OwnerWallet, req.Title, req.Description, req.ShortDescription,
+			req.PriceUsdc, req.Category, req.ImageUrl, req.MOQ, req.LeadTimeDays, req.Rating, req.SellerTier)
 		if err != nil {
 			log.Printf("store product create error: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
@@ -328,19 +389,36 @@ func StoreProductHandler(w http.ResponseWriter, r *http.Request, storeID, prodID
 	switch r.Method {
 	case http.MethodPut:
 		var req struct {
-			Title       string  `json:"title"`
-			Description string  `json:"description"`
-			PriceUsdc   float64 `json:"price_usdc"`
-			Category    string  `json:"category"`
-			ImageUrl    string  `json:"image_url"`
-			InStock     bool    `json:"in_stock"`
+			Title            string  `json:"title"`
+			Description      string  `json:"description"`
+			ShortDescription string  `json:"short_description"`
+			PriceUsdc        float64 `json:"price_usdc"`
+			Category         string  `json:"category"`
+			ImageUrl         string  `json:"image_url"`
+			InStock          bool    `json:"in_stock"`
+			MOQ              int64   `json:"moq"`
+			LeadTimeDays     int64   `json:"lead_time_days"`
+			Rating           float64 `json:"rating"`
+			SellerTier       string  `json:"seller_tier"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "invalid JSON", http.StatusBadRequest)
 			return
 		}
+		if req.MOQ <= 0 {
+			req.MOQ = 1
+		}
+		if req.LeadTimeDays <= 0 {
+			req.LeadTimeDays = 7
+		}
+		if req.Rating <= 0 {
+			req.Rating = 4.5
+		}
+		if req.SellerTier == "" {
+			req.SellerTier = "wholesaler"
+		}
 		if err := UpdateStoreProduct(prodID, storeID, req.Title, req.Description,
-			req.PriceUsdc, req.Category, req.ImageUrl, req.InStock); err != nil {
+			req.ShortDescription, req.PriceUsdc, req.Category, req.ImageUrl, req.InStock, req.MOQ, req.LeadTimeDays, req.Rating, req.SellerTier); err != nil {
 			log.Printf("store product update error: %v", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return

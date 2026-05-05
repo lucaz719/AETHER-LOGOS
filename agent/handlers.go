@@ -383,12 +383,12 @@ func VendorRegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Wallet           string `json:"wallet"`
-		ShopName         string `json:"shop_name"`
-		Description      string `json:"description"`
-		VendorType       string `json:"vendor_type"`
-		Categories       string `json:"categories"`
-		EmailHash        string `json:"email_hash"`
+		Wallet      string `json:"wallet"`
+		ShopName    string `json:"shop_name"`
+		Description string `json:"description"`
+		VendorType  string `json:"vendor_type"`
+		Categories  string `json:"categories"`
+		EmailHash   string `json:"email_hash"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -464,12 +464,17 @@ func ProductCreateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		VendorWallet string  `json:"vendor_wallet"`
-		Title        string  `json:"title"`
-		Description  string  `json:"description"`
-		PriceUsdc    float64 `json:"price_usdc"`
-		Category     string  `json:"category"`
-		ImageUrl     string  `json:"image_url"`
+		VendorWallet     string  `json:"vendor_wallet"`
+		Title            string  `json:"title"`
+		Description      string  `json:"description"`
+		ShortDescription string  `json:"short_description"`
+		PriceUsdc        float64 `json:"price_usdc"`
+		Category         string  `json:"category"`
+		ImageUrl         string  `json:"image_url"`
+		MOQ              int64   `json:"moq"`
+		LeadTimeDays     int64   `json:"lead_time_days"`
+		Rating           float64 `json:"rating"`
+		SellerTier       string  `json:"seller_tier"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -482,7 +487,31 @@ func ProductCreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := CreateProduct(req.VendorWallet, req.Title, req.Description, req.PriceUsdc, req.Category, req.ImageUrl)
+	if req.MOQ <= 0 {
+		req.MOQ = 1
+	}
+	if req.LeadTimeDays <= 0 {
+		req.LeadTimeDays = 7
+	}
+	if req.Rating <= 0 {
+		req.Rating = 4.5
+	}
+	if req.SellerTier == "" {
+		req.SellerTier = "wholesaler"
+	}
+	id, err := CreateProduct(
+		req.VendorWallet,
+		req.Title,
+		req.Description,
+		req.ShortDescription,
+		req.PriceUsdc,
+		req.Category,
+		req.ImageUrl,
+		req.MOQ,
+		req.LeadTimeDays,
+		req.Rating,
+		req.SellerTier,
+	)
 	if err != nil {
 		log.Printf("product create error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)

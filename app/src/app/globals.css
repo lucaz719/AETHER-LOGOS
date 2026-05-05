@@ -141,6 +141,11 @@
   --amber: #F39C12;
   --red: #DC3545;
   
+  /* ---- Glow effects (fix: previously --glow-cyan was undefined) ---- */
+  --glow-cyan: 0 0 20px rgba(0, 102, 255, 0.35);
+  --glow-primary: 0 0 20px rgba(0, 102, 255, 0.35);
+  --shadow-card: 0 10px 25px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.06);
+
   /* ---- Z-Index Stack ---------------------------------------- */
   --z-nav: 50;
   --z-modal: 100;
@@ -175,6 +180,34 @@
 
   --border: #2a2a35;
   --border-light: rgba(255, 255, 255, 0.08);
+
+  /* ---- Missing dark overrides (fixes .glass, .input, .btn-primary focus) ---- */
+  --bg-surface: #16161f;          /* was #FFFFFF in light — fixes .glass bg */
+  --bg-elevated: #1a1a24;         /* fixes .skeleton bg */
+  --bg-hover: #1a1a24;
+  --bg-focus: rgba(0, 102, 255, 0.12);
+
+  --text-primary: #EDEDED;
+  --text-secondary: #a0a0b0;
+  --text-muted: #666680;
+  --text-inverse: #0d0d14;
+
+  --input-border: #2a2a35;
+  --input-background: #1a1a24;
+
+  --primary-light: rgba(0, 102, 255, 0.15);
+  --primary-dim: rgba(0, 102, 255, 0.10);
+
+  --accent-light: rgba(243, 156, 18, 0.15);
+  --accent-subtle: rgba(243, 156, 18, 0.10);
+
+  --glow-cyan: 0 0 24px rgba(0, 102, 255, 0.5);
+  --glow-primary: 0 0 24px rgba(0, 102, 255, 0.5);
+  --shadow-card: 0 10px 25px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+
+  --cyan-dim: rgba(0, 102, 255, 0.12);
+  --violet-dim: rgba(108, 92, 231, 0.12);
+  --green-dim: rgba(39, 174, 96, 0.12);
 }
 
 /* ---- Reset & base ---------------------------------------- */
@@ -207,7 +240,7 @@ a {
 }
 
 a:hover {
-  color: #fff;
+  color: var(--primary);
 }
 
 /* ---- Glass card ------------------------------------------ */
@@ -222,7 +255,7 @@ a:hover {
 
 .glass:hover {
   border-color: var(--border-accent);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--bg-card-shadow-hover);
 }
 
 /* ---- Buttons --------------------------------------------- */
@@ -233,7 +266,7 @@ a:hover {
   justify-content: center;
   gap: 0.4rem;
   padding: 0.65rem 1.4rem;
-  background: var(--cyan);
+  background: var(--primary);
   color: var(--text-inverse);
   font-weight: 700;
   font-size: 0.9rem;
@@ -245,7 +278,7 @@ a:hover {
 
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.15);
-  box-shadow: var(--glow-cyan);
+  box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-md);
 }
 
 .btn-primary:disabled {
@@ -308,8 +341,8 @@ a:hover {
 }
 
 .input:focus {
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .input::placeholder {
@@ -357,8 +390,8 @@ select.input {
 }
 
 .form-input:focus {
-  border-color: var(--cyan);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.12);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .form-input::placeholder {
@@ -391,7 +424,7 @@ select.form-input {
 
 .badge-cyan { background: var(--cyan-dim); color: var(--cyan); border: 1px solid var(--border-accent); }
 .badge-violet { background: var(--violet-dim); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
-.badge-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,255,136,0.25); }
+.badge-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(39,174,96,0.25); }
 .badge-amber { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
 .badge-red { background: rgba(244,63,94,0.12); color: var(--red); border: 1px solid rgba(244,63,94,0.25); }
 

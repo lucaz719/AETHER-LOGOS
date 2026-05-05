@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -58,6 +59,10 @@ module.exports = {
       },
       boxShadow: {
         panel: '0 1px 2px 0 rgba(15, 23, 42, 0.08)',
+        // Fix for undefined --shadow-card and --glow-cyan used in globals.css
+        card: '0 10px 25px -3px rgba(0,0,0,0.12), 0 4px 6px -2px rgba(0,0,0,0.06)',
+        'glow-indigo': '0 0 20px rgba(99, 102, 241, 0.4)',
+        'glow-primary': '0 0 20px rgba(0, 102, 255, 0.35)',
       },
     },
   },

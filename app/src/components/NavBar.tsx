@@ -57,19 +57,26 @@ export function NavBar() {
             </div>
           </Link>
 
-          {/* Search Bar - Hidden on mobile, visible on sm+ */}
-          <div className="hidden flex-1 max-w-sm md:block">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search products, markets..."
-                readOnly
-                className="w-full rounded-lg border border-border bg-secondary px-4 py-2 text-sm text-foreground placeholder-muted-foreground cursor-pointer transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
-              <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 transform rounded border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-                ⌘K
-              </kbd>
-            </div>
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-1">
+            <Link
+              href="/stores"
+              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+            >
+              Suppliers
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+            >
+              Procurement
+            </Link>
+            <Link
+              href="/user/orders"
+              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+            >
+              My Orders
+            </Link>
           </div>
 
           {/* Right Utilities: Wallet + Cart + Theme */}

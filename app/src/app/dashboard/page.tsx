@@ -18,164 +18,43 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
-const products = [
-  {
-    productId: "prod-001",
-    title: "Titanium CNC Milling Spindle (20K RPM)",
-    category: "Industrial Components",
-    vendor: "Nordic Mobility Supply",
-    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
-    sellerTier: "manufacturer" as const,
-    rating: 4.9,
-    priceUsdc: 8950,
-    moq: 2,
-    leadTimeDays: 18,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-002",
-    title: "Cryogenic Bio-Transport Container (2L)",
-    category: "Cold Chain",
-    vendor: "Pacific Transit Systems",
-    sellerWallet: "7kA2mQ9sB5cP1dE8jN6vL3hF4gR2wT5u",
-    sellerTier: "manufacturer" as const,
-    rating: 4.95,
-    priceUsdc: 3200,
-    moq: 5,
-    leadTimeDays: 14,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-003",
-    title: "Industrial-Grade RFID Inventory Scanner",
-    category: "IoT Hardware",
-    vendor: "Anchor Field Devices",
-    sellerWallet: "3mX7kL2pQ9sB4vE1jH8nF5gD2rT6aW9c",
-    sellerTier: "wholesaler" as const,
-    rating: 4.7,
-    priceUsdc: 1850,
-    moq: 15,
-    leadTimeDays: 9,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-004",
-    title: "Military-Grade Biometric Lock Assembly",
-    category: "Security Systems",
-    vendor: "SecureVault Industries",
-    sellerWallet: "2pR8vN4jK1sL9tM6wX3yE7zQ5aB8cD0f",
-    sellerTier: "manufacturer" as const,
-    rating: 4.8,
-    priceUsdc: 2750,
-    moq: 8,
-    leadTimeDays: 12,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-005",
-    title: "EMI Shield Gasket Roll (100m)",
-    category: "Industrial Components",
-    vendor: "Nordic Mobility Supply",
-    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
-    sellerTier: "distributor" as const,
-    rating: 4.6,
-    priceUsdc: 420,
-    moq: 30,
-    leadTimeDays: 5,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-006",
-    title: "Real-Time Temperature & Humidity Sensor",
-    category: "IoT Hardware",
-    vendor: "TechFlow Innovations",
-    sellerWallet: "4dS9vL2bP6jH8nK5mR3tW1xY4aZ7cE0f",
-    sellerTier: "wholesaler" as const,
-    rating: 4.72,
-    priceUsdc: 245,
-    moq: 100,
-    leadTimeDays: 7,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-007",
-    title: "Temperature-Controlled Gel Pack (500g)",
-    category: "Cold Chain",
-    vendor: "Logistics Excellence Ltd",
-    sellerWallet: "5eT0wM3cQ7kL1pS9mN6jX2aU5bV8dW4g",
-    sellerTier: "distributor" as const,
-    rating: 4.85,
-    priceUsdc: 18,
-    moq: 500,
-    leadTimeDays: 3,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-008",
-    title: "Quantum-Encrypted Key Management System",
-    category: "Security Systems",
-    vendor: "CyberShield Pro",
-    sellerWallet: "6fU1xN4dR8sL2qM9bP5jX3aK7cT0eW6h",
-    sellerTier: "manufacturer" as const,
-    rating: 4.92,
-    priceUsdc: 15400,
-    moq: 1,
-    leadTimeDays: 21,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-009",
-    title: "Precision Bearing Set (SKF, 50mm)",
-    category: "Industrial Components",
-    vendor: "Nordic Mobility Supply",
-    sellerWallet: "9B5X4z7Q1mP8vN2kL5jH9gF7sD3aE1rT",
-    sellerTier: "distributor" as const,
-    rating: 4.78,
-    priceUsdc: 680,
-    moq: 20,
-    leadTimeDays: 8,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-010",
-    title: "Wireless IoT Gateway (5G-Ready)",
-    category: "IoT Hardware",
-    vendor: "TechFlow Innovations",
-    sellerWallet: "4dS9vL2bP6jH8nK5mR3tW1xY4aZ7cE0f",
-    sellerTier: "manufacturer" as const,
-    rating: 4.88,
-    priceUsdc: 3850,
-    moq: 10,
-    leadTimeDays: 11,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-011",
-    title: "Pharmaceutical-Grade Insulated Box (10L)",
-    category: "Cold Chain",
-    vendor: "Logistics Excellence Ltd",
-    sellerWallet: "5eT0wM3cQ7kL1pS9mN6jX2aU5bV8dW4g",
-    sellerTier: "wholesaler" as const,
-    rating: 4.76,
-    priceUsdc: 125,
-    moq: 200,
-    leadTimeDays: 6,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-  {
-    productId: "prod-012",
-    title: "ISO 27001 Certified Security Module",
-    category: "Security Systems",
-    vendor: "SecureVault Industries",
-    sellerWallet: "2pR8vN4jK1sL9tM6wX3yE7zQ5aB8cD0f",
-    sellerTier: "distributor" as const,
-    rating: 4.81,
-    priceUsdc: 890,
-    moq: 50,
-    leadTimeDays: 10,
-    usdcMint: "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi",
-  },
-];
+const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
+const DEFAULT_USDC_MINT = "EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi";
+
+type SellerTier = "distributor" | "wholesaler" | "manufacturer";
+type DashboardProduct = {
+  productId: string;
+  title: string;
+  category: string;
+  vendor: string;
+  sellerWallet: string;
+  sellerTier: SellerTier;
+  rating: number;
+  priceUsdc: number;
+  moq: number;
+  leadTimeDays: number;
+  usdcMint: string;
+};
+
+type ApiProduct = {
+  id: number;
+  vendor_wallet: string;
+  title: string;
+  short_description?: string;
+  price_usdc: number;
+  category: string;
+  moq?: number;
+  lead_time_days?: number;
+  rating?: number;
+  seller_tier?: string;
+};
+
+function normalizeTier(value?: string): SellerTier {
+  if (value === "manufacturer" || value === "distributor" || value === "wholesaler") {
+    return value;
+  }
+  return "wholesaler";
+}
 
 const hedgeMarkets = [
   {
@@ -241,7 +120,76 @@ function DashboardContent() {
   const [selectedMarketIdx, setSelectedMarketIdx] = useState<number | null>(null);
   const [stakeAmount, setStakeAmount] = useState("100");
   const [selectedSide, setSelectedSide] = useState<"yes" | "no">("yes");
+  const [products, setProducts] = useState<DashboardProduct[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const { connected: walletConnected } = useWallet();
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      setProductsLoading(true);
+      try {
+        const productsRes = await fetch(`${API}/api/products`);
+        if (!productsRes.ok) {
+          setProducts([]);
+          return;
+        }
+        const productsPayload = await productsRes.json() as { products?: ApiProduct[] };
+        const rawProducts = productsPayload.products ?? [];
+        if (rawProducts.length === 0) {
+          setProducts([]);
+          return;
+        }
+
+        const vendorWallets = Array.from(new Set(rawProducts.map((item) => item.vendor_wallet)));
+        const vendorEntries = await Promise.all(
+          vendorWallets.map(async (wallet) => {
+            const res = await fetch(`${API}/api/vendor/${wallet}`);
+            if (res.ok) {
+              const vendor = await res.json() as { shop_name?: string; vendor_type?: string };
+              return [wallet, vendor] as const;
+            }
+            const storesRes = await fetch(`${API}/api/vendors/${wallet}/stores`);
+            if (!storesRes.ok) return [wallet, null] as const;
+            const storesPayload = await storesRes.json() as {
+              stores?: Array<{ store_name?: string; store_type?: string }>;
+            };
+            const firstStore = storesPayload.stores?.[0];
+            if (!firstStore) return [wallet, null] as const;
+            return [
+              wallet,
+              { shop_name: firstStore.store_name, vendor_type: firstStore.store_type },
+            ] as const;
+          }),
+        );
+        const vendorByWallet = new Map(vendorEntries);
+
+        const mapped = rawProducts.map((item): DashboardProduct => {
+          const vendor = vendorByWallet.get(item.vendor_wallet);
+          const tier = normalizeTier(item.seller_tier ?? vendor?.vendor_type);
+          return {
+            productId: String(item.id),
+            title: item.title,
+            category: item.category || "General",
+            vendor: vendor?.shop_name || "Unknown Vendor",
+            sellerWallet: item.vendor_wallet,
+            sellerTier: tier,
+            rating: item.rating && item.rating > 0 ? item.rating : 4.7,
+            priceUsdc: item.price_usdc,
+            moq: item.moq && item.moq > 0 ? item.moq : (tier === "manufacturer" ? 10 : tier === "wholesaler" ? 25 : 5),
+            leadTimeDays: item.lead_time_days && item.lead_time_days > 0 ? item.lead_time_days : (tier === "manufacturer" ? 14 : tier === "wholesaler" ? 9 : 5),
+            usdcMint: DEFAULT_USDC_MINT,
+          };
+        });
+        setProducts(mapped);
+      } catch {
+        setProducts([]);
+      } finally {
+        setProductsLoading(false);
+      }
+    };
+
+    void loadProducts();
+  }, []);
 
   const filteredProducts =
     selectedTier === "all"
@@ -253,11 +201,11 @@ function DashboardContent() {
   const getRiskColor = (level: "low" | "medium" | "high") => {
     switch (level) {
       case "low":
-        return "text-green-400";
+        return "text-green-600 dark:text-green-400";
       case "medium":
-        return "text-amber-400";
+        return "text-amber-600 dark:text-amber-400";
       case "high":
-        return "text-red-400";
+        return "text-red-600 dark:text-red-400";
     }
   };
 
@@ -297,7 +245,7 @@ function DashboardContent() {
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-slate-950 relative overflow-hidden pt-24 pb-20">
+    <main className="min-h-screen bg-background relative overflow-hidden pt-24 pb-20">
       {/* Premium Atmospheric Backgrounds */}
       <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none"></div>
       <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[160px] pointer-events-none"></div>
@@ -306,10 +254,10 @@ function DashboardContent() {
         {/* Top Header Section */}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div className="space-y-2">
-            <h1 className="text-6xl font-black tracking-tighter text-slate-950 dark:text-white">
+            <h1 className="text-6xl font-black tracking-tighter text-foreground">
               {mode === "marketplace" ? "Procurement" : "Risk Desk"}
             </h1>
-            <p className="text-lg font-bold text-slate-500 dark:text-slate-400">
+            <p className="text-lg font-bold text-muted-foreground">
               {mode === "marketplace" 
                 ? "Global B2B sourcing with verified zkTLS delivery proof." 
                 : "Logistics outcome prediction and risk hedging terminal."}
@@ -336,13 +284,19 @@ function DashboardContent() {
 
 
                 <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 pb-20">
-                  {filteredProducts.map((product) => (
-                    <ProductCard
-                      key={product.productId}
-                      {...product}
-                      onBuy={handleProductBuy}
-                    />
-                  ))}
+                  {productsLoading ? (
+                    <div className="col-span-full text-sm text-muted-foreground">Loading products...</div>
+                  ) : filteredProducts.length === 0 ? (
+                    <div className="col-span-full text-sm text-muted-foreground">No products found.</div>
+                  ) : (
+                    filteredProducts.map((product) => (
+                      <ProductCard
+                        key={product.productId}
+                        {...product}
+                        onBuy={handleProductBuy}
+                      />
+                    ))
+                  )}
                 </div>
               </div>
             </div>

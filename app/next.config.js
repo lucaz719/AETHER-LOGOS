@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+const path = require('path');
 const withBundleAnalyzer = process.env.ANALYZE === 'true'
   ? require('@next/bundle-analyzer')({ enabled: true })
   : (config) => config;
@@ -13,6 +14,7 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react', '@solana/web3.js'],
   },
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       {
@@ -36,37 +38,40 @@ const nextConfig = {
   turbopack: {
     resolveAlias: {
       'bn.js': 'bn.js',
+      'bigint-buffer': 'bigint-buffer/dist/browser.js',
     },
   },
   webpack(config, { isServer }) {
-    // Only run webpack config in Webpack builds, not Turbopack
-    if (process.env.__NEXT_WEBPACK_BUILD === 'true') {
-      config.ignoreWarnings = [
-        ...(config.ignoreWarnings ?? []),
-        {
-          module: /ox[\\/]_esm[\\/]tempo[\\/]internal[\\/]virtualMasterPool/,
-          message: /Critical dependency/,
-        },
-      ];
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      'bigint-buffer': require.resolve('bigint-buffer/dist/browser.js'),
+    };
 
-      // Split heavy Solana / Anchor bundles into separate chunks so they are
-      // only downloaded when the wallet-connected routes are visited.
-      if (!isServer) {
-        config.optimization.splitChunks = {
-          ...config.optimization.splitChunks,
-          cacheGroups: {
-            ...(config.optimization.splitChunks?.cacheGroups ?? {}),
-            solana: {
-              name: 'solana-vendor',
-              test: /[\\/]node_modules[\\/](@solana|@coral-xyz|bn\.js|pino|@protobufjs|@walletconnect|@reown)[\\/]/,
-              chunks: 'all',
-              priority: 40,
-              reuseExistingChunk: true,
-              enforce: true,
-            },
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings ?? []),
+      {
+        module: /ox[\\/]_esm[\\/]tempo[\\/]internal[\\/]virtualMasterPool/,
+        message: /Critical dependency/,
+      },
+    ];
+
+    // Split heavy Solana / Anchor bundles into separate chunks so they are
+    // only downloaded when the wallet-connected routes are visited.
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...(config.optimization.splitChunks?.cacheGroups ?? {}),
+          solana: {
+            name: 'solana-vendor',
+            test: /[\\/]node_modules[\\/](@solana|@coral-xyz|bn\.js|pino|@protobufjs|@walletconnect|@reown)[\\/]/,
+            chunks: 'all',
+            priority: 40,
+            reuseExistingChunk: true,
+            enforce: true,
           },
-        };
-      }
+        },
+      };
     }
     return config;
   },

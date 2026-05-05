@@ -33,26 +33,31 @@ type ShipmentMilestone struct {
 }
 
 type Vendor struct {
-	ID           int64  `json:"id"`
-	Wallet       string `json:"wallet"`
-	ShopName     string `json:"shop_name"`
-	Description  string `json:"description"`
-	VendorType   string `json:"vendor_type"`
-	Categories   string `json:"categories"`
-	EmailHash    string `json:"email_hash"`
-	CreatedAt    string `json:"created_at"`
+	ID          int64  `json:"id"`
+	Wallet      string `json:"wallet"`
+	ShopName    string `json:"shop_name"`
+	Description string `json:"description"`
+	VendorType  string `json:"vendor_type"`
+	Categories  string `json:"categories"`
+	EmailHash   string `json:"email_hash"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type Product struct {
-	ID            int64   `json:"id"`
-	VendorWallet  string  `json:"vendor_wallet"`
-	Title         string  `json:"title"`
-	Description   string  `json:"description"`
-	PriceUsdc     float64 `json:"price_usdc"`
-	Category      string  `json:"category"`
-	ImageUrl      string  `json:"image_url"`
-	InStock       bool    `json:"in_stock"`
-	CreatedAt     string  `json:"created_at"`
+	ID               int64   `json:"id"`
+	VendorWallet     string  `json:"vendor_wallet"`
+	Title            string  `json:"title"`
+	Description      string  `json:"description"`
+	ShortDescription string  `json:"short_description"`
+	PriceUsdc        float64 `json:"price_usdc"`
+	Category         string  `json:"category"`
+	ImageUrl         string  `json:"image_url"`
+	InStock          bool    `json:"in_stock"`
+	MOQ              int64   `json:"moq"`
+	LeadTimeDays     int64   `json:"lead_time_days"`
+	Rating           float64 `json:"rating"`
+	SellerTier       string  `json:"seller_tier"`
+	CreatedAt        string  `json:"created_at"`
 }
 
 func InitDB(path string) error {
@@ -201,10 +206,16 @@ func InitDB(path string) error {
 		vendor_wallet TEXT NOT NULL,
 		title TEXT NOT NULL,
 		description TEXT,
+		short_description TEXT,
 		price_usdc REAL NOT NULL,
 		category TEXT,
 		image_url TEXT,
 		in_stock BOOLEAN DEFAULT true,
+		moq INTEGER DEFAULT 1,
+		lead_time_days INTEGER DEFAULT 7,
+		rating REAL DEFAULT 4.5,
+		seller_tier TEXT DEFAULT 'wholesaler',
+		store_id INTEGER,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
@@ -215,6 +226,21 @@ func InitDB(path string) error {
 		return err
 	}
 	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN store_id INTEGER`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN moq INTEGER DEFAULT 1`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN lead_time_days INTEGER DEFAULT 7`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN rating REAL DEFAULT 4.5`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN seller_tier TEXT DEFAULT 'wholesaler'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN short_description TEXT`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
 	}
 	return nil
@@ -318,7 +344,6 @@ func GetShipmentByTradeAccount(tradeAccount string) (*Shipment, error) {
 	return &s, nil
 }
 
-
 func UpdateStatus(id int64, status string) error {
 	_, err := db.Exec(
 		`UPDATE shipments SET last_known_status = ?, updated_at = ? WHERE id = ?`,
@@ -398,10 +423,11 @@ func GetVendorByWallet(wallet string) (*Vendor, error) {
 }
 
 // Product database functions
-func CreateProduct(vendorWallet, title, description string, priceUsdc float64, category, imageUrl string) (int64, error) {
+func CreateProduct(vendorWallet, title, description, shortDescription string, priceUsdc float64, category, imageUrl string, moq, leadTimeDays int64, rating float64, sellerTier string) (int64, error) {
 	result, err := db.Exec(
-		`INSERT INTO products (vendor_wallet, title, description, price_usdc, category, image_url, in_stock) VALUES (?, ?, ?, ?, ?, ?, true)`,
-		vendorWallet, title, description, priceUsdc, category, imageUrl,
+		`INSERT INTO products (vendor_wallet, title, description, short_description, price_usdc, category, image_url, in_stock, moq, lead_time_days, rating, seller_tier)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, true, ?, ?, ?, ?)`,
+		vendorWallet, title, description, shortDescription, priceUsdc, category, imageUrl, moq, leadTimeDays, rating, sellerTier,
 	)
 	if err != nil {
 		return 0, err
@@ -412,9 +438,11 @@ func CreateProduct(vendorWallet, title, description string, priceUsdc float64, c
 func GetProductByID(id int64) (*Product, error) {
 	var p Product
 	err := db.QueryRow(
-		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE id = ?`,
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products WHERE id = ?`,
 		id,
-	).Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt)
+	).Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +450,13 @@ func GetProductByID(id int64) (*Product, error) {
 }
 
 func GetAllProducts() ([]Product, error) {
-	rows, err := db.Query(`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE in_stock = true ORDER BY created_at DESC`)
+	rows, err := db.Query(
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products
+		 WHERE in_stock = true
+		 ORDER BY created_at DESC`,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -431,7 +465,7 @@ func GetAllProducts() ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -441,7 +475,11 @@ func GetAllProducts() ([]Product, error) {
 
 func GetProductsByVendor(vendorWallet string) ([]Product, error) {
 	rows, err := db.Query(
-		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE vendor_wallet = ? ORDER BY created_at DESC`,
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products
+		 WHERE vendor_wallet = ?
+		 ORDER BY created_at DESC`,
 		vendorWallet,
 	)
 	if err != nil {
@@ -452,7 +490,7 @@ func GetProductsByVendor(vendorWallet string) ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -462,7 +500,11 @@ func GetProductsByVendor(vendorWallet string) ([]Product, error) {
 
 func GetProductsByCategory(category string) ([]Product, error) {
 	rows, err := db.Query(
-		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE category = ? AND in_stock = true ORDER BY created_at DESC`,
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products
+		 WHERE category = ? AND in_stock = true
+		 ORDER BY created_at DESC`,
 		category,
 	)
 	if err != nil {
@@ -473,7 +515,7 @@ func GetProductsByCategory(category string) ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -516,13 +558,13 @@ type UserAddress struct {
 }
 
 type UserPreferences struct {
-	UserID              int64  `json:"user_id"`
-	Theme               string `json:"theme"`
-	Language            string `json:"language"`
-	Currency            string `json:"currency"`
-	EmailNotifications  bool   `json:"email_notifications"`
-	PushNotifications   bool   `json:"push_notifications"`
-	TwoFactorEnabled    bool   `json:"two_factor_enabled"`
+	UserID             int64  `json:"user_id"`
+	Theme              string `json:"theme"`
+	Language           string `json:"language"`
+	Currency           string `json:"currency"`
+	EmailNotifications bool   `json:"email_notifications"`
+	PushNotifications  bool   `json:"push_notifications"`
+	TwoFactorEnabled   bool   `json:"two_factor_enabled"`
 }
 
 // ─── Store Structs & DB Functions ──────────────────────────────────────────
@@ -544,13 +586,13 @@ type Store struct {
 }
 
 type StoreMember struct {
-	ID         int64  `json:"id"`
-	StoreID    int64  `json:"store_id"`
-	UserWallet string `json:"user_wallet"`
-	Role       string `json:"role"`
+	ID          int64  `json:"id"`
+	StoreID     int64  `json:"store_id"`
+	UserWallet  string `json:"user_wallet"`
+	Role        string `json:"role"`
 	Permissions string `json:"permissions"`
-	InvitedBy  string `json:"invited_by"`
-	JoinedAt   string `json:"joined_at"`
+	InvitedBy   string `json:"invited_by"`
+	JoinedAt    string `json:"joined_at"`
 }
 
 type StoreAnalytics struct {
@@ -802,6 +844,33 @@ func GetStoreBySlug(slug string) (*Store, error) {
 	return &s, nil
 }
 
+func GetAllStores() ([]Store, error) {
+	rows, err := db.Query(
+		`SELECT id, owner_wallet, slug, store_name, COALESCE(description,''), COALESCE(logo_cid,''),
+		        COALESCE(banner_cid,''), COALESCE(store_type,'retail'), COALESCE(categories,''),
+		        is_active, is_verified, created_at, COALESCE(settings,'{}')
+		 FROM stores
+		 WHERE is_active = true
+		 ORDER BY created_at DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var stores []Store
+	for rows.Next() {
+		var s Store
+		if err := rows.Scan(&s.ID, &s.OwnerWallet, &s.Slug, &s.StoreName, &s.Description,
+			&s.LogoCid, &s.BannerCid, &s.StoreType, &s.Categories,
+			&s.IsActive, &s.IsVerified, &s.CreatedAt, &s.Settings); err != nil {
+			return nil, err
+		}
+		stores = append(stores, s)
+	}
+	return stores, rows.Err()
+}
+
 func GetStoresByOwner(ownerWallet string) ([]Store, error) {
 	rows, err := db.Query(
 		`SELECT id, owner_wallet, slug, store_name, COALESCE(description,''), COALESCE(logo_cid,''),
@@ -911,11 +980,11 @@ func RecordStoreView(storeID int64) error {
 
 // ─── Store Product DB Functions ─────────────────────────────────────────────
 
-func CreateStoreProduct(storeID int64, ownerWallet, title, description string, priceUsdc float64, category, imageUrl string) (int64, error) {
+func CreateStoreProduct(storeID int64, ownerWallet, title, description, shortDescription string, priceUsdc float64, category, imageUrl string, moq, leadTimeDays int64, rating float64, sellerTier string) (int64, error) {
 	result, err := db.Exec(
-		`INSERT INTO products (vendor_wallet, title, description, price_usdc, category, image_url, in_stock, store_id)
-		 VALUES (?, ?, ?, ?, ?, ?, true, ?)`,
-		ownerWallet, title, description, priceUsdc, category, imageUrl, storeID,
+		`INSERT INTO products (vendor_wallet, title, description, short_description, price_usdc, category, image_url, in_stock, moq, lead_time_days, rating, seller_tier, store_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, true, ?, ?, ?, ?, ?)`,
+		ownerWallet, title, description, shortDescription, priceUsdc, category, imageUrl, moq, leadTimeDays, rating, sellerTier, storeID,
 	)
 	if err != nil {
 		return 0, err
@@ -925,7 +994,8 @@ func CreateStoreProduct(storeID int64, ownerWallet, title, description string, p
 
 func GetProductsByStore(storeID int64) ([]Product, error) {
 	rows, err := db.Query(
-		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
 		 FROM products WHERE store_id=? ORDER BY created_at DESC`,
 		storeID,
 	)
@@ -936,8 +1006,8 @@ func GetProductsByStore(storeID int64) ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description,
-			&p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription,
+			&p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)
@@ -945,11 +1015,11 @@ func GetProductsByStore(storeID int64) ([]Product, error) {
 	return products, rows.Err()
 }
 
-func UpdateStoreProduct(id, storeID int64, title, description string, priceUsdc float64, category, imageUrl string, inStock bool) error {
+func UpdateStoreProduct(id, storeID int64, title, description, shortDescription string, priceUsdc float64, category, imageUrl string, inStock bool, moq, leadTimeDays int64, rating float64, sellerTier string) error {
 	_, err := db.Exec(
-		`UPDATE products SET title=?, description=?, price_usdc=?, category=?, image_url=?, in_stock=?
+		`UPDATE products SET title=?, description=?, short_description=?, price_usdc=?, category=?, image_url=?, in_stock=?, moq=?, lead_time_days=?, rating=?, seller_tier=?
 		 WHERE id=? AND store_id=?`,
-		title, description, priceUsdc, category, imageUrl, inStock, id, storeID,
+		title, description, shortDescription, priceUsdc, category, imageUrl, inStock, moq, leadTimeDays, rating, sellerTier, id, storeID,
 	)
 	return err
 }
@@ -1004,7 +1074,11 @@ func DeletePromotion(id, storeID int64) error {
 func SearchProducts(searchTerm string) ([]Product, error) {
 	query := "%" + searchTerm + "%"
 	rows, err := db.Query(
-		`SELECT id, vendor_wallet, title, description, price_usdc, category, image_url, in_stock, created_at FROM products WHERE (title LIKE ? OR description LIKE ?) AND in_stock = true ORDER BY created_at DESC`,
+		`SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products
+		 WHERE (title LIKE ? OR description LIKE ?) AND in_stock = true
+		 ORDER BY created_at DESC`,
 		query, query,
 	)
 	if err != nil {
@@ -1015,7 +1089,7 @@ func SearchProducts(searchTerm string) ([]Product, error) {
 	var products []Product
 	for rows.Next() {
 		var p Product
-		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.CreatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, p)

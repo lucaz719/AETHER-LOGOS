@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
+import { useRegistrationStore } from "@/lib/stores/registrationStore";
 
 const VENDOR_TYPES = ["Retailer", "Wholesaler", "Distributor", "Manufacturer"] as const;
 const ALL_CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "FoodBeverage", "Chemicals", "Automotive", "Healthcare", "Construction", "Other"];
@@ -19,20 +20,34 @@ async function hashEmail(email: string): Promise<string> {
 
 export default function VendorRegisterPage() {
 	const { publicKey } = useWallet();
-	const [shopName, setShopName] = useState("");
-	const [shopDesc, setShopDesc] = useState("");
-	const [vendorType, setVendorType] = useState<string>("Retailer");
-	const [categories, setCategories] = useState<string[]>([]);
-	const [email, setEmail] = useState("");
+	
+	// Use registration store for persistence
+	const shopName = useRegistrationStore((state) => state.shopName);
+	const setShopName = useRegistrationStore((state) => state.setShopName);
+	const shopDesc = useRegistrationStore((state) => state.shopDesc);
+	const setShopDesc = useRegistrationStore((state) => state.setShopDesc);
+	const vendorType = useRegistrationStore((state) => state.vendorType);
+	const setVendorType = useRegistrationStore((state) => state.setVendorType);
+	const categories = useRegistrationStore((state) => state.categories);
+	const setCategories = useRegistrationStore((state) => state.setCategories);
+	const email = useRegistrationStore((state) => state.email);
+	const setEmail = useRegistrationStore((state) => state.setEmail);
+	const registrationCompleted = useRegistrationStore((state) => state.registrationCompleted);
+	const markRegistrationComplete = useRegistrationStore((state) => state.markRegistrationComplete);
+	const clearDraft = useRegistrationStore((state) => state.clearDraft);
+	
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-	const [done, setDone] = useState(false);
 
 	const toggleCategory = useCallback((cat: string) => {
-		setCategories((prev) =>
-			prev.includes(cat) ? prev.filter((c) => c !== cat) : prev.length < 8 ? [...prev, cat] : prev,
+		setCategories(
+			categories.includes(cat)
+				? categories.filter((c) => c !== cat)
+				: categories.length < 8
+				? [...categories, cat]
+				: categories,
 		);
-	}, []);
+	}, [categories, setCategories]);
 
 	const handleSubmit = useCallback(
 		async (e: React.FormEvent) => {
@@ -60,14 +75,16 @@ export default function VendorRegisterPage() {
 					throw new Error(errorText || `HTTP ${response.status}`);
 				}
 
-				setDone(true);
+				// Mark registration complete and clear draft
+				markRegistrationComplete();
+				clearDraft();
 			} catch (e: unknown) {
 				setError(e instanceof Error ? e.message : String(e));
 			} finally {
 				setSubmitting(false);
 			}
 		},
-		[publicKey, shopName, shopDesc, vendorType, categories, email],
+		[publicKey, shopName, shopDesc, vendorType, categories, email, markRegistrationComplete, clearDraft],
 	);
 
 	if (!publicKey) {
@@ -86,7 +103,7 @@ export default function VendorRegisterPage() {
 				<h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1.75rem" }}>
 					Shop Profile
 				</h1>
-				{done ? (
+				{registrationCompleted ? (
 					<div className="glass" style={{ textAlign: "center", padding: "3rem" }}>
 						<h2 style={{ color: "var(--green)", marginBottom: "0.5rem" }}>Vendor registered successfully!</h2>
 						<div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem" }}>
