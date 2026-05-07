@@ -2,92 +2,95 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Package, Wallet, Star, UserCircle, Settings } from "lucide-react";
+import type { ComponentType } from "react";
+import { 
+  LayoutDashboard, 
+  Package, 
+  Wallet, 
+  Star, 
+  UserCircle, 
+  Settings, 
+  MapPin,
+  ChevronRight
+} from "lucide-react";
 
-const USER_NAV = [
+const TRADE_NAV = [
   { href: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/user/orders", label: "Orders", icon: Package },
-  { href: "/user/wallet", label: "Wallet", icon: Wallet },
-  { href: "/user/reviews", label: "Reviews", icon: Star },
-  { href: "/user/profile", label: "Profile", icon: UserCircle },
-  { href: "/user/settings", label: "Settings", icon: Settings },
+  { href: "/user/orders", label: "Trade Ledger", icon: Package },
+];
+
+const ACCOUNT_NAV = [
+  { href: "/user/wallet", label: "Identity Wallet", icon: Wallet },
+  { href: "/user/profile", label: "Public Profile", icon: UserCircle },
+  { href: "/user/addresses", label: "Address Book", icon: MapPin },
+  { href: "/user/reviews", label: "Trust Reviews", icon: Star },
+  { href: "/user/settings", label: "System Settings", icon: Settings },
 ];
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
   return (
-    <div style={{ display: "flex", gap: "2rem", maxWidth: 1200, margin: "0 auto", padding: "2rem 1.25rem" }}>
+    <div className="mx-auto flex max-w-7xl gap-8 px-4 py-12 lg:px-8" style={{ paddingTop: "100px" }}>
       {/* Sidebar */}
-      <nav
-        style={{
-          width: 224,
-          flexShrink: 0,
-          background: "#0f1117",
-          border: "1px solid rgba(255,255,255,0.08)",
-          borderRadius: "var(--radius-lg)",
-          display: "flex",
-          flexDirection: "column",
-          paddingTop: "1.5rem",
-          paddingBottom: "1.5rem",
-          paddingLeft: "0.75rem",
-          paddingRight: "0.75rem",
-          gap: "0.25rem",
-          minHeight: "100vh",
-          alignSelf: "start",
-          position: "sticky",
-          top: 80,
-        }}
-      >
-        <div style={{ padding: "0 0.75rem 0.5rem", fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.12em", color: "#4B5563", textTransform: "uppercase" }}>
-          My Account
-        </div>
-        {USER_NAV.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(link.href + "/");
+      <aside className="hidden w-64 shrink-0 lg:block">
+        <nav className="glass sticky top-24 flex flex-col gap-8 rounded-3xl p-6 shadow-card">
+          <Section title="Trade Terminal" items={TRADE_NAV} pathname={pathname} />
+          <Section title="Institutional Account" items={ACCOUNT_NAV} pathname={pathname} />
+          
+          <div className="mt-4 rounded-2xl bg-primary/5 p-4 border border-primary/10">
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Status</p>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs font-bold text-foreground">Verified Entity</span>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      {/* Main content */}
+      <div className="min-w-0 flex-1">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  items,
+  pathname,
+}: {
+  title: string;
+  items: Array<{ href: string; label: string; icon: ComponentType<{ size?: number; className?: string }> }>;
+  pathname: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+        {title}
+      </h3>
+      <div className="space-y-1">
+        {items.map((link) => {
+          const active = pathname === link.href || (link.href !== "/user" && pathname.startsWith(link.href + "/"));
           const Icon = link.icon;
           return (
             <Link
               key={link.href}
               href={link.href}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-                padding: "0.5rem 0.75rem",
-                fontSize: "0.8125rem",
-                fontWeight: 500,
-                color: active ? "#60A5FA" : "#9CA3AF",
-                textDecoration: "none",
-                background: active ? "rgba(96,165,250,0.15)" : "transparent",
-                borderLeft: active ? "2px solid #3B82F6" : "2px solid transparent",
-                borderRadius: "0.5rem",
-                transition: "all 150ms ease",
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = "rgba(255,255,255,0.05)";
-                  el.style.color = "white";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = "transparent";
-                  el.style.color = "#9CA3AF";
-                }
-              }}
+              className={`group flex items-center justify-between rounded-xl px-3 py-2.5 transition-all hover:bg-primary/5 ${
+                active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Icon size={16} />
-              {link.label}
+              <div className="flex items-center gap-3">
+                <Icon size={18} className={active ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'} />
+                <span className="text-sm font-bold tracking-tight">{link.label}</span>
+              </div>
+              {active && <ChevronRight size={14} className="text-primary" />}
             </Link>
           );
         })}
-      </nav>
-
-      {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+      </div>
     </div>
   );
 }

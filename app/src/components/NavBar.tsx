@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
-import { ShoppingCart, Moon, Sun } from 'lucide-react';
+import { Moon, Sun } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useCart } from '@/hooks/useCart';
+import CartSheet from './CartSheet';
 
 // Dynamically import wallet button to avoid hydration issues
 const WalletMultiButton = dynamic(
@@ -19,8 +19,6 @@ const WalletMultiButton = dynamic(
 export function NavBar() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
-  const { items } = useCart();
-  const cartCount = items.length;
 
   useEffect(() => {
     setMounted(true);
@@ -87,18 +85,7 @@ export function NavBar() {
             </div>
 
             {/* Cart Button */}
-            <Link
-              href="/cart"
-              className="relative p-2 rounded-lg hover:bg-secondary transition"
-              aria-label="Shopping cart"
-            >
-              <ShoppingCart className="h-5 w-5 text-foreground" />
-              {cartCount > 0 && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
-            </Link>
+            <CartSheet />
 
             {/* Theme Toggle */}
             <button

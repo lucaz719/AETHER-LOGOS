@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Heart } from "lucide-react";
+import { ArrowRight, Clock3, Heart, Repeat2, ShieldCheck, Star, Store } from "lucide-react";
 import { MOCK_STORES, type PublicStore, vendorTypeToSellerTier } from "@/lib/data/mockStores";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
@@ -221,181 +221,102 @@ function StoreCard({
   onToggleFollow: (storeId: string) => void;
   onEnterStore: (store: StoreListItem) => void;
 }) {
-  const typeStyle = VENDOR_TYPE_COLORS[store.vendorType] ?? {
-    bg: "rgba(255,255,255,0.05)",
-    color: "var(--text-secondary)",
-    border: "var(--border)",
-  };
+  const typeStyle = VENDOR_TYPE_COLORS[store.vendorType] || VENDOR_TYPE_COLORS.Wholesaler;
 
   return (
-    <article
-      className="glass relative"
-      style={{
-        padding: "1rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.625rem",
-        transition: "box-shadow var(--transition), border-color var(--transition), transform var(--transition)",
-      }}
-      onMouseEnter={(event) => {
-        const el = event.currentTarget as HTMLDivElement;
-        el.style.transform = "translateY(-2px)";
-        el.style.boxShadow = "var(--shadow-card)";
-        el.style.borderColor = "var(--border-accent)";
-      }}
-      onMouseLeave={(event) => {
-        const el = event.currentTarget as HTMLDivElement;
-        el.style.transform = "translateY(0)";
-        el.style.boxShadow = "";
-        el.style.borderColor = "";
-      }}
-    >
-      {/* Absolute Badge (top-right) */}
-      <div style={{ position: "absolute", top: "0.75rem", right: "0.75rem" }}>
-        <span
-          className="badge"
-          style={{
-            background: typeStyle.bg,
-            color: typeStyle.color,
-            border: `1px solid ${typeStyle.border}`,
-            fontSize: "0.625rem",
-            padding: "0.25rem 0.5rem",
-            display: "inline-block",
-          }}
-        >
-          {store.vendorType}
-        </span>
-      </div>
-
-      {/* Header row: Avatar + Name */}
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
-        {initialsAvatar(store.shopName, 36)}
-        <div style={{ flex: 1, minWidth: 0, paddingTop: "0.125rem" }}>
-          <strong style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white", lineHeight: 1.2, display: "block" }}>
-            {store.shopName}
-          </strong>
-        </div>
-      </div>
-
-      {/* Verified badge on its own line */}
-      {store.isVerified && (
-        <div>
-          <span className="badge badge-green" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem", fontSize: "0.75rem" }}>
-            <ShieldCheck size={11} />
-            Verified
-          </span>
-        </div>
-      )}
-
-      {/* Sub-row: Location, Since, Rating */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-        <span style={{ color: "#A3A3A3", fontSize: "0.6875rem" }}>
-          {store.location} · Since {store.memberSince}
-        </span>
-        {starRow(store.ratingSum, store.ratingCount)}
-      </div>
-
-      {/* Tags row */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
-        {store.categories.slice(0, 3).map((category) => (
+    <article className="group glass relative flex flex-col overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5">
+      {/* Decorative Header */}
+      <div className="h-24 w-full bg-gradient-to-br from-secondary/50 via-background to-secondary/30 relative">
+        <div className="absolute top-4 right-4">
           <span
-            key={category}
+            className="badge font-black uppercase tracking-widest text-[9px]"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              padding: "0.25rem 0.5rem",
-              borderRadius: "var(--radius-pill)",
-              fontSize: "0.6875rem",
-              background: "var(--cyan-dim)",
-              color: "#4B5563",
-              border: "1px solid var(--border)",
+              background: typeStyle.bg,
+              color: typeStyle.color,
+              border: `1px solid ${typeStyle.border}`,
+              padding: "4px 10px",
             }}
           >
-            {category}
+            {store.vendorType}
           </span>
-        ))}
-      </div>
-
-      {/* Stats row: 3 columns with clear layout */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: "0.5rem",
-          borderTop: "1px solid var(--border)",
-          borderBottom: "1px solid var(--border)",
-          paddingTop: "0.5rem",
-          paddingBottom: "0.5rem",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
-            {store.totalOrders.toLocaleString()}
-          </div>
-          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
-            Orders
-          </div>
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
-            {store.onTimeDelivery}%
-          </div>
-          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
-            On-time
-          </div>
-        </div>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
-            {store.repeatBuyers}%
-          </div>
-          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
-            Repeat
-          </div>
         </div>
       </div>
 
-      {/* CTA row: Side-by-side buttons */}
-      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
-        <button
-          type="button"
-          className="btn-primary"
-          onClick={() => onEnterStore(store)}
-          style={{ flex: 1, fontSize: "0.875rem", padding: "0.375rem 0.75rem" }}
-        >
-          Enter Store →
-        </button>
-        <button
-          type="button"
-          onClick={() => onToggleFollow(store.storeId)}
-          style={{
-            padding: "0.375rem 0.75rem",
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.35rem",
-            fontSize: "0.875rem",
-            border: "1px solid rgba(255,255,255,0.25)",
-            background: "transparent",
-            color: "#D1D5DB",
-            borderRadius: "0.5rem",
-            cursor: "pointer",
-            transition: "all 150ms ease",
-            flexShrink: 0,
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLButtonElement;
-            el.style.color = "white";
-            el.style.background = "rgba(255,255,255,0.1)";
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLButtonElement;
-            el.style.color = isFollowed ? "white" : "#D1D5DB";
-            el.style.background = isFollowed ? "rgba(255,255,255,0.1)" : "transparent";
-          }}
-        >
-          <Heart size={14} fill={isFollowed ? "currentColor" : "none"} />
-          {isFollowed ? "Following" : "Follow"}
-        </button>
+      <div className="px-6 pb-6 -mt-10 relative z-10 flex flex-col flex-1">
+        <div className="flex items-end gap-4 mb-5">
+          <div className="shrink-0 border-4 border-background rounded-2xl shadow-lg">
+            {initialsAvatar(store.shopName, 64)}
+          </div>
+          <div className="pb-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-black text-foreground tracking-tight truncate">
+                {store.shopName}
+              </h3>
+              {store.isVerified && (
+                <ShieldCheck size={16} className="text-green-500 shrink-0" />
+              )}
+            </div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+              {store.location} · EST. {store.memberSince}
+            </p>
+          </div>
+        </div>
+
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6 min-h-[40px]">
+          {store.shopDescription}
+        </p>
+
+        {/* Categories */}
+        <div className="flex flex-wrap gap-1.5 mb-6">
+          {store.categories.slice(0, 3).map((category) => (
+            <span
+              key={category}
+              className="px-2.5 py-1 rounded-lg bg-secondary/50 border border-border text-[10px] font-bold text-foreground uppercase tracking-tighter"
+            >
+              {category}
+            </span>
+          ))}
+        </div>
+
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-3 gap-3 rounded-2xl bg-secondary/30 p-3 border border-border/50 mb-6">
+          <div className="text-center">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Rating</p>
+            <div className="flex items-center justify-center gap-1 text-sm font-black text-foreground">
+              <Star size={12} className="text-amber-500 fill-amber-500" />
+              {store.ratingAvg.toFixed(1)}
+            </div>
+          </div>
+          <div className="text-center border-x border-border/50">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Delivery</p>
+            <div className="text-sm font-black text-foreground">{store.onTimeDelivery}%</div>
+          </div>
+          <div className="text-center">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Repeat</p>
+            <div className="text-sm font-black text-foreground">{store.repeatBuyers}%</div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-auto flex gap-2">
+          <button
+            type="button"
+            className="flex-1 bg-foreground text-background py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-primary hover:shadow-lg active:scale-95"
+            onClick={() => onEnterStore(store)}
+          >
+            Enter Store
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleFollow(store.storeId)}
+            className={`px-4 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${isFollowed
+                ? "bg-primary/10 border-primary/20 text-primary"
+                : "bg-transparent border-foreground text-foreground hover:bg-foreground hover:text-background"
+              }`}
+          >
+            <Heart size={16} fill={isFollowed ? "currentColor" : "none"} />
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -449,6 +370,8 @@ export default function StoresPage() {
     return stores.filter((store) => vendorTypeToSellerTier(store.vendorType) === selectedFilter);
   }, [selectedFilter, stores]);
 
+  const verifiedCount = stores.filter((store) => store.isVerified).length;
+
   const handleToggleFollow = (storeId: string) => {
     const next = followedStores.includes(storeId)
       ? followedStores.filter((id) => id !== storeId)
@@ -475,33 +398,49 @@ export default function StoresPage() {
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header: Title & Subtitle */}
-        <div className="mb-8 space-y-2">
-          <h1 className="text-5xl font-black tracking-tight text-foreground" style={{ fontSize: "3rem", fontWeight: 900 }}>
-            Suppliers
-          </h1>
-          <p className="text-base font-normal text-muted-foreground" style={{ fontSize: "1rem", fontWeight: 400 }}>
-            Browse verified global suppliers. Enter a store to view catalog and trade terms.
-          </p>
-          <Link
-            href="/dashboard"
-            className="text-xs inline-block text-muted-foreground hover:text-cyan-400 transition-colors no-underline"
-            style={{ fontSize: "0.8rem", marginTop: "0.75rem" }}
-          >
-            View all products without store filter →
-          </Link>
-        </div>
+        <section className="glass mb-8 rounded-3xl p-6 md:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
+              <div className="badge-pill badge-pill-primary">
+                <Store size={13} />
+                Premium Supplier Portal
+              </div>
+              <h1 className="mt-4 text-4xl font-black tracking-tight text-foreground md:text-5xl">
+                Suppliers
+              </h1>
+              <p className="mt-3 text-sm text-muted-foreground md:text-base">
+                Browse verified global suppliers. Enter a store to inspect catalog, trust metrics, and trade terms.
+              </p>
+              <Link
+                href="/dashboard"
+                className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+              >
+                View all products without store filter
+                <ArrowRight size={14} />
+              </Link>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px] lg:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Suppliers</p>
+                <p className="mt-1 text-2xl font-black text-foreground">{stores.length}</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Verified</p>
+                <p className="mt-1 text-2xl font-black text-foreground">{verifiedCount}</p>
+              </div>
+              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Followed</p>
+                <p className="mt-1 text-2xl font-black text-foreground">{followedStores.length}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Filter Bar: Full-width row above grid */}
         <div className="mb-8 flex flex-wrap gap-2 justify-start">
           {FILTERS.map((filter) => {
             const active = selectedFilter === filter.value;
-            const filterColors: Record<StoreFilter, { bg: string; color: string; borderColor: string }> = {
-              all: { bg: active ? "#0066FF" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#0066FF" : "var(--border)" },
-              manufacturer: { bg: active ? "#F97316" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#F97316" : "var(--border)" },
-              distributor: { bg: active ? "#06B6D4" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#06B6D4" : "var(--border)" },
-              wholesaler: { bg: active ? "#A855F7" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#A855F7" : "var(--border)" },
-            };
-            const filterStyle = filterColors[filter.value];
             return (
               <button
                 key={filter.value}
@@ -509,9 +448,9 @@ export default function StoresPage() {
                 onClick={() => setSelectedFilter(filter.value)}
                 className="badge"
                 style={{
-                  border: `1px solid ${filterStyle.borderColor}`,
-                  background: filterStyle.bg,
-                  color: filterStyle.color,
+                  border: `1px solid ${active ? "var(--border-accent)" : "var(--border)"}`,
+                  background: active ? "var(--primary-light)" : "var(--bg-surface)",
+                  color: active ? "var(--primary)" : "var(--text-secondary)",
                   padding: "0.4rem 1rem",
                   cursor: "pointer",
                   minHeight: "36px",

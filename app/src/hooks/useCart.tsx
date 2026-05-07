@@ -10,6 +10,9 @@ export type CartItem = {
   priceUsdc: number; // micro-USDC (6 decimals)
   quantity: number;
   imagesCid?: string;
+  tier?: string;
+  moq?: number;
+  leadTimeDays?: number;
 };
 
 type CartContextType = {

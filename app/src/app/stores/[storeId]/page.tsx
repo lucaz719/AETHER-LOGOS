@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ProductCard } from "@/components/dashboard/ProductCard";
+import { Clock3, Heart, Repeat2, ShieldCheck, Star, Store } from "lucide-react";
 import {
   MOCK_STORES,
   mapApiProductToDashboardProduct,
@@ -111,17 +112,6 @@ function initialsAvatar(name: string, size = 64) {
       }}
     >
       {initials || "?"}
-    </div>
-  );
-}
-
-function statTile(label: string, value: string, color: string) {
-  return (
-    <div style={{ textAlign: "center", display: "grid", gap: "0.25rem" }}>
-      <span style={{ fontSize: "0.74rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.02em" }}>
-        {label}
-      </span>
-      <strong style={{ fontSize: "1rem", color }}>{value}</strong>
     </div>
   );
 }
@@ -303,39 +293,77 @@ export default function StoreDetailPage() {
           ← Back to Suppliers
         </button>
 
-        <section className="glass rounded-2xl p-6 mb-6 mt-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div className="flex items-center gap-4">
-              {initialsAvatar(store.shopName, 64)}
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-2xl font-black text-foreground">{store.shopName}</h1>
-                  {store.isVerified && (
-                    <span className="badge badge-green" style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
-                      ✓ Verified Supplier
-                    </span>
-                  )}
-                  <span className="badge badge-cyan">{store.vendorType}</span>
+        <section className="glass mb-6 overflow-hidden rounded-3xl">
+          <div className="relative p-6 md:p-8">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-violet-500/10" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                {initialsAvatar(store.shopName, 72)}
+                <div className="max-w-2xl">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="badge-pill badge-pill-primary">
+                      <Store size={13} />
+                      Institutional Header
+                    </div>
+                    {store.isVerified && (
+                      <span className="badge badge-green inline-flex items-center gap-1">
+                        <ShieldCheck size={11} />
+                        Verified on Solana Devnet
+                      </span>
+                    )}
+                    <span className="badge badge-cyan">{store.vendorType}</span>
+                  </div>
+                  <h1 className="mt-4 text-3xl font-black tracking-tight text-foreground md:text-4xl">
+                    {store.shopName}
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
+                    {store.shopDescription}
+                  </p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{store.shopDescription}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 lg:justify-end">
+                <button
+                  type="button"
+                  onClick={toggleFollow}
+                  className={`btn-follow ${isFollowed ? "btn-follow-active" : ""}`}
+                >
+                  <Heart size={14} fill={isFollowed ? "currentColor" : "none"} />
+                  {isFollowed ? "Following" : "Follow"}
+                </button>
               </div>
             </div>
-
-            <div className="flex gap-3 md:ml-auto flex-shrink-0">
-              <button type="button" onClick={toggleFollow} className="btn-primary">
-                {isFollowed ? "✓ Following" : "+ Follow"}
-              </button>
-            </div>
           </div>
-        </section>
 
-        <section className="glass rounded-xl px-6 py-4 mb-6">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {statTile("Seller Rating", `${Math.round(averageRating * 20)}%`, "var(--green)")}
-            {statTile("On-Time Delivery", `${store.onTimeDelivery}%`, "var(--cyan)")}
-            {statTile("Response Time", store.responseTime, "var(--amber)")}
-            {statTile("Total Orders", store.totalOrders.toLocaleString(), "var(--violet)")}
-            {statTile("Repeat Buyers", `${store.repeatBuyers}%`, "var(--text-primary)")}
+          <div className="grid gap-3 border-t border-border bg-background/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Star size={11} className="text-amber-500" />
+                Seller rating
+              </div>
+              <p className="mt-1 text-2xl font-black text-foreground">{averageRating.toFixed(1)}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Clock3 size={11} className="text-cyan-500" />
+                On-time delivery
+              </div>
+              <p className="mt-1 text-2xl font-black text-foreground">{store.onTimeDelivery}%</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Repeat2 size={11} className="text-emerald-500" />
+                Repeat buyers
+              </div>
+              <p className="mt-1 text-2xl font-black text-foreground">{store.repeatBuyers}%</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <ShieldCheck size={11} className="text-primary" />
+                Total orders
+              </div>
+              <p className="mt-1 text-2xl font-black text-foreground">{store.totalOrders.toLocaleString()}</p>
+            </div>
           </div>
         </section>
 

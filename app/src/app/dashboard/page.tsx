@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { TrendingUp, TrendingDown, Lock } from "lucide-react";
+import { TrendingUp, TrendingDown, Lock, Zap } from "lucide-react";
 import { DashboardModeToggle } from "@/components/dashboard/DashboardModeToggle";
 import { MarketplaceFilters } from "@/components/dashboard/MarketplaceFilters";
 import { ProductCard } from "@/components/dashboard/ProductCard";
@@ -98,6 +98,14 @@ const hedgeMarkets = [
     riskLevel: "low" as const,
   },
 ];
+function StatusItem({ label, status, color }: { label: string; status: string; color: string }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-0">
+      <span className="text-[10px] font-bold text-muted-foreground uppercase">{label}</span>
+      <span className={`text-[11px] font-black ${color}`}>{status}</span>
+    </div>
+  );
+}
 
 function DashboardContent() {
   const searchParams = useSearchParams();
@@ -245,49 +253,68 @@ function DashboardContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden pt-24 pb-20">
+    <main className="min-h-screen bg-background relative overflow-hidden pt-28 pb-20">
       {/* Premium Atmospheric Backgrounds */}
-      <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none"></div>
-      <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[160px] pointer-events-none"></div>
-      
-      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/5 rounded-full blur-[160px] pointer-events-none -z-10"></div>
+      <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[160px] pointer-events-none -z-10"></div>
+
+      <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Top Header Section */}
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-2">
-            <h1 className="text-6xl font-black tracking-tighter text-foreground">
+        <header className="mb-16 flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b border-border/50 pb-10">
+          <div className="space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+              <Zap size={12} />
+              AETHER Protocol v2.4
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground leading-[0.9]">
               {mode === "marketplace" ? "Procurement" : "Risk Desk"}
             </h1>
-            <p className="text-lg font-bold text-muted-foreground">
-              {mode === "marketplace" 
-                ? "Global B2B sourcing with verified zkTLS delivery proof." 
-                : "Logistics outcome prediction and risk hedging terminal."}
+            <p className="text-base md:text-lg font-bold text-muted-foreground max-w-2xl">
+              {mode === "marketplace"
+                ? "Unified B2B procurement terminal with integrated zkTLS logistics verification and automated escrow settlement."
+                : "Predictive logistics hedge terminal. Analyze DHL event streams and secure your supply chain against latency."}
             </p>
           </div>
-          
-          <div className="w-full md:w-auto">
+
+          <div className="shrink-0">
             <DashboardModeToggle mode={mode} onChange={handleModeChange} />
           </div>
         </header>
 
-        <section className="relative min-h-[800px]">
+        <section className="relative min-h-[600px]">
+          {/* Marketplace Grid */}
           <div
-            className={`transition-all duration-300 ease-in-out ${mode === "marketplace" ? "pointer-events-auto translate-x-0 opacity-100" : "pointer-events-none absolute inset-0 -translate-x-3 opacity-0"}`}
+            className={`transition-all duration-500 ease-in-out ${mode === "marketplace" ? "translate-x-0 opacity-100" : "absolute inset-0 -translate-x-8 opacity-0 pointer-events-none"}`}
             aria-hidden={mode !== "marketplace"}
           >
-            <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-              <MarketplaceFilters
-                categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
-                selectedTier={selectedTier}
-                onTierChange={setSelectedTier}
-              />
-              <div className="space-y-6">
+            <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
+              <aside className="sticky top-28 h-fit">
+                <MarketplaceFilters
+                  categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
+                  selectedTier={selectedTier}
+                  onTierChange={setSelectedTier}
+                />
 
+                <div className="mt-8 rounded-2xl bg-secondary/30 p-5 border border-border/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Protocol Status</h4>
+                  <div className="space-y-1">
+                    <StatusItem label="Settlement" status="Active" color="text-green-500" />
+                    <StatusItem label="zkTLS Nodes" status="Synced" color="text-green-500" />
+                    <StatusItem label="Escrow TVL" status="$1.2M" color="text-primary" />
+                  </div>
+                </div>
+              </aside>
 
-                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 pb-20">
+              <div className="space-y-8">
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
                   {productsLoading ? (
-                    <div className="col-span-full text-sm text-muted-foreground">Loading products...</div>
+                    [...Array(6)].map((_, i) => (
+                      <div key={i} className="glass h-[420px] animate-pulse" />
+                    ))
                   ) : filteredProducts.length === 0 ? (
-                    <div className="col-span-full text-sm text-muted-foreground">No products found.</div>
+                    <div className="col-span-full py-20 text-center glass rounded-3xl">
+                      <p className="text-muted-foreground font-bold">No assets found in the selected classification.</p>
+                    </div>
                   ) : (
                     filteredProducts.map((product) => (
                       <ProductCard
@@ -311,7 +338,7 @@ function DashboardContent() {
                 <h2 className="text-lg font-semibold text-foreground">Hedge Markets Terminal</h2>
                 <p className="text-sm text-muted-foreground mt-1">Predict logistics outcomes and hedge your exposure</p>
               </div>
-              
+
 
 
               {/* Markets Grid */}
@@ -322,67 +349,77 @@ function DashboardContent() {
                     <button
                       key={idx}
                       onClick={() => setSelectedMarketIdx(idx)}
-                      className={`group relative rounded-lg border transition-all duration-200 text-left ${
-                        selectedMarketIdx === idx
-                          ? "card-elevated border-primary/50 shadow-lg"
-                          : "card-plain hover:shadow-md"
-                      }`}
+                      className={`group relative rounded-2xl border transition-all duration-300 text-left overflow-hidden ${selectedMarketIdx === idx
+                          ? "border-primary bg-primary/5 shadow-2xl shadow-primary/10"
+                          : "border-border/50 bg-card/40 hover:border-primary/40 hover:bg-card/60"
+                        }`}
                     >
-                      <div className="space-y-4 p-5">
+                      {/* Minimalist Sparkline Background */}
+                      <div className="absolute inset-x-0 bottom-0 h-16 opacity-10 transition-opacity group-hover:opacity-20 pointer-events-none">
+                        <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                          <path
+                            d={`M 0 80 Q 25 ${40 + (idx * 10)} 50 ${60 - (idx * 5)} T 100 ${30 + (idx * 15)}`}
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            className="text-primary"
+                          />
+                        </svg>
+                      </div>
+
+                      <div className="relative space-y-4 p-5">
                         {/* Header */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{market.marketType}</p>
-                            <h3 className="font-semibold text-foreground leading-snug">{market.title}</h3>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/70">{market.marketType}</p>
+                            <h3 className="text-sm font-bold text-foreground leading-snug uppercase tracking-tight line-clamp-2">{market.title}</h3>
                           </div>
-                          <div className={`shrink-0 rounded px-2.5 py-1 text-xs font-semibold ${getRiskBgColor(market.riskLevel)}`}>
+                          <div className={`shrink-0 rounded-lg px-2 py-1 text-[9px] font-black uppercase tracking-widest ${getRiskBgColor(market.riskLevel)}`}>
                             <span className={getRiskColor(market.riskLevel)}>
-                              {market.riskLevel.charAt(0).toUpperCase() + market.riskLevel.slice(1)}
+                              {market.riskLevel}
                             </span>
                           </div>
                         </div>
 
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="flex items-center gap-2 text-xs font-medium text-foreground">
-                                <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
-                                Yes
-                              </span>
-                              <span className="font-mono text-xs font-semibold text-purple-600">{market.yesProbability.toFixed(1)}%</span>
+                        {/* Probability Matrix */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase">Yes</span>
+                              <span className="text-xs font-black text-foreground">{market.yesProbability.toFixed(1)}%</span>
                             </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-secondary/50">
+                            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary/50">
                               <div
-                                className="h-full bg-gradient-to-r from-purple-500 to-fuchsia-400"
+                                className="h-full bg-primary"
                                 style={{ width: `${market.yesProbability}%` }}
                               />
                             </div>
-
-                            <div className="flex items-center justify-between gap-2 pt-1">
-                              <span className="flex items-center gap-2 text-xs font-medium text-foreground">
-                                <TrendingDown className="h-3.5 w-3.5 text-rose-500" />
-                                No
-                              </span>
-                              <span className="font-mono text-xs font-semibold text-rose-600">{(100 - market.yesProbability).toFixed(1)}%</span>
-                            </div>
-                            <div className="h-2 overflow-hidden rounded-full bg-secondary/50">
-                              <div
-                                className="h-full bg-gradient-to-r from-rose-500 to-pink-400"
-                                style={{ width: `${100 - market.yesProbability}%` }}
-                              />
-                            </div>
                           </div>
+                          <div className="space-y-1.5 text-right">
+                             <div className="flex items-center justify-between">
+                               <span className="text-xs font-black text-foreground">{(100 - market.yesProbability).toFixed(1)}%</span>
+                               <span className="text-[10px] font-bold text-muted-foreground uppercase">No</span>
+                             </div>
+                             <div className="h-1 w-full overflow-hidden rounded-full bg-secondary/50">
+                               <div
+                                 className="h-full bg-muted-foreground/30"
+                                 style={{ width: `${100 - market.yesProbability}%` }}
+                               />
+                             </div>
+                          </div>
+                        </div>
 
-                        {/* Stats */}
-                        <div className="grid grid-cols-2 gap-2 border-t border-border-light pt-3">
-                          <div className="text-left">
-                            <p className="text-xs text-muted-foreground">Liquidity</p>
-                            <p className="font-mono text-xs font-semibold text-foreground">
-                              ${((market.yesLiquidity + market.noLiquidity) / 1_000_000).toFixed(1)}M
+                        {/* Institutional Stats */}
+                        <div className="flex items-center justify-between border-t border-border/50 pt-4">
+                          <div>
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Liquidity</p>
+                            <p className="text-xs font-black text-foreground tracking-tighter">
+                              ${((market.yesLiquidity + market.noLiquidity) / 1_000_000).toLocaleString()}M
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-muted-foreground">Expires</p>
-                            <p className="font-mono text-xs font-semibold text-foreground">Soon</p>
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Deadline</p>
+                            <p className="text-xs font-black text-primary tracking-tighter uppercase">Soon</p>
                           </div>
                         </div>
                       </div>
@@ -400,7 +437,7 @@ function DashboardContent() {
                   onClick={() => setSelectedMarketIdx(-1)}
                   aria-label="Close side panel"
                 />
-                
+
                 {/* Side-Sheet Panel */}
                 <div className="fixed right-0 top-24 bottom-0 w-full max-w-sm z-50 pointer-events-auto flex flex-col">
                   <div className="glass-header rounded-l-2xl flex flex-col shadow-2xl h-full overflow-hidden p-6">
@@ -433,11 +470,10 @@ function DashboardContent() {
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => setSelectedSide("yes")}
-                            className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${
-                              selectedSide === "yes"
+                            className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${selectedSide === "yes"
                                 ? "border-green-500 bg-green-500/10 text-green-700 dark:text-green-400"
                                 : "border-border-light bg-secondary text-muted-foreground hover:border-green-300"
-                            }`}
+                              }`}
                           >
                             YES
                             <div className="text-xs font-normal text-muted-foreground mt-0.5">
@@ -446,11 +482,10 @@ function DashboardContent() {
                           </button>
                           <button
                             onClick={() => setSelectedSide("no")}
-                            className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${
-                              selectedSide === "no"
+                            className={`rounded-lg border-2 px-3 py-3 text-sm font-semibold transition-all duration-150 ${selectedSide === "no"
                                 ? "border-red-500 bg-red-500/10 text-red-700 dark:text-red-400"
                                 : "border-border-light bg-secondary text-muted-foreground hover:border-red-300"
-                            }`}
+                              }`}
                           >
                             NO
                             <div className="text-xs font-normal text-muted-foreground mt-0.5">

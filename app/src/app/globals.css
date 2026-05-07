@@ -192,32 +192,33 @@
   --border-light: rgba(255, 255, 255, 0.08);
 
   /* ---- Missing dark overrides (fixes .glass, .input, .btn-primary focus) ---- */
-  --bg-surface: #16161f;          /* was #FFFFFF in light — fixes .glass bg */
-  --bg-elevated: #1a1a24;         /* fixes .skeleton bg */
-  --bg-hover: #1a1a24;
-  --bg-focus: rgba(0, 102, 255, 0.12);
+  --bg-surface: #12121a;          /* Deeper, more institutional dark */
+  --bg-elevated: #1a1a26;
+  --bg-hover: #1e1e2e;
+  --bg-focus: rgba(0, 102, 255, 0.15);
 
-  --text-primary: #EDEDED;
-  --text-secondary: #a0a0b0;
-  --text-muted: #666680;
+  --text-primary: #f8f9fa;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
   --text-inverse: #0d0d14;
 
-  --input-border: #2a2a35;
-  --input-background: #1a1a24;
+  --input-border: #2d2d3d;
+  --input-background: #12121a;
 
-  --primary-light: rgba(0, 102, 255, 0.15);
-  --primary-dim: rgba(0, 102, 255, 0.10);
+  --primary-light: rgba(96, 165, 250, 0.1);
+  --primary-dim: rgba(96, 165, 250, 0.05);
 
-  --accent-light: rgba(243, 156, 18, 0.15);
-  --accent-subtle: rgba(243, 156, 18, 0.10);
+  --accent-light: rgba(245, 158, 11, 0.12);
+  --accent-subtle: rgba(245, 158, 11, 0.08);
 
-  --glow-cyan: 0 0 24px rgba(0, 102, 255, 0.5);
-  --glow-primary: 0 0 24px rgba(0, 102, 255, 0.5);
-  --shadow-card: 0 10px 25px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --glow-cyan: 0 0 24px rgba(59, 130, 246, 0.4);
+  --glow-primary: 0 0 24px rgba(59, 130, 246, 0.4);
+  --shadow-card: 0 20px 40px -10px rgba(0, 0, 0, 0.7);
 
-  --cyan-dim: rgba(0, 102, 255, 0.12);
-  --violet-dim: rgba(108, 92, 231, 0.12);
-  --green-dim: rgba(39, 174, 96, 0.12);
+  --cyan: #3b82f6; /* More premium electric blue */
+  --cyan-dim: rgba(59, 130, 246, 0.1);
+  --violet-dim: rgba(139, 92, 246, 0.1);
+  --green-dim: rgba(16, 185, 129, 0.1);
 }
 
 /* ---- Reset & base ---------------------------------------- */
@@ -274,21 +275,25 @@ a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.65rem 1.4rem;
-  background: var(--primary);
-  color: var(--text-inverse);
-  font-weight: 700;
-  font-size: 0.9rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--foreground);
+  color: var(--background);
+  font-weight: 800;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: filter var(--transition), box-shadow var(--transition);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.15);
-  box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-md);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg), 0 0 20px var(--primary-light);
+  filter: contrast(1.1);
 }
 
 .btn-primary:disabled {
@@ -314,6 +319,63 @@ a:hover {
 .btn-ghost:hover:not(:disabled) {
   border-color: var(--border-accent);
   color: var(--text-primary);
+}
+
+.btn-enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-enter:hover:not(:disabled) {
+  border-color: var(--primary);
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-md), 0 0 15px var(--primary-dim);
+  transform: translateY(-1px);
+}
+
+.btn-follow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  border: 1px solid var(--text-primary); /* High contrast border */
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.btn-follow:hover:not(:disabled) {
+  background: var(--text-primary);
+  color: var(--background);
+  transform: translateY(-1px);
+}
+
+.btn-follow-active {
+  background: var(--primary);
+  color: var(--text-inverse);
+  border-color: var(--primary);
+}
+
+.dark .btn-follow-active {
+  background: var(--primary);
+  color: var(--text-inverse);
 }
 
 .btn-danger {

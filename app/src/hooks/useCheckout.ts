@@ -1,14 +1,40 @@
 'use client';
 
 import { useCallback, useState } from "react";
-import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
+import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, type Connection, type Signer } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount } from "@solana/spl-token";
 import BN from "bn.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import type { CartItem } from "@/hooks/useCart";
 
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
+
+export function resolveSettlementError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (
+    /wallet payer is required/i.test(message) ||
+    /payer is required/i.test(message) ||
+    /insufficient funds/i.test(message) ||
+    /insufficient lamports/i.test(message) ||
+    /attempt to debit an account/i.test(message) ||
+    /not enough sol/i.test(message)
+  ) {
+    return "Insufficient Devnet SOL for fees";
+  }
+
+  return message;
+}
+
+export async function ensureAssociatedTokenAccount(
+  connection: Connection,
+  payer: Signer,
+  mint: PublicKey,
+  owner: PublicKey,
+) {
+  return getOrCreateAssociatedTokenAccount(connection, payer, mint, owner);
+}
 
 function randomBytes(len: number): Uint8Array {
   const buf = new Uint8Array(len);
@@ -25,7 +51,7 @@ async function sha256Async(data: Uint8Array): Promise<ArrayBuffer> {
 export type CheckoutState = "idle" | "signing" | "confirming" | "done" | "error";
 
 export function useCheckout() {
-  const { marketProgram, wallet } = useAnchorClient();
+  const { marketProgram, wallet, provider, connection } = useAnchorClient();
   const [state, setState] = useState<CheckoutState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txSigs, setTxSigs] = useState<string[]>([]);
@@ -41,6 +67,11 @@ export function useCheckout() {
       const sigs: string[] = [];
 
       try {
+        const payer = (provider?.wallet as { payer?: Signer } | undefined)?.payer;
+        if (!payer) {
+          throw new Error("wallet payer is required");
+        }
+
         for (const item of items) {
           const orderIdBytes = randomBytes(16);
           const tradeIdBytes = randomBytes(32);
@@ -73,7 +104,12 @@ export function useCheckout() {
             [Buffer.from("authority")],
             ESCROW_PROGRAM_ID,
           );
-          const buyerTokenAccount = await getAssociatedTokenAddress(USDC_MINT, buyerKey);
+          const buyerTokenAccount = await ensureAssociatedTokenAccount(
+            connection,
+            payer,
+            USDC_MINT,
+            buyerKey,
+          );
 
           setState("confirming");
           const tx = await (marketProgram.methods as any)
@@ -92,7 +128,7 @@ export function useCheckout() {
               tradeAccount: tradeAccountPda,
               escrowVault: escrowVaultPda,
               vaultAuthority: vaultAuthorityPda,
-              buyerTokenAccount,
+              buyerTokenAccount: buyerTokenAccount.address,
               usdcMint: USDC_MINT,
               tradeEscrowProgram: ESCROW_PROGRAM_ID,
               systemProgram: SystemProgram.programId,
@@ -106,11 +142,11 @@ export function useCheckout() {
         setTxSigs(sigs);
         setState("done");
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(resolveSettlementError(e));
         setState("error");
       }
     },
-    [marketProgram, wallet],
+    [marketProgram, wallet, provider, connection],
   );
 
   return { checkout, state, error, txSigs };

@@ -317,23 +317,64 @@ export default function LandingPage() {
 
       {/* ════════════════ FOOTER ════════════════ */}
       <footer
-        className="relative z-10 px-6 py-12 lg:px-8"
-        style={{ background: sectionBg, borderTop: "0.5px solid rgba(255,255,255,0.08)" }}
+        className="relative z-10 px-8 py-20 lg:px-16"
+        style={{ background: "#060608", borderTop: "0.5px solid rgba(255,255,255,0.08)" }}
       >
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-3 md:items-center">
-          <div className={`${inter.className} text-left`}>
-            <p className="text-base font-medium text-white">◯ AETHER-LOGOS</p>
-            <p className="mt-2 text-[13px] text-[#666680]">© 2026 AETHER-LOGOS. All rights reserved.</p>
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-12 md:grid-cols-4 lg:gap-24">
+            <div className="col-span-1 md:col-span-1">
+              <div className="flex items-center gap-2.5 text-lg font-black tracking-tighter text-white uppercase">
+                <div className="h-2 w-2 rounded-full bg-primary" />
+                AETHER
+              </div>
+              <p className="mt-6 text-[13px] leading-relaxed text-[#666680] max-w-[240px]">
+                Institutional-grade B2B procurement and automated settlement on Solana. Escrow by default.
+              </p>
+            </div>
+            
+            <div>
+              <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Platform</p>
+              <ul className="space-y-4">
+                {["Marketplace", "Risk Desk", "Suppliers", "Security"].map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Resources</p>
+              <ul className="space-y-4">
+                {["Documentation", "API Reference", "Status", "Support"].map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Legal</p>
+              <ul className="space-y-4">
+                {["Terms of Service", "Privacy Policy", "Escrow Agreement", "Cookie Policy"].map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-          <div className={`${inter.className} flex justify-start gap-6 text-[13px] text-[#666680] md:justify-center`}>
-            {["Docs", "API", "Support", "Terms"].map((item) => (
-              <a key={item} href="#" className="transition-colors duration-150 hover:text-white">{item}</a>
-            ))}
-          </div>
-          <div className={`${inter.className} flex justify-start gap-6 text-[13px] text-[#666680] md:justify-end`}>
-            {["X", "LinkedIn", "Status"].map((item) => (
-              <a key={item} href="#" className="transition-colors duration-150 hover:text-white">{item}</a>
-            ))}
+
+          <div className="mt-20 flex flex-col items-center justify-between border-t border-white/5 pt-10 md:flex-row">
+            <p className="text-[11px] font-medium text-[#444450] uppercase tracking-widest">
+              © 2026 AETHER-LOGOS PROTOCOL. ALL RIGHTS RESERVED.
+            </p>
+            <div className="mt-6 flex gap-8 md:mt-0">
+              {["X", "LinkedIn", "GitHub", "Telegram"].map(social => (
+                <a key={social} href="#" className="text-[11px] font-black text-[#444450] transition-colors hover:text-white tracking-widest">{social}</a>
+              ))}
+            </div>
           </div>
         </div>
       </footer>

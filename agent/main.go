@@ -78,6 +78,7 @@ func main() {
 	http.HandleFunc("/notify", NotifyHandler)
 	http.HandleFunc("/health", HealthHandler)
 	http.HandleFunc("/api/tracking/", TrackingHandler)
+	http.HandleFunc("/api/tracking/trade/", TrackingByTradeHandler)
 	http.HandleFunc("/marketplace/orders", MarketplaceOrdersHandler)
 
 	// Vendor API

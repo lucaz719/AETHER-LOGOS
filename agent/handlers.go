@@ -349,10 +349,38 @@ func TrackingHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "shipment not found", http.StatusNotFound)
 		return
 	}
-	fullTracking, err := dhlClient.GetFullTracking(trackingNumber)
-	if err != nil {
-		http.Error(w, "tracking lookup failed", http.StatusBadGateway)
+	respondWithTracking(w, shipment)
+}
+
+func TrackingByTradeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+	const prefix = "/api/tracking/trade/"
+	if !strings.HasPrefix(r.URL.Path, prefix) {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	tradeAccount := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+	if tradeAccount == "" {
+		http.Error(w, "trade account is required", http.StatusBadRequest)
+		return
+	}
+
+	shipment, err := GetShipmentByTradeAccount(tradeAccount)
+	if err != nil {
+		http.Error(w, "shipment not found for this trade", http.StatusNotFound)
+		return
+	}
+	respondWithTracking(w, shipment)
+}
+
+func respondWithTracking(w http.ResponseWriter, shipment *Shipment) {
+	fullTracking, err := dhlClient.GetFullTracking(shipment.TrackingID)
+	if err != nil {
+		// If DHL lookup fails (e.g. invalid key), we still return the milestones from DB
+		log.Printf("DHL lookup failed for %s: %v", shipment.TrackingID, err)
 	}
 	milestones, err := GetMilestonesByShipmentID(shipment.ID)
 	if err != nil {

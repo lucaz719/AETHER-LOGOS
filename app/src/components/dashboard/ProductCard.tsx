@@ -1,6 +1,9 @@
 'use client';
 
-import { CheckCircle2, ShieldCheck, Zap } from "lucide-react";
+import * as React from "react";
+import { ShieldCheck, Zap, ShoppingCart, Plus, ArrowRight } from "lucide-react";
+import { useCart } from "@/hooks/useCart";
+import { useToast } from "@/hooks/useToast";
 
 type ProductCardProps = {
   productId: string;
@@ -10,7 +13,7 @@ type ProductCardProps = {
   sellerWallet: string;
   sellerTier: "distributor" | "wholesaler" | "manufacturer";
   rating: number;
-  priceUsdc: number;
+  priceUsdc: number; // In Dollars (e.g. 8950.00) based on dashboard usage
   moq: number;
   leadTimeDays: number;
   usdcMint: string;
@@ -27,28 +30,30 @@ type ProductCardProps = {
   }) => void;
 };
 
-const usdc = new Intl.NumberFormat("en-US", {
+const formatter = new Intl.NumberFormat("en-US", {
+  style: 'currency',
+  currency: 'USD',
   minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
 });
 
-// Token-aware tier config — uses Tailwind's dark: prefix which now works
-// because tailwind.config.js has darkMode: 'class'
 const tierConfig = {
   manufacturer: {
-    label: "Direct",
-    badge: "Factory",
-    bg: "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20",
+    label: "Manufacturer",
+    badge: "Factory Direct",
+    bg: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    icon: Zap,
   },
   wholesaler: {
-    label: "Wholesale",
-    badge: "Bulk",
-    bg: "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-500/20",
+    label: "Wholesaler",
+    badge: "Bulk Stock",
+    bg: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+    icon: Zap,
   },
   distributor: {
     label: "Distributor",
-    badge: "Express",
-    bg: "bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-100 dark:border-orange-500/20",
+    badge: "Express Distribution",
+    bg: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+    icon: Zap,
   },
 };
 
@@ -56,79 +61,144 @@ export function ProductCard({
   productId, title, category, vendor, sellerWallet, sellerTier,
   rating, priceUsdc, moq, leadTimeDays, usdcMint, isVerified = true, onBuy,
 }: ProductCardProps) {
-  const tier = tierConfig[sellerTier];
+  const tier = tierConfig[sellerTier] || tierConfig.wholesaler;
+  const { addItem, items } = useCart();
+  const { success } = useToast();
+  const [adding, setAdding] = React.useState(false);
+
+  const inCart = items.some(i => i.listingPubkey === productId);
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (adding) return;
+    
+    setAdding(true);
+    // Convert dollars to micro-USDC for the cart hook which expects atoms
+    const priceAtoms = Math.round(priceUsdc * 1_000_000);
+    
+    addItem({
+      listingPubkey: productId,
+      vendorPubkey: sellerWallet,
+      vendorAuthority: sellerWallet,
+      title,
+      priceUsdc: priceAtoms,
+      quantity: moq,
+      tier: sellerTier,
+      moq,
+      leadTimeDays,
+    });
+
+    success(`Requisition updated: ${title.slice(0, 20)}...`);
+    setTimeout(() => setAdding(false), 800);
+  };
+
+  const handleQuickBuy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onBuy({ productId, title, sellerWallet, usdcMint, tier: sellerTier, moq, leadTimeDays, priceUsdc });
+  };
 
   return (
-    <article className="group relative flex flex-col rounded-2xl border border-border bg-card transition-all duration-300 hover:shadow-2xl hover:border-primary/30">
-      {/* Dynamic Header */}
-      <div className="relative h-40 w-full overflow-hidden rounded-t-2xl bg-secondary">
-        <div className="absolute inset-0 flex items-center justify-center">
-           <div className="text-4xl font-black text-border select-none tracking-tighter">
+    <article className="group glass flex flex-col overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5">
+      {/* Visual Header */}
+      <div className="relative h-44 w-full bg-gradient-to-br from-secondary via-background to-secondary/50">
+        <div className="absolute inset-0 flex items-center justify-center opacity-10 transition-opacity group-hover:opacity-20">
+           <div className="text-6xl font-black tracking-tighter uppercase select-none">
              {category.split(" ").map(w => w[0]).join("")}
            </div>
         </div>
         
-        {/* Tier Badge */}
-        <div className={`absolute top-3 left-3 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${tier.bg}`}>
-          <Zap size={10} className="fill-current" />
-          {tier.badge}
-        </div>
-
-        {/* Verification Status */}
-        {isVerified && (
-          <div className="absolute top-3 right-3 flex items-center gap-1 rounded-full bg-card/90 px-2 py-1 shadow-sm border border-border">
-            <ShieldCheck size={12} className="text-primary" />
-            <span className="text-[9px] font-bold text-foreground uppercase tracking-tighter">Verified SKU</span>
+        {/* Badges */}
+        <div className="absolute inset-x-3 top-3 flex items-center justify-between">
+          <div className={`flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[9px] font-black uppercase tracking-widest ${tier.bg}`}>
+            <tier.icon size={10} />
+            {tier.badge}
           </div>
-        )}
+          {isVerified && (
+            <div className="flex items-center gap-1 rounded-lg bg-background/90 px-2 py-1 border border-border shadow-sm">
+              <ShieldCheck size={12} className="text-green-500" />
+              <span className="text-[9px] font-black text-foreground uppercase tracking-tighter">Verified SKU</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Main Details */}
-      <div className="flex flex-1 flex-col p-5">
-        <div className="mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-primary">
+      {/* Content Area */}
+      <div className="flex flex-1 flex-col p-6">
+        <div className="mb-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1.5">
             {category}
-          </span>
-          <h3 className="mt-1 text-sm font-bold leading-tight text-foreground line-clamp-2 min-h-[40px] group-hover:text-primary transition-colors">
+          </p>
+          <h3 className="text-base font-bold leading-tight text-foreground line-clamp-2 min-h-[44px] group-hover:text-primary transition-colors">
             {title}
           </h3>
         </div>
 
-        {/* Pricing Info */}
-        <div className="mt-auto pt-4 flex items-center justify-between border-t border-border">
+        {/* Pricing Matrix */}
+        <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">Unit Price</p>
-            <span className="text-xl font-black text-foreground tracking-tighter">
-              ${usdc.format(priceUsdc)}
-            </span>
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Unit Price</p>
+            <p className="text-xl font-black text-foreground tracking-tight mt-0.5">
+              {formatter.format(priceUsdc)}
+            </p>
           </div>
           <div className="text-right">
-             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter text-right">MOQ</p>
-             <span className="text-sm font-bold text-foreground">
-              {moq} Units
-            </span>
+             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Min. Quantity</p>
+             <p className="text-sm font-bold text-foreground mt-1">
+              {moq} <span className="text-[10px] text-muted-foreground uppercase ml-0.5">Units</span>
+            </p>
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="mt-4 flex items-center justify-between rounded-xl bg-secondary px-3 py-2">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-bold text-foreground">★ {rating.toFixed(1)}</span>
-            <span className="text-[10px] text-muted-foreground font-medium">{vendor}</span>
+        {/* Institutional Stats */}
+        <div className="mt-5 flex items-center justify-between rounded-xl border border-border/50 bg-secondary/30 px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 text-xs font-bold text-foreground">
+              <span className="text-amber-500">★</span>
+              {rating.toFixed(1)}
+            </div>
+            <div className="h-3 w-px bg-border" />
+            <span className="text-[10px] font-bold text-muted-foreground truncate max-w-[80px]">{vendor}</span>
           </div>
-          <span className="text-[10px] font-bold text-primary uppercase">{leadTimeDays}D Delivery</span>
+          <div className="flex items-center gap-1 text-[9px] font-black text-primary uppercase">
+            <span>{leadTimeDays}D Est. Delivery</span>
+          </div>
         </div>
 
-        {/* CTA */}
-        <button
-          type="button"
-          onClick={() =>
-            onBuy({ productId, title, sellerWallet, usdcMint, tier: sellerTier, moq, leadTimeDays, priceUsdc })
-          }
-          className="mt-5 w-full rounded-xl bg-foreground py-3 text-[13px] font-bold text-background transition-all hover:bg-primary hover:shadow-xl hover:shadow-primary/20 active:scale-[0.98]"
-        >
-          Secure Trade Asset
-        </button>
+        {/* Dynamic Actions */}
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={handleQuickBuy}
+            className="flex items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-xs font-black text-background transition-all hover:bg-primary hover:shadow-lg active:scale-[0.98]"
+          >
+            BUY NOW
+            <ArrowRight size={14} />
+          </button>
+          
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={adding}
+            className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-xs font-black transition-all active:scale-[0.98] ${
+              inCart || adding
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-foreground bg-transparent hover:bg-foreground hover:text-background"
+            }`}
+          >
+            {adding ? (
+              <span className="animate-pulse">ADDING...</span>
+            ) : inCart ? (
+              <>IN CART</>
+            ) : (
+              <>
+                <Plus size={14} />
+                ADD TO CART
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </article>
   );
