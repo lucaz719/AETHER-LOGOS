@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Heart } from "lucide-react";
 import { MOCK_STORES, type PublicStore, vendorTypeToSellerTier } from "@/lib/data/mockStores";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
@@ -19,10 +19,10 @@ const FILTERS: Array<{ label: string; value: StoreFilter }> = [
   { label: "Wholesaler", value: "wholesaler" },
 ];
 
-const VENDOR_TYPE_COLORS: Record<string, { bg: string; color: string; border: string }> = {
-  Manufacturer: { bg: "rgba(180,83,9,0.12)", color: "#fb923c", border: "rgba(180,83,9,0.3)" },
-  Wholesaler: { bg: "rgba(124,58,237,0.12)", color: "#a78bfa", border: "rgba(124,58,237,0.3)" },
-  Distributor: { bg: "rgba(8,145,178,0.12)", color: "#22d3ee", border: "rgba(8,145,178,0.3)" },
+const VENDOR_TYPE_COLORS: Record<string, { bg: string; color: string; border: string; activeColor?: string }> = {
+  Manufacturer: { bg: "rgba(249,115,22,0.12)", color: "#fb923c", border: "rgba(249,115,22,0.3)", activeColor: "#F97316" },
+  Wholesaler: { bg: "rgba(168,85,247,0.12)", color: "#a78bfa", border: "rgba(168,85,247,0.3)", activeColor: "#A855F7" },
+  Distributor: { bg: "rgba(6,182,212,0.12)", color: "#22d3ee", border: "rgba(6,182,212,0.3)", activeColor: "#06B6D4" },
 };
 
 function toVendorType(value?: string): PublicStore["vendorType"] {
@@ -41,18 +41,18 @@ function starRow(ratingSum: number, ratingCount: number) {
   const avg = avgRating(ratingSum, ratingCount);
   const filled = Math.round(avg);
   return (
-    <span style={{ color: "var(--amber)", fontSize: "0.82rem", display: "flex", alignItems: "center", gap: "0.2rem" }}>
+    <span style={{ color: "var(--amber)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.2rem" }}>
       {[1, 2, 3, 4, 5].map((s) => (
-        <span key={s} style={{ opacity: s <= filled ? 1 : 0.25 }}>★</span>
+        <span key={s} style={{ opacity: s <= filled ? 1 : 0.25, fontSize: "0.75rem" }}>★</span>
       ))}
-      <small style={{ color: "var(--text-muted)", marginLeft: "0.2rem", fontSize: "0.72rem" }}>
+      <small style={{ color: "#A3A3A3", marginLeft: "0.2rem", fontSize: "0.6875rem" }}>
         {ratingCount > 0 ? avg.toFixed(1) : "—"} ({ratingCount})
       </small>
     </span>
   );
 }
 
-function initialsAvatar(name: string, size = 44) {
+function initialsAvatar(name: string, size = 36) {
   const initials = name
     .split(" ")
     .slice(0, 2)
@@ -229,11 +229,12 @@ function StoreCard({
 
   return (
     <article
-      className="glass"
+      className="glass relative"
       style={{
         padding: "1rem",
-        display: "grid",
-        gap: "0.75rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.625rem",
         transition: "box-shadow var(--transition), border-color var(--transition), transform var(--transition)",
       }}
       onMouseEnter={(event) => {
@@ -249,38 +250,52 @@ function StoreCard({
         el.style.borderColor = "";
       }}
     >
-      <div style={{ display: "flex", gap: "0.65rem", alignItems: "flex-start" }}>
-        {initialsAvatar(store.shopName, 44)}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.4rem", flexWrap: "wrap" }}>
-            <strong style={{ fontSize: "0.95rem", color: "var(--text-primary)", lineHeight: 1.2 }}>
-              {store.shopName}
-            </strong>
-            <div style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-              {store.isVerified && (
-                <span className="badge badge-green" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem" }}>
-                  <ShieldCheck size={12} />
-                  Verified
-                </span>
-              )}
-              <span className="badge" style={{ background: typeStyle.bg, color: typeStyle.color, border: `1px solid ${typeStyle.border}` }}>
-                {store.vendorType}
-              </span>
-            </div>
-          </div>
-          <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-            {store.location} · Since {store.memberSince}
-          </p>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-        {starRow(store.ratingSum, store.ratingCount)}
-        <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          {store.responseTime} · {store.followerCount.toLocaleString()} followers
+      {/* Absolute Badge (top-right) */}
+      <div style={{ position: "absolute", top: "0.75rem", right: "0.75rem" }}>
+        <span
+          className="badge"
+          style={{
+            background: typeStyle.bg,
+            color: typeStyle.color,
+            border: `1px solid ${typeStyle.border}`,
+            fontSize: "0.625rem",
+            padding: "0.25rem 0.5rem",
+            display: "inline-block",
+          }}
+        >
+          {store.vendorType}
         </span>
       </div>
 
+      {/* Header row: Avatar + Name */}
+      <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+        {initialsAvatar(store.shopName, 36)}
+        <div style={{ flex: 1, minWidth: 0, paddingTop: "0.125rem" }}>
+          <strong style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white", lineHeight: 1.2, display: "block" }}>
+            {store.shopName}
+          </strong>
+        </div>
+      </div>
+
+      {/* Verified badge on its own line */}
+      {store.isVerified && (
+        <div>
+          <span className="badge badge-green" style={{ display: "inline-flex", alignItems: "center", gap: "0.2rem", fontSize: "0.75rem" }}>
+            <ShieldCheck size={11} />
+            Verified
+          </span>
+        </div>
+      )}
+
+      {/* Sub-row: Location, Since, Rating */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+        <span style={{ color: "#A3A3A3", fontSize: "0.6875rem" }}>
+          {store.location} · Since {store.memberSince}
+        </span>
+        {starRow(store.ratingSum, store.ratingCount)}
+      </div>
+
+      {/* Tags row */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "0.35rem" }}>
         {store.categories.slice(0, 3).map((category) => (
           <span
@@ -288,11 +303,11 @@ function StoreCard({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              padding: "0.15rem 0.55rem",
+              padding: "0.25rem 0.5rem",
               borderRadius: "var(--radius-pill)",
-              fontSize: "0.72rem",
+              fontSize: "0.6875rem",
               background: "var(--cyan-dim)",
-              color: "var(--cyan)",
+              color: "#4B5563",
               border: "1px solid var(--border)",
             }}
           >
@@ -301,36 +316,85 @@ function StoreCard({
         ))}
       </div>
 
+      {/* Stats row: 3 columns with clear layout */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr auto 1fr auto 1fr",
-          alignItems: "center",
-          gap: "0.35rem",
-          color: "var(--text-muted)",
-          fontSize: "0.73rem",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: "0.5rem",
           borderTop: "1px solid var(--border)",
-          paddingTop: "0.65rem",
+          borderBottom: "1px solid var(--border)",
+          paddingTop: "0.5rem",
+          paddingBottom: "0.5rem",
         }}
       >
-        <span>{store.totalOrders.toLocaleString()} Orders</span>
-        <span style={{ opacity: 0.5 }}>|</span>
-        <span>{store.onTimeDelivery}% On-time</span>
-        <span style={{ opacity: 0.5 }}>|</span>
-        <span>{store.repeatBuyers}% Repeat</span>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
+            {store.totalOrders.toLocaleString()}
+          </div>
+          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
+            Orders
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
+            {store.onTimeDelivery}%
+          </div>
+          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
+            On-time
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, color: "white" }}>
+            {store.repeatBuyers}%
+          </div>
+          <div style={{ fontSize: "0.625rem", textTransform: "uppercase", color: "#6B7280", fontWeight: 600, letterSpacing: "0.05em" }}>
+            Repeat
+          </div>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gap: "0.55rem", marginTop: "0.2rem" }}>
-        <button type="button" className="btn-primary" onClick={() => onEnterStore(store)}>
+      {/* CTA row: Side-by-side buttons */}
+      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.25rem" }}>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={() => onEnterStore(store)}
+          style={{ flex: 1, fontSize: "0.875rem", padding: "0.375rem 0.75rem" }}
+        >
           Enter Store →
         </button>
         <button
           type="button"
-          className="btn-ghost"
           onClick={() => onToggleFollow(store.storeId)}
-          style={{ borderColor: isFollowed ? "var(--border-accent)" : undefined, color: isFollowed ? "var(--text-primary)" : undefined }}
+          style={{
+            padding: "0.375rem 0.75rem",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.35rem",
+            fontSize: "0.875rem",
+            border: "1px solid rgba(255,255,255,0.25)",
+            background: "transparent",
+            color: "#D1D5DB",
+            borderRadius: "0.5rem",
+            cursor: "pointer",
+            transition: "all 150ms ease",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.color = "white";
+            el.style.background = "rgba(255,255,255,0.1)";
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget as HTMLButtonElement;
+            el.style.color = isFollowed ? "white" : "#D1D5DB";
+            el.style.background = isFollowed ? "rgba(255,255,255,0.1)" : "transparent";
+          }}
         >
-          {isFollowed ? "✓ Following" : "+ Follow"}
+          <Heart size={14} fill={isFollowed ? "currentColor" : "none"} />
+          {isFollowed ? "Following" : "Follow"}
         </button>
       </div>
     </article>
@@ -402,70 +466,94 @@ export default function StoresPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden pt-24 pb-20">
-      <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[160px] pointer-events-none" />
+    <main className="min-h-screen bg-background relative overflow-hidden pb-20" style={{ paddingTop: "80px" }}>
+      {/* Background effects constrained with overflow-hidden */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden", pointerEvents: "none" }}>
+        <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px]" />
+        <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[160px]" />
+      </div>
 
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-        <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="space-y-2">
-            <h1 className="text-6xl font-black tracking-tighter text-foreground">Suppliers</h1>
-            <p className="text-lg font-bold text-muted-foreground">
-              Browse verified global suppliers. Enter a store to view catalog and trade terms.
-            </p>
-            <Link
-              href="/dashboard"
-              className="text-xs mt-3 inline-block text-muted-foreground hover:text-cyan-400 transition-colors no-underline"
-              style={{ fontSize: "0.8rem" }}
-            >
-              View all products without store filter →
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {FILTERS.map((filter) => {
-              const active = selectedFilter === filter.value;
-              return (
-                <button
-                  key={filter.value}
-                  type="button"
-                  onClick={() => setSelectedFilter(filter.value)}
-                  className="badge"
-                  style={{
-                    border: active ? "1px solid var(--border-accent)" : "1px solid var(--border)",
-                    background: active ? "var(--cyan-dim)" : "transparent",
-                    color: active ? "var(--cyan)" : "var(--text-secondary)",
-                    padding: "0.32rem 0.8rem",
-                    cursor: "pointer",
-                    minHeight: "40px",
-                  }}
-                >
-                  {filter.label}
-                </button>
-              );
-            })}
-          </div>
-        </header>
+        {/* Header: Title & Subtitle */}
+        <div className="mb-8 space-y-2">
+          <h1 className="text-5xl font-black tracking-tight text-foreground" style={{ fontSize: "3rem", fontWeight: 900 }}>
+            Suppliers
+          </h1>
+          <p className="text-base font-normal text-muted-foreground" style={{ fontSize: "1rem", fontWeight: 400 }}>
+            Browse verified global suppliers. Enter a store to view catalog and trade terms.
+          </p>
+          <Link
+            href="/dashboard"
+            className="text-xs inline-block text-muted-foreground hover:text-cyan-400 transition-colors no-underline"
+            style={{ fontSize: "0.8rem", marginTop: "0.75rem" }}
+          >
+            View all products without store filter →
+          </Link>
+        </div>
+
+        {/* Filter Bar: Full-width row above grid */}
+        <div className="mb-8 flex flex-wrap gap-2 justify-start">
+          {FILTERS.map((filter) => {
+            const active = selectedFilter === filter.value;
+            const filterColors: Record<StoreFilter, { bg: string; color: string; borderColor: string }> = {
+              all: { bg: active ? "#0066FF" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#0066FF" : "var(--border)" },
+              manufacturer: { bg: active ? "#F97316" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#F97316" : "var(--border)" },
+              distributor: { bg: active ? "#06B6D4" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#06B6D4" : "var(--border)" },
+              wholesaler: { bg: active ? "#A855F7" : "transparent", color: active ? "white" : "var(--text-secondary)", borderColor: active ? "#A855F7" : "var(--border)" },
+            };
+            const filterStyle = filterColors[filter.value];
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                onClick={() => setSelectedFilter(filter.value)}
+                className="badge"
+                style={{
+                  border: `1px solid ${filterStyle.borderColor}`,
+                  background: filterStyle.bg,
+                  color: filterStyle.color,
+                  padding: "0.4rem 1rem",
+                  cursor: "pointer",
+                  minHeight: "36px",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                  transition: "all 150ms ease",
+                }}
+              >
+                {filter.label}
+              </button>
+            );
+          })}
+        </div>
 
         {error && (
-          <div className="glass" style={{ padding: "0.9rem 1rem", marginBottom: "1rem", color: "var(--amber)" }}>
+          <div className="glass mb-6" style={{ padding: "1rem", color: "var(--amber)" }}>
             {error}
           </div>
         )}
 
         {loading ? (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="glass" style={{ padding: "1rem" }}>
-                <div className="skeleton" style={{ height: "220px" }} />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(9)].map((_, i) => (
+              <div key={i} className="glass" style={{ padding: "1.25rem", height: "420px" }}>
+                <div className="skeleton" style={{ height: "100%" }} />
               </div>
             ))}
           </div>
         ) : filteredStores.length === 0 ? (
           <div className="glass p-12 text-center" style={{ color: "var(--text-muted)" }}>
-            No suppliers found for this filter.
+            <div style={{ fontSize: "0.875rem", marginBottom: "1rem" }}>No suppliers found for this category.</div>
+            <button
+              type="button"
+              onClick={() => setSelectedFilter("all")}
+              className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
+              style={{ textDecoration: "underline" }}
+            >
+              Clear Filter
+            </button>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" style={{ gridAutoFlow: filteredStores.length < 3 ? "dense" : "row", justifyItems: filteredStores.length < 3 ? "start" : "auto" }}>
             {filteredStores.map((store) => (
               <StoreCard
                 key={store.id}

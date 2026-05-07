@@ -117,6 +117,33 @@ func (c *DHLClient) GetFullTracking(trackingNumber string) (*ShipmentTracking, e
 	if strings.TrimSpace(trackingNumber) == "" {
 		return nil, fmt.Errorf("tracking number is required")
 	}
+
+	if strings.HasPrefix(strings.ToUpper(trackingNumber), "MOCK-") {
+		return &ShipmentTracking{
+			TrackingNumber: trackingNumber,
+			CurrentStatus:  "Delivered",
+			Milestones: []TrackingMilestone{
+				{
+					Status:      "PendingPickup",
+					Description: "Shipment registered",
+					Location:    "Mock City",
+					Timestamp:   time.Now().Add(-24 * time.Hour),
+				},
+				{
+					Status:      "Delivered",
+					Description: "Delivered to recipient",
+					Location:    "Mock City",
+					Timestamp:   time.Now(),
+					IsDelivered: true,
+					SignedBy:    "John Doe",
+				},
+			},
+			IsDelivered:  true,
+			HasSignature: true,
+			SignedBy:     "John Doe",
+		}, nil
+	}
+
 	baseURL := strings.TrimSpace(c.BaseURL)
 	if baseURL == "" {
 		baseURL = "https://api-eu.dhl.com"
