@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
+import { ClipboardList, Wallet, Store, Building2, AlertCircle, Heart } from "lucide-react";
+import { useBuyerOrders } from "@/hooks/useBuyerOrders";
+import { SettlementStatusBadge, SettlementFlowViewer } from "@/components/SettlementStatus";
 
 interface UserProfile {
   id: number;
@@ -15,17 +18,43 @@ interface UserProfile {
   created_at: string;
 }
 
+interface TradeRow {
+  pubkey: any;
+  account: any;
+}
+
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 
+// ============= SKELETON COMPONENTS =============
+const SkeletonLine = ({ w = "w-24", h = "h-3" }: { w?: string; h?: string }) => (
+  <div className={`${h} ${w} bg-white/8 rounded animate-pulse`} />
+);
+
+const SkeletonText = () => <SkeletonLine w="w-32" h="h-2.5" />;
+const SkeletonRow = () => (
+  <div className="flex items-center justify-between">
+    <SkeletonText />
+    <SkeletonText />
+  </div>
+);
+
+// ============= MAIN COMPONENT =============
 export default function UserDashboardPage() {
   const { publicKey } = useWallet();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState<number | null>(null);
 
   const wallet = publicKey?.toBase58();
+  const { orders } = useBuyerOrders();
 
   useEffect(() => {
-    if (!wallet) { setLoading(false); return; }
+    if (!wallet) {
+      setLoading(false);
+      return;
+    }
+
     const init = async () => {
       try {
         // Upsert user on login
@@ -34,107 +63,473 @@ export default function UserDashboardPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ wallet_address: wallet, user_type: "buyer" }),
         });
+
+        // Fetch user profile
         const res = await fetch(`${API}/api/users/${wallet}`);
-        if (res.ok) setUser(await res.json());
-      } catch { /* offline */ }
-      finally { setLoading(false); }
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+        }
+
+        // Try to fetch follower/review counts from localStorage (demo data)
+        try {
+          const storedFollowers = localStorage.getItem("aether_followed_stores");
+          if (storedFollowers) {
+            setFollowerCount(JSON.parse(storedFollowers).length);
+          } else {
+            setFollowerCount(0);
+          }
+        } catch {
+          setFollowerCount(0);
+        }
+
+        // Demo: use orders count as approximation for reviews
+        setReviewCount(Math.max(0, orders.length - 1));
+      } catch {
+        /* offline */
+      } finally {
+        setLoading(false);
+      }
     };
+
     init();
-  }, [wallet]);
+  }, [wallet, orders.length]);
 
   if (!publicKey) {
     return (
       <main style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>◉</div>
-        <h2 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>My Account</h2>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Connect your wallet to access your account.</p>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.5 }}>◉</div>
+        <h2 style={{ color: "white", marginBottom: "0.5rem", fontSize: "1.125rem", fontWeight: 600 }}>
+          My Account
+        </h2>
+        <p style={{ color: "#9CA3AF", marginBottom: "1.5rem", fontSize: "0.8125rem" }}>
+          Connect your wallet to access your account.
+        </p>
         <WalletMultiButton />
       </main>
     );
   }
 
-  if (loading) {
-    return <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Loading…</div>;
-  }
-
+  // ============= QUICK ACTIONS =============
   const quickActions = [
-    { href: "/user/orders", label: "View Orders", icon: "📦", color: "var(--cyan)" },
-    { href: "/user/wallet", label: "Wallet", icon: "◈", color: "var(--violet)" },
-    { href: "/marketplace", label: "Shop Now", icon: "🛍", color: "var(--green)" },
-    { href: "/vendor/stores", label: "My Stores", icon: "🏪", color: "var(--amber)" },
+    { href: "/user/orders", label: "View Orders", icon: ClipboardList },
+    { href: "/user/wallet", label: "Wallet", icon: Wallet },
+    { href: "/marketplace", label: "Shop Now", icon: Store },
+    { href: "/vendor/stores", label: "My Stores", icon: Building2 },
   ];
+
+  // ============= REPUTATION COLOR LOGIC =============
+  const reputationColor = user
+    ? user.reputation_score >= 4.0
+      ? "#22C55E"
+      : user.reputation_score >= 2.0
+        ? "#FBBF24"
+        : user.reputation_score > 0
+          ? "#EF4444"
+          : "#6B7280"
+    : "#6B7280";
 
   return (
     <div>
-      {/* Header */}
-      <div className="glass" style={{ padding: "1.5rem", borderRadius: "var(--radius-lg)", marginBottom: "1.5rem" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "var(--cyan-dim)", border: "2px solid var(--cyan)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem" }}>
-            ◉
+      {/* PROFILE HEADER ROW */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          paddingBottom: "1.25rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        {loading ? (
+          <div style={{ width: 48, height: 48, background: "#1F2937", borderRadius: "50%", animation: "pulse 2s infinite" }} />
+        ) : (
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              background: "#1F2937",
+              border: "2px solid rgba(96,165,250,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1.25rem",
+              fontWeight: 900,
+              color: "#93C5FD",
+              flexShrink: 0,
+            }}
+          >
+            {(user?.username || "A")[0]?.toUpperCase()}
           </div>
-          <div>
-            <h1 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--text-primary)" }}>
-              {user?.username || "Anonymous"}
-            </h1>
-            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", fontFamily: "monospace", marginTop: "0.2rem" }}>
-              {wallet?.slice(0, 8)}…{wallet?.slice(-8)}
+        )}
+
+        <div style={{ flex: 1 }}>
+          {loading ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <SkeletonLine w="w-32" />
+              <SkeletonLine w="w-48" h="h-2" />
             </div>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-            <span style={{ padding: "0.25rem 0.65rem", background: "var(--cyan-dim)", color: "var(--cyan)", borderRadius: "var(--radius-pill)", fontSize: "0.75rem", fontWeight: 600, border: "1px solid rgba(0,212,255,0.2)" }}>
-              {user?.user_type ?? "buyer"}
-            </span>
-            <span style={{ padding: "0.25rem 0.65rem", background: user?.kyc_status === "verified" ? "var(--green-dim)" : "rgba(255,255,255,0.05)", color: user?.kyc_status === "verified" ? "var(--green)" : "var(--text-muted)", borderRadius: "var(--radius-pill)", fontSize: "0.75rem", fontWeight: 600, border: `1px solid ${user?.kyc_status === "verified" ? "rgba(16,185,129,0.2)" : "var(--border)"}` }}>
-              KYC: {user?.kyc_status ?? "none"}
-            </span>
-          </div>
+          ) : (
+            <>
+              <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "white", marginBottom: "0.25rem" }}>
+                {user?.username || "Anonymous"}
+              </h1>
+              <div style={{ fontSize: "0.6875rem", color: "#6B7280", fontFamily: "monospace" }}>
+                {wallet?.slice(0, 8)}…{wallet?.slice(-8)}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right side: badges + button */}
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexShrink: 0 }}>
+          {loading ? (
+            <>
+              <SkeletonLine w="w-16" h="h-5" />
+              <SkeletonLine w="w-20" h="h-5" />
+            </>
+          ) : (
+            <>
+              <span
+                style={{
+                  padding: "0.25rem 0.65rem",
+                  background: "rgba(6,182,212,0.15)",
+                  color: "#22D3EE",
+                  borderRadius: "9999px",
+                  fontSize: "0.625rem",
+                  fontWeight: 600,
+                  border: "1px solid rgba(6,182,212,0.3)",
+                  textTransform: "capitalize",
+                }}
+              >
+                {user?.user_type ?? "buyer"}
+              </span>
+
+              {/* KYC Badge with Warning */}
+              <div
+                title="Complete KYC to unlock trade limits"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  padding: "0.35rem 0.65rem",
+                  background: "rgba(249,115,22,0.15)",
+                  color: "#FB923C",
+                  border: "1px solid rgba(249,115,22,0.3)",
+                  borderRadius: "9999px",
+                  fontSize: "0.625rem",
+                  fontWeight: 600,
+                }}
+              >
+                <AlertCircle size={12} />
+                KYC: {user?.kyc_status ?? "none"}
+              </div>
+
+              <Link
+                href="/user/profile"
+                style={{
+                  padding: "0.35rem 0.75rem",
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  color: "#9CA3AF",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.75rem",
+                  textDecoration: "none",
+                  cursor: "pointer",
+                  transition: "all 150ms ease",
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLAnchorElement).style.background = "rgba(255,255,255,0.1)";
+                  (e.target as HTMLAnchorElement).style.color = "white";
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLAnchorElement).style.background = "transparent";
+                  (e.target as HTMLAnchorElement).style.color = "#9CA3AF";
+                }}
+              >
+                Edit Profile
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Stats row */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+      {/* SETTLEMENT STATUS SECTION */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <SettlementStatusBadge />
+        <SettlementFlowViewer />
+      </div>
+
+      {/* STATS ROW (4 columns) */}
+      <div
+        style={{
+          display: "flex",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          marginBottom: "1.5rem",
+        }}
+      >
         {[
-          { label: "Reputation", value: user?.reputation_score?.toFixed(1) ?? "0.0", color: "var(--amber)" },
-          { label: "Member Since", value: user?.created_at ? new Date(user.created_at).getFullYear().toString() : "–", color: "var(--cyan)" },
-        ].map((stat) => (
-          <div key={stat.label} className="glass" style={{ padding: "1.25rem", borderRadius: "var(--radius-md)" }}>
-            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>{stat.label}</div>
-            <div style={{ fontSize: "1.8rem", fontWeight: 900, color: stat.color, marginTop: "0.35rem" }}>{stat.value}</div>
+          { label: "Reputation", value: loading ? "—" : user?.reputation_score?.toFixed(1) ?? "0.0", color: reputationColor },
+          { label: "Member Since", value: loading ? "—" : user?.created_at ? new Date(user.created_at).getFullYear().toString() : "–" },
+          { label: "Total Orders", value: loading ? "—" : orders.length.toString() },
+          { label: "Wallet Balance", value: "—" },
+        ].map((stat, idx) => (
+          <div
+            key={stat.label}
+            style={{
+              flex: 1,
+              padding: "1.5rem",
+              borderRight: idx < 3 ? "1px solid rgba(255,255,255,0.08)" : "none",
+            }}
+          >
+            <div style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.12em", color: "#6B7280", textTransform: "uppercase", marginBottom: "0.5rem" }}>
+              {stat.label}
+            </div>
+            <div
+              style={{
+                fontSize: "1.875rem",
+                fontWeight: 900,
+                color: stat.color || "white",
+              }}
+            >
+              {stat.value}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>Quick Actions</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: "0.75rem", marginBottom: "1.5rem" }}>
-        {quickActions.map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "1.25rem",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border)",
-              background: "var(--bg-surface)",
-              textDecoration: "none",
-              transition: "all var(--transition)",
-              cursor: "pointer",
-            }}
-          >
-            <span style={{ fontSize: "1.6rem" }}>{a.icon}</span>
-            <span style={{ fontSize: "0.82rem", fontWeight: 600, color: a.color }}>{a.label}</span>
-          </Link>
-        ))}
+      {/* QUICK ACTIONS */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+          Quick Actions
+        </h2>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link
+                key={action.href}
+                href={action.href}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  padding: "1rem",
+                  borderRadius: "0.75rem",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  background: "rgba(255,255,255,0.03)",
+                  textDecoration: "none",
+                  transition: "all 150ms ease",
+                  cursor: "pointer",
+                }}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = "rgba(255,255,255,0.06)";
+                  el.style.borderColor = "rgba(255,255,255,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  const el = e.currentTarget as HTMLAnchorElement;
+                  el.style.background = "rgba(255,255,255,0.03)";
+                  el.style.borderColor = "rgba(255,255,255,0.08)";
+                }}
+              >
+                <Icon size={28} style={{ color: "#60A5FA" }} />
+                <span style={{ fontSize: "0.75rem", color: "#9CA3AF", fontWeight: 500 }}>
+                  {action.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Edit link */}
-      <Link href="/user/profile" className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.85rem" }}>
-        Edit Profile →
-      </Link>
+      {/* MAIN CONTENT: 2 COLUMNS */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 18rem", gap: "1.5rem" }}>
+        {/* RECENT ORDERS */}
+        <div>
+          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+            Recent Orders
+          </h2>
+          <div
+            style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "0.75rem",
+              background: "rgba(255,255,255,0.03)",
+              overflow: "hidden",
+            }}
+          >
+            {loading ? (
+              <div style={{ padding: "1.5rem" }}>
+                {[...Array(3)].map((_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      marginBottom: i < 2 ? "1rem" : 0,
+                      paddingBottom: i < 2 ? "1rem" : 0,
+                      borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.08)" : "none",
+                    }}
+                  >
+                    <SkeletonRow />
+                    <SkeletonText />
+                  </div>
+                ))}
+              </div>
+            ) : orders.length === 0 ? (
+              <div style={{ padding: "1.5rem", textAlign: "center" }}>
+                <div style={{ fontSize: "0.8125rem", color: "#9CA3AF", marginBottom: "0.75rem" }}>
+                  No orders yet — let's get started!
+                </div>
+                <Link
+                  href="/marketplace"
+                  style={{
+                    display: "inline-block",
+                    padding: "0.35rem 0.75rem",
+                    background: "#3B82F6",
+                    color: "white",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.75rem",
+                    textDecoration: "none",
+                    transition: "all 150ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = "#2563EB";
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLAnchorElement).style.background = "#3B82F6";
+                  }}
+                >
+                  Shop Now →
+                </Link>
+              </div>
+            ) : (
+              <div>
+                {orders.slice(0, 5).map((order, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: "1rem 1.5rem",
+                      borderBottom: idx < Math.min(4, orders.length - 1) ? "1px solid rgba(255,255,255,0.08)" : "none",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <div>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "white", fontFamily: "monospace" }}>
+                        {order.account?.id?.toString?.() || "Order #" + (idx + 1)}
+                      </div>
+                      <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
+                        {new Date(
+                          typeof order.account?.created_at === "string" ||
+                          typeof order.account?.created_at === "number"
+                            ? order.account.created_at
+                            : Date.now()
+                        ).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        padding: "0.25rem 0.5rem",
+                        background: "rgba(34,212,34,0.15)",
+                        color: "#22C55E",
+                        borderRadius: "0.375rem",
+                        fontSize: "0.625rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {String(order.account?.status || "Active")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ACCOUNT STATUS */}
+        <div>
+          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+            Account Status
+          </h2>
+          <div
+            style={{
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "0.75rem",
+              background: "rgba(255,255,255,0.03)",
+              padding: "1.5rem",
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+            }}
+          >
+            {loading ? (
+              <>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </>
+            ) : (
+              <>
+                {/* KYC Status */}
+                <div>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
+                    KYC Status
+                  </div>
+                  {user?.kyc_status === "verified" ? (
+                    <div style={{ fontSize: "0.8125rem", color: "#22C55E", fontWeight: 500 }}>
+                      ✓ Verified
+                    </div>
+                  ) : (
+                    <Link
+                      href="/user/profile"
+                      style={{
+                        display: "inline-block",
+                        fontSize: "0.8125rem",
+                        color: "#FB923C",
+                        textDecoration: "none",
+                        cursor: "pointer",
+                        transition: "color 150ms ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLAnchorElement).style.color = "#FED7AA";
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLAnchorElement).style.color = "#FB923C";
+                      }}
+                    >
+                      Complete KYC →
+                    </Link>
+                  )}
+                </div>
+
+                {/* Followed Stores */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
+                    Followed Stores
+                  </div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "white" }}>
+                    {followerCount !== null ? followerCount : "—"}
+                  </div>
+                </div>
+
+                {/* Reviews Given */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
+                  <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
+                    Reviews Given
+                  </div>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "white" }}>
+                    {reviewCount !== null ? reviewCount : "—"}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

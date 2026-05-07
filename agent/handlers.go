@@ -66,15 +66,23 @@ func runPollCycle() (pollResult, error) {
 		return pollResult{}, err
 	}
 
+	if len(shipments) == 0 {
+		return pollResult{Checked: 0}, nil
+	}
+
+	// Log poll cycle start
+	LogSection("POLL CYCLE START")
+	LogProgress("Processing", 0, len(shipments))
+
 	result := pollResult{Checked: len(shipments)}
-	for _, s := range shipments {
+	for idx, s := range shipments {
 		if !strings.EqualFold(s.Carrier, "dhl") {
 			continue
 		}
 
 		fullTracking, err := dhlClient.GetFullTracking(s.TrackingID)
 		if err != nil {
-			log.Printf("poll error for %s: %v", s.TrackingID, err)
+			LogError(fmt.Sprintf("DHL lookup: %s", s.TrackingID), err)
 			result.Errors++
 			continue
 		}
@@ -89,14 +97,14 @@ func runPollCycle() (pollResult, error) {
 			})
 		}
 		if err := UpsertMilestones(s.ID, milestones); err != nil {
-			log.Printf("milestone store error for %s: %v", s.TrackingID, err)
+			LogError(fmt.Sprintf("Store milestones: %s", s.TrackingID), err)
 			result.Errors++
 		}
 
 		newStatus := fullTracking.CurrentStatus
 		if newStatus != s.LastKnownStatus {
 			if err := UpdateStatus(s.ID, newStatus); err != nil {
-				log.Printf("poll update error for %s: %v", s.TrackingID, err)
+				LogError(fmt.Sprintf("Update status: %s", s.TrackingID), err)
 				result.Errors++
 				continue
 			}
@@ -110,20 +118,33 @@ func runPollCycle() (pollResult, error) {
 		}
 
 		if strings.EqualFold(newStatus, "delivered") {
+			LogDeliveryFlow(s.TrackingID, s.Carrier, newStatus)
+			
+			// Get location from latest milestone
+			location := "Unknown"
+			if len(fullTracking.Milestones) > 0 {
+				location = fullTracking.Milestones[len(fullTracking.Milestones)-1].Location
+			}
+			LogVerificationStep(1, "DHL Verification", fmt.Sprintf("✓ Delivered (%s)", location))
+
 			if !fullTracking.HasSignature {
 				if deliveredBeyondRetryWindow(s.UpdatedAt) {
-					log.Printf("delivery signature timeout for %s", s.TrackingID)
+					LogVerificationStep(0, "Signature Check", "✗ No signature (timeout)")
 				}
 				continue
 			}
+
 			if err := handleDeliveryConfirmed(s, fullTracking); err != nil {
-				log.Printf("delivery handling failed for %s: %v", s.TrackingID, err)
+				LogError(fmt.Sprintf("Delivery confirmation: %s", s.TrackingID), err)
 				result.Errors++
 				continue
 			}
 		}
+
+		LogProgress("Processing", idx+1, len(shipments))
 	}
 
+	LogPollSummary(result.Checked, result.Updated, result.Errors)
 	return result, nil
 }
 
@@ -132,23 +153,30 @@ func handleDeliveryConfirmed(shipment Shipment, tracking *carrier.ShipmentTracki
 	defer cancel()
 
 	if reclaimClient == nil || !reclaimClient.IsConfigured() {
+		LogVerificationStep(2, "zkTLS Generation", "Fallback to SHA256")
 		return handleDeliveryFallback(ctx, shipment, tracking)
 	}
+
+	LogVerificationStep(2, "zkTLS Generation", "Starting...")
 
 	sessionID, verificationURL, err := reclaimClient.CreateVerificationRequest(
 		shipment.TrackingID,
 		"delivered",
 	)
 	if err != nil {
-		log.Printf("reclaim unavailable, fallback to SHA256: %v", err)
+		LogVerificationStep(2, "zkTLS Generation", fmt.Sprintf("✗ Error: %v", err))
 		return handleDeliveryFallback(ctx, shipment, tracking)
 	}
 
 	log.Printf("reclaim verification URL: %s", verificationURL)
 	proofObj, err := reclaimClient.PollForProof(ctx, sessionID)
 	if err != nil {
+		LogError("Proof generation", err)
 		return fmt.Errorf("proof generation failed: %w", err)
 	}
+
+	LogVerificationStep(2, "zkTLS Generation", "✓ Proof created")
+
 	proofBytes, err := proofObj.SerializeForSolana()
 	if err != nil {
 		return err
@@ -156,10 +184,11 @@ func handleDeliveryConfirmed(shipment Shipment, tracking *carrier.ShipmentTracki
 
 	txSig := "offchain-only"
 	if solanaSubmitter != nil && shipment.TradeAccount != "" && shipment.TradeID != "" {
+		LogVerificationStep(3, "On-Chain Submission", "Processing...")
 		// Validate trade account is a valid base58-encoded pubkey before attempting submission
 		tradeAccount, err := solana.PublicKeyFromBase58(shipment.TradeAccount)
 		if err != nil {
-			log.Printf("skipping on-chain submission: invalid trade account key %q: %v", shipment.TradeAccount, err)
+			LogVerificationStep(3, "On-Chain Submission", fmt.Sprintf("⚠ Skipped (%v)", err))
 			txSig = "offchain-only (invalid-key)"
 		} else {
 			tradeID, err := parseTradeIDHex(shipment.TradeID)
@@ -168,8 +197,10 @@ func handleDeliveryConfirmed(shipment Shipment, tracking *carrier.ShipmentTracki
 			}
 			txSig, err = solanaSubmitter.SubmitReclaimProof(ctx, tradeAccount, tradeID, proofObj)
 			if err != nil {
+				LogError("On-chain submission", err)
 				return fmt.Errorf("on-chain submission failed: %w", err)
 			}
+			LogVerificationStep(3, "On-Chain Submission", fmt.Sprintf("✓ Submitted (sig: %s)", truncateHash(txSig)))
 		}
 	}
 
@@ -177,6 +208,8 @@ func handleDeliveryConfirmed(shipment Shipment, tracking *carrier.ShipmentTracki
 	if err := UpdateShipmentProof(shipment.ID, proofHash, txSig); err != nil {
 		return err
 	}
+
+	LogProofGenerated(shipment.TrackingID, proofHash, txSig)
 	log.Printf("zkTLS proof submitted: %s", txSig)
 	return nil
 }

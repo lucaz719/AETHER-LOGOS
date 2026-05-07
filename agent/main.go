@@ -44,10 +44,6 @@ func main() {
 		os.Getenv("RECLAIM_APP_SECRET"),
 		mockProof,
 	)
-	if mockProof {
-		log.Printf("MOCK_PROOF enabled: using mock reclaim zkTLS flow")
-	}
-
 	// Accept both SOLANA_RPC (agent-native) and SOLANA_RPC_URL (.env.example name).
 	rpcURL := os.Getenv("SOLANA_RPC")
 	if rpcURL == "" {
@@ -56,7 +52,9 @@ func main() {
 	if rpcURL == "" {
 		rpcURL = "https://api.devnet.solana.com"
 	}
-	if os.Getenv("TRADE_ESCROW_PROGRAM_ID") != "" && os.Getenv("SOLANA_PRIVATE_KEY_BASE58") != "" {
+
+	hasOnChainKey := os.Getenv("TRADE_ESCROW_PROGRAM_ID") != "" && os.Getenv("SOLANA_PRIVATE_KEY_BASE58") != ""
+	if hasOnChainKey {
 		submitter, err := proof.NewSolanaSubmitter(
 			rpcURL,
 			os.Getenv("TRADE_ESCROW_PROGRAM_ID"),
@@ -67,6 +65,13 @@ func main() {
 		}
 		solanaSubmitter = submitter
 	}
+
+	// Log startup with institutional style
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	LogInitialization(port, mockProof, hasOnChainKey)
 
 	http.HandleFunc("/register", RegisterHandler)
 	http.HandleFunc("/poll", PollHandler)
@@ -129,11 +134,6 @@ func main() {
 			}
 		}
 	}()
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
 
 	fmt.Printf("aether-logos agent listening on :%s\n", port)
 	log.Fatal(http.ListenAndServe(":"+port, corsMiddleware(http.DefaultServeMux)))
