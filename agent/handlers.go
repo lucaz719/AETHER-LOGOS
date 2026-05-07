@@ -156,14 +156,20 @@ func handleDeliveryConfirmed(shipment Shipment, tracking *carrier.ShipmentTracki
 
 	txSig := "offchain-only"
 	if solanaSubmitter != nil && shipment.TradeAccount != "" && shipment.TradeID != "" {
-		tradeAccount := solana.MustPublicKeyFromBase58(shipment.TradeAccount)
-		tradeID, err := parseTradeIDHex(shipment.TradeID)
+		// Validate trade account is a valid base58-encoded pubkey before attempting submission
+		tradeAccount, err := solana.PublicKeyFromBase58(shipment.TradeAccount)
 		if err != nil {
-			return err
-		}
-		txSig, err = solanaSubmitter.SubmitReclaimProof(ctx, tradeAccount, tradeID, proofObj)
-		if err != nil {
-			return fmt.Errorf("on-chain submission failed: %w", err)
+			log.Printf("skipping on-chain submission: invalid trade account key %q: %v", shipment.TradeAccount, err)
+			txSig = "offchain-only (invalid-key)"
+		} else {
+			tradeID, err := parseTradeIDHex(shipment.TradeID)
+			if err != nil {
+				return err
+			}
+			txSig, err = solanaSubmitter.SubmitReclaimProof(ctx, tradeAccount, tradeID, proofObj)
+			if err != nil {
+				return fmt.Errorf("on-chain submission failed: %w", err)
+			}
 		}
 	}
 
