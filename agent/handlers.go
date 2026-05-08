@@ -607,18 +607,23 @@ func ProductsListHandler(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 	search := r.URL.Query().Get("search")
 	vendor := r.URL.Query().Get("vendor")
+	tier := r.URL.Query().Get("tier")
+	minRatingStr := r.URL.Query().Get("minRating")
 
 	var products []Product
 	var err error
 
 	if search != "" {
 		products, err = SearchProducts(search)
-	} else if category != "" {
-		products, err = GetProductsByCategory(category)
 	} else if vendor != "" {
 		products, err = GetProductsByVendor(vendor)
 	} else {
-		products, err = GetAllProducts()
+		// General filtering
+		var minRating float64
+		if minRatingStr != "" {
+			fmt.Sscanf(minRatingStr, "%f", &minRating)
+		}
+		products, err = GetFilteredProducts(category, tier, minRating)
 	}
 
 	if err != nil {

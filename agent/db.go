@@ -1108,3 +1108,41 @@ func SearchProducts(searchTerm string) ([]Product, error) {
 	}
 	return products, rows.Err()
 }
+func GetFilteredProducts(category, tier string, minRating float64) ([]Product, error) {
+	query := `SELECT id, vendor_wallet, title, COALESCE(description,''), COALESCE(short_description,''), price_usdc, COALESCE(category,''), COALESCE(image_url,''), in_stock,
+		        COALESCE(moq,1), COALESCE(lead_time_days,7), COALESCE(rating,4.5), COALESCE(seller_tier,'wholesaler'), created_at
+		 FROM products
+		 WHERE in_stock = true`
+	var args []interface{}
+
+	if category != "" && category != "all" {
+		query += " AND category = ?"
+		args = append(args, category)
+	}
+	if tier != "" && tier != "all" {
+		query += " AND seller_tier = ?"
+		args = append(args, tier)
+	}
+	if minRating > 0 {
+		query += " AND rating >= ?"
+		args = append(args, minRating)
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []Product
+	for rows.Next() {
+		var p Product
+		if err := rows.Scan(&p.ID, &p.VendorWallet, &p.Title, &p.Description, &p.ShortDescription, &p.PriceUsdc, &p.Category, &p.ImageUrl, &p.InStock, &p.MOQ, &p.LeadTimeDays, &p.Rating, &p.SellerTier, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		products = append(products, p)
+	}
+	return products, rows.Err()
+}

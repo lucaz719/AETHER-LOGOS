@@ -117,6 +117,8 @@ function DashboardContent() {
     router.push(`/dashboard?${params.toString()}`);
   };
   const [selectedTier, setSelectedTier] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [minRating, setMinRating] = useState<number>(0);
   const [products, setProducts] = useState<DashboardProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
 
@@ -124,7 +126,13 @@ function DashboardContent() {
     const loadProducts = async () => {
       setProductsLoading(true);
       try {
-        const productsRes = await fetch(`${API}/api/products`);
+        const params = new URLSearchParams();
+        if (selectedCategory !== "all") params.set("category", selectedCategory);
+        if (selectedTier !== "all") params.set("tier", selectedTier);
+        if (minRating > 0) params.set("minRating", minRating.toString());
+
+        const url = `${API}/api/products${params.toString() ? `?${params.toString()}` : ""}`;
+        const productsRes = await fetch(url);
         if (!productsRes.ok) {
           setProducts([]);
           return;
@@ -185,12 +193,9 @@ function DashboardContent() {
     };
 
     void loadProducts();
-  }, []);
+  }, [selectedTier, selectedCategory, minRating]);
 
-  const filteredProducts =
-    selectedTier === "all"
-      ? products
-      : products.filter((p) => p.sellerTier === selectedTier);
+  const filteredProducts = products;
 
   const handleProductBuy = (payload: {
     productId: string;
@@ -255,8 +260,12 @@ function DashboardContent() {
               <aside className="sticky top-28 h-fit">
                 <MarketplaceFilters
                   categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
                   selectedTier={selectedTier}
                   onTierChange={setSelectedTier}
+                  minRating={minRating}
+                  onRatingChange={setMinRating}
                 />
                 <DashboardStatsOverview />
               </aside>

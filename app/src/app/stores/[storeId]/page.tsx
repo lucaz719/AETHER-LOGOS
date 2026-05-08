@@ -411,11 +411,10 @@ export default function StoreDetailPage() {
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 text-sm font-bold transition-all ${
-                activeTab === tab
+              className={`px-6 py-3 text-sm font-bold transition-all ${activeTab === tab
                   ? "text-foreground border-b-2 border-primary"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
               style={{ minHeight: "40px" }}
             >
               {tab}
