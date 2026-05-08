@@ -171,40 +171,42 @@ export default function UserOrdersPage() {
             const trackingHref = `/user/orders/${order.pubkey}`;
 
             return (
-              <article key={order.pubkey} className="glass rounded-2xl p-5 shadow-card">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <article key={order.pubkey} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`badge ${meta.tone}`}>{meta.label}</span>
-                      <span className="badge badge-cyan">Order {shortKey(order.pubkey)}</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`badge ${meta.tone} px-3 py-1 rounded-full`}>{meta.label}</span>
+                      <span className="badge badge-cyan px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        Ref: {shortKey(order.pubkey)}
+                      </span>
                     </div>
-                    <h3 className="mt-3 text-base font-bold text-foreground">{shortKey(order.account.seller)}</h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1">
-                        <Package size={12} />
+                    <h3 className="mt-4 text-xl font-black text-foreground tracking-tight">{shortKey(order.account.seller)}</h3>
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      <span className="inline-flex items-center gap-2">
+                        <Package size={14} className="text-primary" />
                         Qty {quantity}
                       </span>
-                      <span className="inline-flex items-center gap-1">
-                        <Truck size={12} />
-                        Tracking live dashboard
+                      <span className="inline-flex items-center gap-2">
+                        <Truck size={14} className="text-primary" />
+                        zkTLS Monitoring
                       </span>
                       {deadline && (
-                        <span className="inline-flex items-center gap-1">
-                          <Clock3 size={12} />
-                          Ship by {new Date(deadline * 1000).toLocaleDateString()}
+                        <span className="inline-flex items-center gap-2">
+                          <Clock3 size={14} className="text-primary" />
+                          Due {new Date(deadline * 1000).toLocaleDateString()}
                         </span>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex shrink-0 items-center gap-3">
+ 
+                  <div className="flex shrink-0 items-center gap-6">
                     <div className="text-right">
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Amount locked</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Settlement locked</p>
                       <p className="mt-1 text-2xl font-black text-foreground">${amount.toFixed(2)}</p>
                     </div>
-                    <Link href={trackingHref} className="btn-enter">
+                    <Link href={trackingHref} className="btn-enter flex items-center gap-3 px-6 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-black text-xs uppercase tracking-widest">
                       Live tracking
-                      <BadgeCheck size={14} />
+                      <BadgeCheck size={16} />
                     </Link>
                   </div>
                 </div>

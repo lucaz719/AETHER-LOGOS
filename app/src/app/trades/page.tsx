@@ -20,6 +20,9 @@ import {
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import { InvoiceUpload } from "@/components/InvoiceUpload";
+import { AetherInvoicePreview } from "@/components/AetherInvoicePreview";
+import { ComplianceUploadZone } from "@/components/ComplianceUploadZone";
+import { CommitStepsDisplay } from "@/components/CommitStepsDisplay";
 import { ensureAssociatedTokenAccount, resolveSettlementError } from "@/hooks/useCheckout";
 
 const DEVNET_USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
@@ -145,6 +148,11 @@ function TradesPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [loadingStage, setLoadingStage] = useState<LoadingStage>("idle");
   const [loading, setLoading] = useState(false);
+  const [invoiceCid, setInvoiceCid] = useState("");
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
+  const [currentCommitStep, setCurrentCommitStep] = useState<string>("idle");
+  const [completedCommitSteps, setCompletedCommitSteps] = useState<string[]>([]);
+  const [commitStepData, setCommitStepData] = useState<Record<string, unknown>>({});
 
   const baseItems = useMemo(() => parseSettlementItems(searchParams), [searchParams]);
   const effectiveItems = useMemo(() => {
@@ -275,6 +283,28 @@ function TradesPageContent() {
       setLoading(true);
       setLoadingStage("creating-accounts");
       setError(null);
+      setCompletedCommitSteps([]);
+      setCurrentCommitStep("hashing-po");
+      setCommitStepData({});
+
+      // Step 1: Hash PO (simulated)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const poHash = `0x${crypto.getRandomValues(new Uint8Array(32)).reduce((a, b) => a + b.toString(16).padStart(2, '0'), '')}`.slice(0, 66);
+      setCommitStepData(prev => ({ ...prev, poHash }));
+      setCompletedCommitSteps(prev => [...prev, "hashing-po"]);
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Step 2: Generate invoice number
+      setCurrentCommitStep("generating-invoice");
+      const invoiceNumber = `AETHER-${Date.now()}`;
+      setCommitStepData(prev => ({ ...prev, invoiceNumber }));
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setCompletedCommitSteps(prev => [...prev, "generating-invoice"]);
+
+      // Step 3: Prepare to lock USDC
+      setCurrentCommitStep("locking-usdc");
+      const escrowAmount = effectiveItems.reduce((acc, item) => acc + item.priceUsdc * item.quantity, 0);
+      setCommitStepData(prev => ({ ...prev, escrowAmount }));
 
       const payer = (provider?.wallet as { payer?: Parameters<typeof ensureAssociatedTokenAccount>[1] } | undefined)?.payer;
       if (!payer) {
@@ -318,7 +348,7 @@ function TradesPageContent() {
             new BN(amountUsdc),
             Array.from(milestoneHash),
             signatureRequired,
-            invoiceUrl.includes("/ipfs/") ? invoiceUrl.split("/ipfs/")[1] : null,
+            invoiceCid || (invoiceUrl.includes("/ipfs/") ? invoiceUrl.split("/ipfs/")[1] : null),
           )
           .accounts({
             buyer: wallet.publicKey,
@@ -333,13 +363,21 @@ function TradesPageContent() {
           })
           .rpc();
 
+        await new Promise(resolve => setTimeout(resolve, 600));
+        setCompletedCommitSteps(prev => [...prev, "locking-usdc"]);
+
+        // Step 4: Register with agent
+        setCurrentCommitStep("registering-agent");
         setLoadingStage("registering");
+        const trackingId = `TRK-${Buffer.from(tradeId).toString("hex").slice(0, 12).toUpperCase()}`;
+        setCommitStepData(prev => ({ ...prev, trackingId }));
+
         const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
         fetch(`${AGENT_URL}/api/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            tracking_id: "",
+            tracking_id: trackingId,
             wallet: wallet.publicKey.toString(),
             callback_url: "",
             carrier: "dhl",
@@ -348,6 +386,9 @@ function TradesPageContent() {
             signature,
           }),
         }).catch((e) => console.warn("Agent registration failed (non-fatal):", e));
+
+        await new Promise(resolve => setTimeout(resolve, 600));
+        setCompletedCommitSteps(prev => [...prev, "registering-agent"]);
       }
 
       setInvoiceUrl("");
@@ -520,10 +561,10 @@ function TradesPageContent() {
               <div className="p-6 space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Escrow Evidence</p>
-                    <InvoiceUpload onUploaded={setInvoiceUrl} />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Company Authorization</p>
+                    <ComplianceUploadZone onUploaded={(url, cid) => { setInvoiceUrl(url); setInvoiceCid(cid || ""); }} />
                     <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground font-medium">
-                      Attach an invoice, packing list, or purchase order. This document is cryptographically pinned to the trade record.
+                      Upload a signed Purchase Order or corporate authorization document. This document is cryptographically pinned to the escrow.
                     </p>
                   </div>
 
@@ -696,6 +737,18 @@ function TradesPageContent() {
             </div>
           </section>
         )}
+
+        <AetherInvoicePreview
+          items={effectiveItems}
+          buyerAddress={wallet?.publicKey?.toBase58() || ""}
+          vendorProfiles={vendorProfiles}
+          grandTotal={grandTotal}
+          subtotal={subtotal}
+          platformFee={platformFee}
+          isOpen={invoiceModalOpen}
+          onClose={() => setInvoiceModalOpen(false)}
+          invoiceCid={invoiceCid}
+        />
       </div>
     </main>
   );
@@ -708,3 +761,8 @@ export default function TradesPage() {
     </Suspense>
   );
 }
+
+
+
+
+

@@ -74,6 +74,7 @@ func main() {
 	LogInitialization(port, mockProof, hasOnChainKey)
 
 	http.HandleFunc("/register", RegisterHandler)
+	http.HandleFunc("/api/register", RegisterHandler)
 	http.HandleFunc("/poll", PollHandler)
 	http.HandleFunc("/notify", NotifyHandler)
 	http.HandleFunc("/health", HealthHandler)

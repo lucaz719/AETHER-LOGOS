@@ -4,10 +4,10 @@ import { useCallback } from "react";
 
 const VENDOR_TYPES = ["Retailer", "Wholesaler", "Distributor", "Manufacturer"] as const;
 const TYPE_ICONS: Record<string, string> = {
-  Retailer: "🛍️",
-  Wholesaler: "📦",
-  Distributor: "🚢",
-  Manufacturer: "🏭",
+  Retailer: "",
+  Wholesaler: "",
+  Distributor: "",
+  Manufacturer: "",
 };
 
 export function VendorTypeFilter({

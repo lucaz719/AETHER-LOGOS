@@ -242,7 +242,7 @@ export default function StoreOverviewPage() {
                         <Clock size={10} />
                         {product.lead_time_days}d lead time
                         {product.rating && (
-                          <span className="ml-auto font-semibold text-foreground">★ {product.rating.toFixed(1)}</span>
+                          <span className="ml-auto font-semibold text-foreground inline-flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--amber)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg>{product.rating.toFixed(1)}</span>
                         )}
                       </div>
                     )}

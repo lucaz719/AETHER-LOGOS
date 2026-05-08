@@ -114,8 +114,8 @@ export default function OrderTrackingPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column: Timeline & Milestones */}
           <div className="lg:col-span-2 space-y-6">
-            <section className="glass rounded-3xl p-8">
-              <h2 className="text-2xl font-black mb-8 flex items-center gap-3">
+            <section className="glass rounded-3xl p-8 shadow-2xl border border-white/5 bg-white/[0.02]">
+              <h2 className="text-2xl font-black mb-8 flex items-center gap-3 tracking-tight text-foreground">
                 <Truck className="text-primary" />
                 Logistics Intelligence
               </h2>
@@ -159,54 +159,54 @@ export default function OrderTrackingPage() {
 
           {/* Right Column: Settlement & Proof Details */}
           <div className="space-y-6">
-            <section className="glass rounded-3xl p-6 bg-primary/5 border-primary/20">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <section className="glass rounded-3xl p-8 shadow-2xl border border-primary/20 bg-primary/[0.03]">
+              <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-primary">
                 <ShieldCheck className="text-primary" />
                 Settlement Status
               </h3>
               
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-background/50 border border-border">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">Carrier Reference</p>
-                  <p className="font-mono text-sm font-bold">{data?.shipment.tracking_id}</p>
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Carrier Reference</p>
+                  <p className="font-mono text-sm font-black text-foreground">{data?.shipment.tracking_id}</p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-background/50 border border-border">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">zkTLS Protocol</p>
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">zkTLS Protocol</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold">Active & Watching</span>
+                    <span className="text-xs font-black text-foreground">Active & Watching</span>
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                      <span className="text-[10px] font-bold text-green-500">LIVE</span>
+                      <span className="text-[10px] font-black text-green-500 uppercase tracking-widest">LIVE</span>
                     </div>
                   </div>
                 </div>
 
                 {hasProof ? (
-                  <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center gap-2 text-green-500 mb-2">
-                      <CheckCircle2 size={16} />
-                      <span className="text-sm font-bold">Proof Verified</span>
+                  <div className="p-5 rounded-2xl bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center gap-2 text-green-500 mb-3">
+                      <CheckCircle2 size={18} />
+                      <span className="text-sm font-black uppercase tracking-widest">Proof Verified</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mb-3 leading-relaxed">
+                    <p className="text-[10px] text-muted-foreground mb-4 leading-relaxed font-bold uppercase tracking-wider">
                       Settlement Agent has generated a zkTLS proof confirming delivery. Funds are eligible for release.
                     </p>
                     <Link 
                       href={`https://solscan.io/tx/${data?.shipment.proof_tx_sig}?cluster=devnet`}
                       target="_blank"
-                      className="btn-enter w-full justify-center text-xs gap-2"
+                      className="btn-enter w-full justify-center text-[10px] gap-2 font-black uppercase tracking-widest py-3 rounded-xl"
                     >
                       <ExternalLink size={14} />
                       View On-Chain Proof
                     </Link>
                   </div>
                 ) : (
-                  <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                  <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
                     <div className="flex items-center gap-2 text-amber-500 mb-2">
                       <Clock size={16} />
-                      <span className="text-sm font-bold">Awaiting Delivery</span>
+                      <span className="text-sm font-black uppercase tracking-widest">Awaiting Delivery</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    <p className="text-[10px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wider">
                       Proof generation will trigger automatically upon carrier confirmation of delivery to the registered recipient.
                     </p>
                   </div>
@@ -214,12 +214,12 @@ export default function OrderTrackingPage() {
               </div>
             </section>
 
-            <section className="glass rounded-3xl p-6">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <section className="glass rounded-3xl p-8 shadow-2xl border border-white/5">
+              <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-foreground">
                 <Globe className="text-primary" />
                 Network Metrics
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <MetricItem label="Protocol" value="AETHER-SETTLE v1" />
                 <MetricItem label="Verification" value="zkTLS / Reclaim" />
                 <MetricItem label="Network" value="Solana Devnet" />

@@ -97,7 +97,7 @@ export function ReviewForm({
                 padding: "0 2px",
               }}
             >
-              ★
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ color: n <= (hovered || rating) ? 'var(--amber)' : 'var(--border)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg>
             </button>
           ))}
         </div>

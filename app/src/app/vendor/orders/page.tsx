@@ -10,6 +10,7 @@ import { useInterval } from "@/hooks/useInterval";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { OrderStatusStepper } from "@/components/OrderStatusStepper";
 import { Skeleton } from "@/components/Skeleton";
+import { KeyRound, Package } from "lucide-react";
 
 function shortKey(k: string) { return `${k.slice(0, 6)}…${k.slice(-4)}`; }
 
@@ -62,9 +63,11 @@ export default function VendorOrdersPage() {
   );
 
   if (!publicKey) {
-    return (
-      <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔑</div>
+      return (
+        <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
+        <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
+          <KeyRound size={42} color="var(--text-secondary)" />
+        </div>
         <h2 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>Vendor Orders</h2>
         <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Connect your wallet to manage orders.</p>
         <WalletMultiButton />
@@ -85,7 +88,9 @@ export default function VendorOrdersPage() {
           </div>
         ) : orders.length === 0 ? (
           <div className="glass" style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
-            <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>📦</div>
+            <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}>
+              <Package size={36} color="var(--text-muted)" />
+            </div>
             <p>No orders yet.</p>
           </div>
         ) : (

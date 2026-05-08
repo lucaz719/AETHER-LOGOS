@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Clock3, Heart, Repeat2, ShieldCheck, Star, Store } from "lucide-react";
+import dynamic from "next/dynamic";
+import { ArrowRight, Store } from "lucide-react";
 import { MOCK_STORES, type PublicStore, vendorTypeToSellerTier } from "@/lib/data/mockStores";
+import type { StoreCardItem } from "@/components/stores/StoreCardGrid";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 const FOLLOWED_STORES_KEY = "aether_followed_stores";
@@ -19,11 +21,15 @@ const FILTERS: Array<{ label: string; value: StoreFilter }> = [
   { label: "Wholesaler", value: "wholesaler" },
 ];
 
-const VENDOR_TYPE_COLORS: Record<string, { bg: string; color: string; border: string; activeColor?: string }> = {
-  Manufacturer: { bg: "rgba(249,115,22,0.12)", color: "#fb923c", border: "rgba(249,115,22,0.3)", activeColor: "#F97316" },
-  Wholesaler: { bg: "rgba(168,85,247,0.12)", color: "#a78bfa", border: "rgba(168,85,247,0.3)", activeColor: "#A855F7" },
-  Distributor: { bg: "rgba(6,182,212,0.12)", color: "#22d3ee", border: "rgba(6,182,212,0.3)", activeColor: "#06B6D4" },
-};
+const StoresStatsOverview = dynamic(
+  () => import("@/components/stores/StoresStatsOverview").then((m) => m.StoresStatsOverview),
+  { ssr: false },
+);
+
+const StoreCardGrid = dynamic(
+  () => import("@/components/stores/StoreCardGrid").then((m) => m.StoreCardGrid),
+  { ssr: false },
+);
 
 function toVendorType(value?: string): PublicStore["vendorType"] {
   const v = (value ?? "").toLowerCase();
@@ -32,58 +38,8 @@ function toVendorType(value?: string): PublicStore["vendorType"] {
   return "Wholesaler";
 }
 
-function avgRating(ratingSum: number, ratingCount: number) {
-  if (ratingCount <= 0) return 0;
-  return ratingSum / ratingCount;
-}
-
-function starRow(ratingSum: number, ratingCount: number) {
-  const avg = avgRating(ratingSum, ratingCount);
-  const filled = Math.round(avg);
-  return (
-    <span style={{ color: "var(--amber)", fontSize: "0.75rem", display: "flex", alignItems: "center", gap: "0.2rem" }}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <span key={s} style={{ opacity: s <= filled ? 1 : 0.25, fontSize: "0.75rem" }}>★</span>
-      ))}
-      <small style={{ color: "#A3A3A3", marginLeft: "0.2rem", fontSize: "0.6875rem" }}>
-        {ratingCount > 0 ? avg.toFixed(1) : "—"} ({ratingCount})
-      </small>
-    </span>
-  );
-}
-
-function initialsAvatar(name: string, size = 36) {
-  const initials = name
-    .split(" ")
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  const hue = name.charCodeAt(0) % 360;
-  return (
-    <div
-      aria-hidden="true"
-      style={{
-        width: size,
-        height: size,
-        borderRadius: "var(--radius-sm)",
-        background: `hsl(${hue},50%,18%)`,
-        border: `1px solid hsl(${hue},50%,30%)`,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontWeight: 700,
-        fontSize: size * 0.34,
-        color: `hsl(${hue},60%,70%)`,
-        flexShrink: 0,
-      }}
-    >
-      {initials || "?"}
-    </div>
-  );
-}
-
 function computeStoreIdFromWallet(wallet: string) {
-  return `vendor-${wallet.slice(0, 8)}`;
+  return `vendor-${wallet}`;
 }
 
 function parseCategories(raw: unknown): string[] {
@@ -210,118 +166,6 @@ async function fetchStoreListFromApi(): Promise<StoreListItem[]> {
   return stores.filter((store): store is Exclude<typeof store, null> => store !== null);
 }
 
-function StoreCard({
-  store,
-  isFollowed,
-  onToggleFollow,
-  onEnterStore,
-}: {
-  store: StoreListItem;
-  isFollowed: boolean;
-  onToggleFollow: (storeId: string) => void;
-  onEnterStore: (store: StoreListItem) => void;
-}) {
-  const typeStyle = VENDOR_TYPE_COLORS[store.vendorType] || VENDOR_TYPE_COLORS.Wholesaler;
-
-  return (
-    <article className="group glass relative flex flex-col overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5">
-      {/* Decorative Header */}
-      <div className="h-24 w-full bg-gradient-to-br from-secondary/50 via-background to-secondary/30 relative">
-        <div className="absolute top-4 right-4">
-          <span
-            className="badge font-black uppercase tracking-widest text-[9px]"
-            style={{
-              background: typeStyle.bg,
-              color: typeStyle.color,
-              border: `1px solid ${typeStyle.border}`,
-              padding: "4px 10px",
-            }}
-          >
-            {store.vendorType}
-          </span>
-        </div>
-      </div>
-
-      <div className="px-6 pb-6 -mt-10 relative z-10 flex flex-col flex-1">
-        <div className="flex items-end gap-4 mb-5">
-          <div className="shrink-0 border-4 border-background rounded-2xl shadow-lg">
-            {initialsAvatar(store.shopName, 64)}
-          </div>
-          <div className="pb-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-black text-foreground tracking-tight truncate">
-                {store.shopName}
-              </h3>
-              {store.isVerified && (
-                <ShieldCheck size={16} className="text-green-500 shrink-0" />
-              )}
-            </div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-              {store.location} · EST. {store.memberSince}
-            </p>
-          </div>
-        </div>
-
-        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6 min-h-[40px]">
-          {store.shopDescription}
-        </p>
-
-        {/* Categories */}
-        <div className="flex flex-wrap gap-1.5 mb-6">
-          {store.categories.slice(0, 3).map((category) => (
-            <span
-              key={category}
-              className="px-2.5 py-1 rounded-lg bg-secondary/50 border border-border text-[10px] font-bold text-foreground uppercase tracking-tighter"
-            >
-              {category}
-            </span>
-          ))}
-        </div>
-
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-3 gap-3 rounded-2xl bg-secondary/30 p-3 border border-border/50 mb-6">
-          <div className="text-center">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Rating</p>
-            <div className="flex items-center justify-center gap-1 text-sm font-black text-foreground">
-              <Star size={12} className="text-amber-500 fill-amber-500" />
-              {store.ratingAvg.toFixed(1)}
-            </div>
-          </div>
-          <div className="text-center border-x border-border/50">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Delivery</p>
-            <div className="text-sm font-black text-foreground">{store.onTimeDelivery}%</div>
-          </div>
-          <div className="text-center">
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Repeat</p>
-            <div className="text-sm font-black text-foreground">{store.repeatBuyers}%</div>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="mt-auto flex gap-2">
-          <button
-            type="button"
-            className="flex-1 bg-foreground text-background py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-primary hover:shadow-lg active:scale-95"
-            onClick={() => onEnterStore(store)}
-          >
-            Enter Store
-          </button>
-          <button
-            type="button"
-            onClick={() => onToggleFollow(store.storeId)}
-            className={`px-4 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${isFollowed
-                ? "bg-primary/10 border-primary/20 text-primary"
-                : "bg-transparent border-foreground text-foreground hover:bg-foreground hover:text-background"
-              }`}
-          >
-            <Heart size={16} fill={isFollowed ? "currentColor" : "none"} />
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export default function StoresPage() {
   const router = useRouter();
   const [stores, setStores] = useState<StoreListItem[]>([]);
@@ -380,7 +224,7 @@ export default function StoresPage() {
     localStorage.setItem(FOLLOWED_STORES_KEY, JSON.stringify(next));
   };
 
-  const handleEnterStore = (store: StoreListItem) => {
+  const handleEnterStore = (store: any) => {
     if (store.source === "mock" || store.storeId.startsWith("mock-")) {
       router.push(`/marketplace/vendor/${store.walletAddr}`);
       return;
@@ -420,20 +264,7 @@ export default function StoresPage() {
               </Link>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px] lg:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Suppliers</p>
-                <p className="mt-1 text-2xl font-black text-foreground">{stores.length}</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Verified</p>
-                <p className="mt-1 text-2xl font-black text-foreground">{verifiedCount}</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Followed</p>
-                <p className="mt-1 text-2xl font-black text-foreground">{followedStores.length}</p>
-              </div>
-            </div>
+            <StoresStatsOverview total={stores.length} verified={verifiedCount} followed={followedStores.length} />
           </div>
         </section>
 
@@ -492,17 +323,12 @@ export default function StoresPage() {
             </button>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" style={{ gridAutoFlow: filteredStores.length < 3 ? "dense" : "row", justifyItems: filteredStores.length < 3 ? "start" : "auto" }}>
-            {filteredStores.map((store) => (
-              <StoreCard
-                key={store.id}
-                store={store}
-                isFollowed={followedStores.includes(store.storeId)}
-                onToggleFollow={handleToggleFollow}
-                onEnterStore={handleEnterStore}
-              />
-            ))}
-          </div>
+          <StoreCardGrid
+            stores={filteredStores as StoreCardItem[]}
+            followedStoreIds={followedStores}
+            onToggleFollow={handleToggleFollow}
+            onEnterStore={handleEnterStore}
+          />
         )}
       </div>
     </main>

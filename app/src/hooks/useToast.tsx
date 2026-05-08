@@ -46,10 +46,10 @@ const ToastContext = createContext<ToastContextType>({
 // ── Icons ──────────────────────────────────────────────────────────────────
 
 const ICONS: Record<ToastVariant, string> = {
-  success: '✅',
-  error: '❌',
-  info: 'ℹ️',
-  loading: '⏳',
+  success: 'OK',
+  error: 'ERR',
+  info: 'i',
+  loading: '...',
 };
 
 const COLORS: Record<ToastVariant, { bg: string; border: string; text: string }> = {
@@ -147,7 +147,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           lineHeight: 1,
         }}
       >
-        ✕
+        ×
       </button>
     </div>
   );

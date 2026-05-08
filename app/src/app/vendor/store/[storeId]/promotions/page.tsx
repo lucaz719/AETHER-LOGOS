@@ -152,7 +152,7 @@ export default function StorePromotionsPage() {
         <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Loading promotions…</div>
       ) : promos.length === 0 ? (
         <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-lg)" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🏷</div>
+          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>No promotions</div>
           <h3 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>No promotions yet</h3>
           <p style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>Create discount codes and flash sales to boost your store.</p>
         </div>

@@ -67,7 +67,7 @@ export default async function CategoryPage({
       </h2>
       {listings.length === 0 ? (
         <div className="glass" style={{ textAlign: "center", padding: "3rem", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🏷️</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>No listings</div>
           <p style={{ marginBottom: "1rem" }}>No listings in this category yet.</p>
           <Link href="/marketplace" style={{ color: "var(--cyan)" }}>← Back to Marketplace</Link>
         </div>

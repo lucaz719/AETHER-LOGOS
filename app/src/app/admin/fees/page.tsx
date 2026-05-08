@@ -1,11 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSolPrice, formatUsd, usdToLamports } from '@/hooks/useSolPrice';
+import { PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { useAnchorClient } from '@/hooks/useAnchorClient';
+import { ESCROW_PROGRAM_ID } from '@/lib/anchor';
+import { formatUsd } from '@/hooks/useSolPrice';
+import { toAtoms, toUsd } from '@/lib/units';
 
 export default function AdminFeesPage() {
-  const { solPriceUsd } = useSolPrice();
+  const { connection, escrowProgram, wallet } = useAnchorClient();
   const [withdrawalAmount, setWithdrawalAmount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'usdc' | 'sol'>('usdc');
   const [withdrawalRecipient, setWithdrawalRecipient] = useState<string>('');
@@ -13,21 +19,36 @@ export default function AdminFeesPage() {
   const [withdrawalStatus, setWithdrawalStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
 
-  // Mock data - in production, fetch from blockchain
-  const totalFeesCollected = {
-    usdc: 15_250_00, // $15,250 USDC
-    lamports: 107_500_000_000, // ~0.1075 SOL
-  };
+  const [usdcAtoms, setUsdcAtoms] = useState<number | null>(null);
+  const [solLamports, setSolLamports] = useState<number | null>(null);
+  const [recentWithdrawals, setRecentWithdrawals] = useState<any[]>([]);
+  const DEVNET_USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 
-  const recentWithdrawals = [
-    { id: 1, amount: 5000, currency: 'USDC', timestamp: '2026-05-03 18:30', status: 'confirmed' },
-    { id: 2, amount: 0.05, currency: 'SOL', timestamp: '2026-05-02 14:15', status: 'confirmed' },
-    { id: 3, amount: 3000, currency: 'USDC', timestamp: '2026-04-30 09:45', status: 'confirmed' },
-  ];
+  // Load on-chain balances for fee vault and config account (SOL)
+  useEffect(() => {
+    if (!connection) return;
+    (async () => {
+      try {
+        const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee-vault')], ESCROW_PROGRAM_ID);
+        const [configPda] = PublicKey.findProgramAddressSync([Buffer.from('config')], ESCROW_PROGRAM_ID);
+        const tv = await connection.getTokenAccountBalance(feeVaultPda).catch(() => null);
+        setUsdcAtoms(tv?.value?.amount ? Number(tv.value.amount) : 0);
+        const solBal = await connection.getBalance(configPda).catch(() => 0);
+        setSolLamports(solBal ?? 0);
+      } catch (e) {
+        console.error('failed loading balances', e);
+      }
+    })();
+  }, [connection]);
 
   const handleWithdraw = async () => {
     if (!withdrawalAmount || !withdrawalRecipient) {
       setStatusMessage('Please enter both amount and recipient address');
+      setWithdrawalStatus('error');
+      return;
+    }
+    if (!escrowProgram || !connection || !wallet?.publicKey) {
+      setStatusMessage('Blockchain client unavailable');
       setWithdrawalStatus('error');
       return;
     }
@@ -36,29 +57,45 @@ export default function AdminFeesPage() {
     setWithdrawalStatus('idle');
 
     try {
-      // TODO: Call blockchain withdraw_platform_fees instruction
-      // For now, just simulate success
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (paymentMethod === 'usdc') {
+        const amountAtoms = toAtoms(Number(withdrawalAmount));
+        const [configPda] = PublicKey.findProgramAddressSync([Buffer.from('config')], ESCROW_PROGRAM_ID);
+        const [feeVaultPda] = PublicKey.findProgramAddressSync([Buffer.from('fee-vault')], ESCROW_PROGRAM_ID);
+        const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from('authority')], ESCROW_PROGRAM_ID);
+        const recipientTokenAccount = new PublicKey(withdrawalRecipient);
 
-      setStatusMessage(
-        `Successfully initiated withdrawal of ${withdrawalAmount} ${paymentMethod.toUpperCase()}`
-      );
-      setWithdrawalStatus('success');
-      setWithdrawalAmount('');
-      setWithdrawalRecipient('');
+        // Call Anchor instruction to withdraw platform fees (USDC)
+        const tx = await (escrowProgram.methods as any)
+          .withdrawPlatformFees(new BN(amountAtoms))
+          .accounts({
+            admin: wallet.publicKey,
+            config: configPda,
+            feeVault: feeVaultPda,
+            vaultAuthority: vaultAuth,
+            recipientTokenAccount: recipientTokenAccount,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          })
+          .rpc();
+
+        setStatusMessage(`Successfully withdrew ${withdrawalAmount} USDC — tx: ${tx}`);
+        setWithdrawalStatus('success');
+        setWithdrawalAmount('');
+        setWithdrawalRecipient('');
+        const bal = await connection.getTokenAccountBalance(feeVaultPda).catch(() => null);
+        setUsdcAtoms(bal?.value?.amount ? Number(bal.value.amount) : 0);
+      } else {
+        setStatusMessage('SOL withdrawal must be performed via on-chain governance or CLI — not supported in UI.');
+        setWithdrawalStatus('error');
+      }
     } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Failed to process withdrawal'
-      );
+      setStatusMessage(error instanceof Error ? error.message : 'Failed to process withdrawal');
       setWithdrawalStatus('error');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const totalUsdValue =
-    (totalFeesCollected.usdc / 1_000_000) +
-    (totalFeesCollected.lamports / 1_000_000_000) * solPriceUsd;
+  const totalUsdValue = toUsd(usdcAtoms ?? 0);
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -106,7 +143,7 @@ export default function AdminFeesPage() {
             USDC Collected
           </div>
           <div style={{ color: 'var(--green)', fontSize: '1.8rem', fontWeight: 700 }}>
-            ${(totalFeesCollected.usdc / 1_000_000).toFixed(2)}
+            ${((usdcAtoms ?? 0) / 1_000_000).toFixed(2)}
           </div>
         </div>
 
@@ -116,7 +153,7 @@ export default function AdminFeesPage() {
             SOL Collected
           </div>
           <div style={{ color: 'var(--violet)', fontSize: '1.8rem', fontWeight: 700 }}>
-            {(totalFeesCollected.lamports / 1_000_000_000).toFixed(6)} SOL
+            ${((solLamports ?? 0) / 1_000_000_000).toFixed(6)} SOL
           </div>
         </div>
       </div>
@@ -147,7 +184,7 @@ export default function AdminFeesPage() {
                 transition: 'all 0.2s',
               }}
             >
-              💵 USDC
+              USDC
             </button>
             <button
               onClick={() => setPaymentMethod('sol')}
@@ -185,9 +222,9 @@ export default function AdminFeesPage() {
             <button
               onClick={() => {
                 if (paymentMethod === 'usdc') {
-                  setWithdrawalAmount((totalFeesCollected.usdc / 1_000_000).toString());
+                  setWithdrawalAmount(((usdcAtoms ?? 0) / 1_000_000).toString());
                 } else {
-                  setWithdrawalAmount((totalFeesCollected.lamports / 1_000_000_000).toString());
+                  setWithdrawalAmount(((solLamports ?? 0) / 1_000_000_000).toString());
                 }
               }}
               style={{
@@ -263,7 +300,7 @@ export default function AdminFeesPage() {
           }}
         >
           {isProcessing
-            ? '⏳ Processing Withdrawal…'
+            ? 'Processing Withdrawal…'
             : `Withdraw ${paymentMethod.toUpperCase()}`}
         </button>
       </div>

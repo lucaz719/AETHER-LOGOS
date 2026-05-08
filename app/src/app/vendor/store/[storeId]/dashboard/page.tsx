@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
+import { FileText, Package, Settings, Tag } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 
@@ -65,10 +66,10 @@ export default function StoreDashboardPage() {
   ];
 
   const quickLinks = [
-    { href: `/vendor/store/${storeId}/products`, label: "Manage Products", icon: "📦" },
-    { href: `/vendor/store/${storeId}/orders`, label: "View Orders", icon: "🧾" },
-    { href: `/vendor/store/${storeId}/promotions`, label: "Create Promo", icon: "🏷" },
-    { href: `/vendor/store/${storeId}/settings`, label: "Store Settings", icon: "⚙" },
+    { href: `/vendor/store/${storeId}/products`, label: "Manage Products", icon: Package },
+    { href: `/vendor/store/${storeId}/orders`, label: "View Orders", icon: FileText },
+    { href: `/vendor/store/${storeId}/promotions`, label: "Create Promo", icon: Tag },
+    { href: `/vendor/store/${storeId}/settings`, label: "Store Settings", icon: Settings },
   ];
 
   return (
@@ -104,7 +105,7 @@ export default function StoreDashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
         {quickLinks.map((q) => (
           <Link key={q.href} href={q.href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem 1.25rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--bg-surface)", textDecoration: "none", transition: "all var(--transition)" }}>
-            <span style={{ fontSize: "1.25rem" }}>{q.icon}</span>
+            <q.icon size={20} color="var(--text-secondary)" />
             <span style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--text-primary)" }}>{q.label}</span>
           </Link>
         ))}

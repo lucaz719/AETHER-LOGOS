@@ -34,7 +34,7 @@ export function OrderStatusStepper({
   if (isCancelled) {
     return (
       <div className="badge badge-red" style={{ padding: "0.4rem 0.9rem", fontSize: "0.82rem" }}>
-        ✕ Order Cancelled
+        Order Cancelled
       </div>
     );
   }

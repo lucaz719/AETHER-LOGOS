@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { Package } from "lucide-react";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 const CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "FoodBeverage", "Chemicals", "Automotive", "Healthcare", "Construction", "Other"];
@@ -247,7 +248,9 @@ export default function StoreProductsPage() {
         <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Loading products…</div>
       ) : products.length === 0 ? (
         <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-lg)" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>📦</div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}>
+            <Package size={40} color="var(--text-muted)" />
+          </div>
           <p style={{ color: "var(--text-muted)" }}>No products yet. Add your first product above.</p>
         </div>
       ) : (
@@ -257,7 +260,7 @@ export default function StoreProductsPage() {
               <div>
                 <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.9rem" }}>{p.title}</div>
                 <div style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                  {p.category} · ${p.price_usdc.toFixed(2)} USDC · MOQ {p.moq} · {p.lead_time_days}d · ★{p.rating.toFixed(1)} · {p.seller_tier}
+                  {p.category} · ${p.price_usdc.toFixed(2)} USDC · MOQ {p.moq} · {p.lead_time_days}d · <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--amber)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg>{p.rating.toFixed(1)}</span> · {p.seller_tier}
                 </div>
               </div>
               <span style={{ padding: "0.2rem 0.6rem", borderRadius: "var(--radius-pill)", fontSize: "0.72rem", fontWeight: 700, color: p.in_stock ? "var(--green)" : "var(--red)", background: p.in_stock ? "var(--green-dim)" : "rgba(239,68,68,0.1)", border: `1px solid ${p.in_stock ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}` }}>

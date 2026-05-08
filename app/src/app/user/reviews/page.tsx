@@ -33,7 +33,7 @@ export default function UserReviewsPage() {
 
       {/* Empty state */}
       <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-lg)" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>★</div>
+        <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--amber)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg></div>
         <p style={{ color: "var(--text-muted)", marginBottom: "0.5rem" }}>No reviews yet.</p>
         <p style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>After completing a purchase, you can leave a review for the vendor.</p>
       </div>

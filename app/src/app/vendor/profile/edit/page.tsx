@@ -9,6 +9,7 @@ import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import { Skeleton } from "@/components/Skeleton";
+import { CheckCircle2, KeyRound } from "lucide-react";
 
 const VENDOR_TYPES = ["Retailer", "Wholesaler", "Distributor", "Manufacturer"] as const;
 const CATEGORY_OPTIONS = [
@@ -181,7 +182,9 @@ export default function EditVendorProfilePage() {
   if (!publicKey) {
     return (
       <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔑</div>
+        <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
+          <KeyRound size={42} color="var(--text-secondary)" />
+        </div>
         <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>
           Connect your wallet to edit your vendor profile.
         </p>
@@ -211,7 +214,10 @@ export default function EditVendorProfilePage() {
             {/* Success banner */}
             {success && (
               <div style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", borderRadius: "var(--radius-md)", padding: "0.85rem 1rem", color: "var(--green)", fontSize: "0.9rem" }}>
-                ✅ Profile updated — redirecting to dashboard…
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                  <CheckCircle2 size={16} />
+                  Profile updated — redirecting to dashboard…
+                </span>
               </div>
             )}
 

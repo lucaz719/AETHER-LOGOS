@@ -4,16 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const CATEGORIES = [
-  { slug: "electronics", label: "Electronics", icon: "⚡" },
-  { slug: "apparel", label: "Apparel", icon: "👗" },
-  { slug: "home-goods", label: "Home Goods", icon: "🏠" },
-  { slug: "machinery", label: "Machinery", icon: "⚙️" },
-  { slug: "food-beverage", label: "Food & Beverage", icon: "🍎" },
-  { slug: "chemicals", label: "Chemicals", icon: "🧪" },
-  { slug: "automotive", label: "Automotive", icon: "🚗" },
-  { slug: "healthcare", label: "Healthcare", icon: "🏥" },
-  { slug: "construction", label: "Construction", icon: "🏗️" },
-  { slug: "other", label: "Other", icon: "📦" },
+  { slug: "electronics", label: "Electronics" },
+  { slug: "apparel", label: "Apparel" },
+  { slug: "home-goods", label: "Home Goods" },
+  { slug: "machinery", label: "Machinery" },
+  { slug: "food-beverage", label: "Food & Beverage" },
+  { slug: "chemicals", label: "Chemicals" },
+  { slug: "automotive", label: "Automotive" },
+  { slug: "healthcare", label: "Healthcare" },
+  { slug: "construction", label: "Construction" },
+  { slug: "other", label: "Other" },
 ];
 
 export function CategoryNav({ active }: { active?: string }) {
@@ -64,7 +64,7 @@ export function CategoryNav({ active }: { active?: string }) {
             transition: "border-color var(--transition), color var(--transition), background var(--transition)",
           }}
         >
-          {cat.icon} {cat.label}
+          {cat.label}
         </Link>
       ))}
     </div>

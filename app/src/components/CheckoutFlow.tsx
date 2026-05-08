@@ -7,6 +7,7 @@ import { useSolPrice, formatUsd, usdToLamports } from "@/hooks/useSolPrice";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
+import { AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 
 type Step = "review" | "approve" | "confirm" | "done";
 type PaymentMethod = "usdc" | "sol";
@@ -53,7 +54,9 @@ export function CheckoutFlow() {
           className="glass"
           style={{ textAlign: "center", padding: "3rem 2rem" }}
         >
-          <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>✅</div>
+          <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
+            <CheckCircle2 size={56} color="var(--green)" />
+          </div>
           <h2 style={{ color: "var(--green)", marginBottom: "0.5rem" }}>Order placed!</h2>
           <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", marginBottom: "1rem" }}>
             {txSigs.length} order(s) created. {paymentMethod === "usdc" ? "USDC" : "SOL"} locked in escrow vault.
@@ -122,7 +125,7 @@ export function CheckoutFlow() {
             transition: "all 0.2s",
           }}
         >
-          💵 USDC
+          USDC
         </button>
         <button
           onClick={() => setPaymentMethod("sol")}
@@ -156,7 +159,7 @@ export function CheckoutFlow() {
           }}
         >
           {priceError ? (
-            <span>⚠️ Unable to fetch SOL price</span>
+            <span><AlertTriangle size={14} style={{ display: "inline", marginRight: "0.35rem" }} />Unable to fetch SOL price</span>
           ) : (
             <span>1 SOL = {formatUsd(solPriceUsd)}</span>
           )}
@@ -248,7 +251,7 @@ export function CheckoutFlow() {
           alignItems: "flex-start",
         }}
       >
-        <span style={{ fontSize: "1.1rem" }}>🔒</span>
+        <ShieldCheck size={18} />
         <span>Funds are locked in the escrow vault on Solana and released to the seller only upon verified delivery.</span>
       </div>
 
@@ -280,12 +283,12 @@ export function CheckoutFlow() {
           style={{ width: "100%", fontSize: "1rem", padding: "0.85rem", marginTop: "1rem" }}
         >
           {state === "signing"
-            ? "⏳ Waiting for signature…"
+            ? "Waiting for signature…"
             : state === "confirming"
-            ? "⏳ Confirming…"
+            ? "Confirming…"
             : paymentMethod === "sol"
-            ? "⚡ Lock SOL & Checkout"
-            : "🔒 Place Order & Lock Funds"}
+            ? "Lock SOL & Checkout"
+            : "Place Order & Lock Funds"}
         </button>
       )}
     </div>

@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from "react";
-import { ShieldCheck, Zap, ShoppingCart, Plus, ArrowRight } from "lucide-react";
+import { ShieldCheck, Zap, ShoppingCart, Plus, ArrowRight, Star } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/useToast";
+import { toAtoms } from "@/lib/units";
 
 type ProductCardProps = {
   productId: string;
@@ -74,8 +75,7 @@ export function ProductCard({
     if (adding) return;
     
     setAdding(true);
-    // Convert dollars to micro-USDC for the cart hook which expects atoms
-    const priceAtoms = Math.round(priceUsdc * 1_000_000);
+    const priceAtoms = toAtoms(priceUsdc);
     
     addItem({
       listingPubkey: productId,
@@ -155,7 +155,7 @@ export function ProductCard({
         <div className="mt-5 flex items-center justify-between rounded-xl border border-border/50 bg-secondary/30 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-0.5 text-xs font-bold text-foreground">
-              <span className="text-amber-500">★</span>
+              <Star size={12} className="text-amber-500" />
               {rating.toFixed(1)}
             </div>
             <div className="h-3 w-px bg-border" />
@@ -167,24 +167,24 @@ export function ProductCard({
         </div>
 
         {/* Dynamic Actions */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-2 gap-2.5">
           <button
             type="button"
             onClick={handleQuickBuy}
-            className="flex items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-xs font-black text-background transition-all hover:bg-primary hover:shadow-lg active:scale-[0.98]"
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-[10px] font-black text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/20 active:scale-[0.97]"
           >
             BUY NOW
-            <ArrowRight size={14} />
+            <ArrowRight size={12} />
           </button>
           
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={adding}
-            className={`flex items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-xs font-black transition-all active:scale-[0.98] ${
+            className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[10px] font-black transition-all active:scale-[0.97] ${
               inCart || adding
-                ? "border-primary/20 bg-primary/10 text-primary"
-                : "border-foreground bg-transparent hover:bg-foreground hover:text-background"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-white/10 bg-white/5 text-foreground hover:bg-white/10 hover:border-white/20"
             }`}
           >
             {adding ? (
@@ -193,7 +193,7 @@ export function ProductCard({
               <>IN CART</>
             ) : (
               <>
-                <Plus size={14} />
+                <Plus size={12} />
                 ADD TO CART
               </>
             )}

@@ -91,7 +91,7 @@ export default function VendorStoresPage() {
   if (!publicKey) {
     return (
       <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🏪</div>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>Store</div>
         <h2 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>My Stores</h2>
         <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Connect your wallet to manage your stores.</p>
         <WalletMultiButton />
@@ -158,7 +158,7 @@ export default function VendorStoresPage() {
         <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Loading stores…</div>
       ) : stores.length === 0 ? (
         <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-lg)" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🏪</div>
+          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>Store</div>
           <h3 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>No stores yet</h3>
           <p style={{ color: "var(--text-muted)", marginBottom: "1.25rem" }}>Create your first store to start selling.</p>
           <button className="btn-primary" onClick={() => setShowForm(true)}>Create Store</button>
@@ -186,7 +186,7 @@ export default function VendorStoresPage() {
                   Manage →
                 </Link>
                 <Link href={`/vendor/store/${store.id}/settings`} className="btn-ghost" style={{ textDecoration: "none", fontSize: "0.82rem" }}>
-                  ⚙
+                  Settings
                 </Link>
               </div>
             </div>

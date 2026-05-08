@@ -4,6 +4,8 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
   ? require('@next/bundle-analyzer')({ enabled: true })
   : (config) => config;
 
+const webpack = require('webpack');
+
 const nextConfig = {
   transpilePackages: [
     '@solana/wallet-adapter-base',
@@ -42,6 +44,12 @@ const nextConfig = {
     },
   },
   webpack(config, { isServer }) {
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+      })
+    );
+
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       'bigint-buffer': require.resolve('bigint-buffer/dist/browser.js'),

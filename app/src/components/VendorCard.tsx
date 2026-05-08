@@ -18,7 +18,9 @@ function StarRow({ avg, count }: { avg: number; count: number }) {
   return (
     <span style={{ color: 'var(--amber)', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
       {[1, 2, 3, 4, 5].map((s) => (
-        <span key={s} style={{ opacity: s <= filled ? 1 : 0.25 }}>★</span>
+        <span key={s} style={{ opacity: s <= filled ? 1 : 0.25 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--amber)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg>
+        </span>
       ))}
       <small style={{ color: 'var(--text-muted)', marginLeft: '0.2rem', fontSize: '0.72rem' }}>
         {label} ({count})

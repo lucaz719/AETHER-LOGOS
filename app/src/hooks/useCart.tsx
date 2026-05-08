@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { toAtoms, toUsd } from "@/lib/units";
 
 export type CartItem = {
   listingPubkey: string;
@@ -22,6 +23,7 @@ type CartContextType = {
   updateQty: (listingPubkey: string, quantity: number) => void;
   clearCart: () => void;
   totalUsdc: number;
+  totalUsd: number;
 };
 
 const CartContext = createContext<CartContextType>({
@@ -31,9 +33,17 @@ const CartContext = createContext<CartContextType>({
   updateQty: () => {},
   clearCart: () => {},
   totalUsdc: 0,
+  totalUsd: 0,
 });
 
 const STORAGE_KEY = "aether_cart";
+
+function normalizeToAtoms(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  // Cart contract expects atoms; large integer values are already atom-denominated.
+  if (Number.isInteger(value) && value >= 1_000_000) return value;
+  return toAtoms(value);
+}
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -59,7 +69,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ? prev.map((i) =>
               i.listingPubkey === item.listingPubkey ? { ...i, quantity: i.quantity + qty } : i,
             )
-          : [...prev, { ...item, quantity: qty }];
+          : [...prev, { ...item, priceUsdc: normalizeToAtoms(item.priceUsdc), quantity: qty }];
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
         return next;
       });
@@ -89,9 +99,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const clearCart = useCallback(() => persist([]), [persist]);
 
   const totalUsdc = items.reduce((acc, i) => acc + i.priceUsdc * i.quantity, 0);
+  const totalUsd = toUsd(totalUsdc);
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, totalUsdc }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, totalUsdc, totalUsd }}>
       {children}
     </CartContext.Provider>
   );

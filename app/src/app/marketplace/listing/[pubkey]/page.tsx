@@ -46,7 +46,7 @@ export default function ListingPage() {
   if (!listing || !listing.account) {
     return (
       <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🔍</div>
+        <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>Search</div>
         <p style={{ color: "var(--text-muted)" }}>Listing not found.</p>
         <Link href="/marketplace" style={{ color: "var(--cyan)" }}>← Back to Marketplace</Link>
       </main>
@@ -108,7 +108,7 @@ export default function ListingPage() {
                 background: "linear-gradient(135deg, rgba(0,212,255,0.04), rgba(124,58,237,0.06))",
               }}
             >
-              📦
+              No image
             </div>
           )}
         </div>
@@ -206,7 +206,7 @@ export default function ListingPage() {
               gap: "0.5rem",
             }}
           >
-            🔒 USDC locked in on-chain escrow vault upon order placement
+            USDC locked in on-chain escrow vault upon order placement
           </div>
 
           <Link

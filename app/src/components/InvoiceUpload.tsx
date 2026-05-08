@@ -48,12 +48,12 @@ export function InvoiceUpload({
   return (
     <div 
       onClick={() => fileInputRef.current?.click()}
-      className={`relative group cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 p-6 flex flex-col items-center justify-center gap-3 ${
+      className={`relative group cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 p-8 flex flex-col items-center justify-center gap-4 ${
         preview 
-          ? "border-green-500/50 bg-green-500/5" 
+          ? "border-green-500/40 bg-green-500/5 backdrop-blur-sm" 
           : error 
-            ? "border-red-500/50 bg-red-500/5" 
-            : "border-border hover:border-primary/50 hover:bg-primary/5"
+            ? "border-red-500/40 bg-red-500/5 backdrop-blur-sm" 
+            : "border-white/10 bg-white/5 hover:border-primary/40 hover:bg-primary/5 backdrop-blur-md"
       }`}
     >
       <input

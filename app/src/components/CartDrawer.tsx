@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/hooks/useCart';
 import Link from 'next/link';
+import { Lock, ShoppingCart } from 'lucide-react';
 
 export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { items, removeItem, updateQty, totalUsdc } = useCart();
@@ -85,8 +86,9 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
             borderBottom: '1px solid var(--border)',
           }}
         >
-          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
-            🛒 Cart
+          <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+            <ShoppingCart size={14} />
+            Cart
             <span style={{ color: 'var(--text-muted)', fontWeight: 400, fontSize: '0.82rem', marginLeft: '0.4rem' }}>
               ({items.length} {items.length === 1 ? 'item' : 'items'})
             </span>
@@ -109,7 +111,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               transition: 'border-color var(--transition)',
             }}
           >
-            ✕
+            ×
           </button>
         </div>
 
@@ -117,7 +119,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
         <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem 1.25rem', display: 'grid', gap: '0.6rem', alignContent: 'flex-start' }}>
           {items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.75rem', filter: 'grayscale(1)' }}>🛒</div>
+              <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}><ShoppingCart size={40} color="var(--text-muted)" /></div>
               <p style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>Your cart is empty</p>
               <p style={{ fontSize: '0.82rem' }}>Browse the marketplace to add items.</p>
               <Link
@@ -146,7 +148,10 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                   ${(item.priceUsdc / 1_000_000).toFixed(2)} USDC
                   <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> × {item.quantity} = ${((item.priceUsdc * item.quantity) / 1_000_000).toFixed(2)}</span>
                 </div>
-                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>🔒 Funds locked in escrow on checkout</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <Lock size={11} />
+                  Funds locked in escrow on checkout
+                </div>
                 <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center', marginTop: '0.2rem' }}>
                   <button
                     aria-label="Decrease quantity"

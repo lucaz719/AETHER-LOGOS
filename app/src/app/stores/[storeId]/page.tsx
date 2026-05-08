@@ -160,6 +160,44 @@ export default function StoreDetailPage() {
           return;
         }
 
+        if (storeId.startsWith("vendor-")) {
+          const wallet = storeId.replace("vendor-", "");
+          const [vendorRes, productsRes] = await Promise.all([
+            fetch(`${API}/api/vendor/${wallet}`),
+            fetch(`${API}/api/products?vendor=${wallet}`),
+          ]);
+
+          if (!vendorRes.ok) {
+            setError("Supplier not found.");
+            setStore(null);
+            setProducts([]);
+            return;
+          }
+
+          const vendorPayload = await vendorRes.json();
+          const mappedStore = buildStoreFromApi(storeId, {
+            owner_wallet: wallet,
+            store_name: vendorPayload.shop_name,
+            description: vendorPayload.description,
+            store_type: vendorPayload.vendor_type,
+            categories: vendorPayload.categories,
+            is_verified: true,
+            created_at: vendorPayload.created_at,
+          });
+
+          let mappedProducts: DashboardProduct[] = [];
+          if (productsRes.ok) {
+            const productsPayload = await productsRes.json();
+            mappedProducts = (productsPayload.products ?? []).map((item: any) =>
+              mapApiProductToDashboardProduct(item, mappedStore.shopName, mappedStore.walletAddr, mappedStore.vendorType)
+            );
+          }
+
+          setStore({ ...mappedStore, products: mappedProducts });
+          setProducts(mappedProducts);
+          return;
+        }
+
         const [storeRes, productsRes] = await Promise.all([
           fetch(`${API}/api/stores/${storeId}`),
           fetch(`${API}/api/stores/${storeId}/products`),

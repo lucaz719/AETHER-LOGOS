@@ -72,7 +72,7 @@ export function VendorTabs({
         <section>
           {listings.length === 0 ? (
             <div className="glass" style={{ textAlign: "center", padding: "2.5rem", color: "var(--text-muted)" }}>
-              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📦</div>
+              <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>No listings</div>
               <p>No listings yet from this vendor.</p>
             </div>
           ) : (
@@ -135,9 +135,9 @@ export function VendorTabs({
                 return (
                   <div key={r.pubkey} className="glass" style={{ padding: "1rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                      <span style={{ color: "var(--amber)", fontSize: "1rem" }}>
-                        {"★".repeat(rating)}
-                        {"☆".repeat(5 - rating)}
+                      <span style={{ color: "var(--amber)", fontSize: "1rem", display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--amber)' }} xmlns="http://www.w3.org/2000/svg"><path d="M12 .587l3.668 7.431L24 9.753l-6 5.848L19.335 24 12 19.897 4.665 24 6 15.601 0 9.753l8.332-1.735z"/></svg>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{rating}</span>
                       </span>
                       <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>{createdAt}</span>
                     </div>

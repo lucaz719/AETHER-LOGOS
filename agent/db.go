@@ -243,6 +243,18 @@ func InitDB(path string) error {
 	if _, err = db.Exec(`ALTER TABLE products ADD COLUMN short_description TEXT`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
 	}
+	if _, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_shipments_trade_account ON shipments(trade_account)`); err != nil {
+		return err
+	}
+	if _, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_shipments_tracking_id ON shipments(tracking_id)`); err != nil {
+		return err
+	}
+	if _, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_products_vendor_wallet ON products(vendor_wallet)`); err != nil {
+		return err
+	}
+	if _, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_shipment_milestones_shipment_timestamp ON shipment_milestones(shipment_id, timestamp)`); err != nil {
+		return err
+	}
 	return nil
 }
 

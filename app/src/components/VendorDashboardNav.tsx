@@ -1,12 +1,12 @@
 import Link from "next/link";
 
 const NAV_ITEMS = [
-  { href: "/vendor/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/vendor/listings", label: "My Listings", icon: "📋" },
-  { href: "/vendor/listings/new", label: "New Listing", icon: "+" },
-  { href: "/vendor/orders", label: "Orders", icon: "📦" },
-  { href: "/vendor/profile/edit", label: "Edit Profile", icon: "✏️" },
-  { href: "/vendor/register", label: "Register Shop", icon: "🏪" },
+  { href: "/vendor/dashboard", label: "Dashboard" },
+  { href: "/vendor/listings", label: "My Listings" },
+  { href: "/vendor/listings/new", label: "New Listing" },
+  { href: "/vendor/orders", label: "Orders" },
+  { href: "/vendor/profile/edit", label: "Edit Profile" },
+  { href: "/vendor/register", label: "Register Shop" },
 ];
 
 export function VendorDashboardNav({ active }: { active: string }) {
@@ -42,7 +42,6 @@ export function VendorDashboardNav({ active }: { active: string }) {
               transition: "all var(--transition)",
             }}
           >
-            <span>{item.icon}</span>
             {item.label}
           </Link>
         );

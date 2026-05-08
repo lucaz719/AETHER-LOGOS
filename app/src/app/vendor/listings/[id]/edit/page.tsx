@@ -172,7 +172,7 @@ export default function EditListingPage() {
               ) : uploading ? (
                 <span style={{ color: "var(--text-muted)" }}>Uploading…</span>
               ) : (
-                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>🖼️ Click to replace image</div>
+                <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Click to replace image</div>
               )}
               <input
                 id="edit-image-input"

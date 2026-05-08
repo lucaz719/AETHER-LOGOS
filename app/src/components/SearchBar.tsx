@@ -38,7 +38,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
             pointerEvents: "none",
           }}
         >
-          🔍
+          Search
         </span>
         <input
           type="text"
@@ -70,7 +70,7 @@ export function SearchBar({ initialQuery = "" }: { initialQuery?: string }) {
             }}
             aria-label="Clear search"
           >
-            ✕
+            ×
           </button>
         )}
       </div>

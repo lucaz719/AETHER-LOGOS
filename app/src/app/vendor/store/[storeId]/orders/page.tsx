@@ -8,6 +8,7 @@ import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useMarketplaceOrders } from "@/hooks/useMarketplaceOrders";
 import { useInterval } from "@/hooks/useInterval";
 import { OrderStatusStepper } from "@/components/OrderStatusStepper";
+import { FileText } from "lucide-react";
 
 const CARRIERS = ["DHL", "FedEx", "UPS", "Maersk", "USPS"];
 
@@ -67,7 +68,9 @@ export default function StoreOrdersPage() {
         <div style={{ color: "var(--text-muted)", padding: "2rem" }}>Loading orders…</div>
       ) : orders.length === 0 ? (
         <div className="glass" style={{ padding: "3rem", textAlign: "center", borderRadius: "var(--radius-lg)" }}>
-          <div style={{ fontSize: "3rem", marginBottom: "0.75rem" }}>🧾</div>
+          <div style={{ marginBottom: "0.75rem", display: "flex", justifyContent: "center" }}>
+            <FileText size={40} color="var(--text-muted)" />
+          </div>
           <p style={{ color: "var(--text-muted)" }}>No orders yet.</p>
         </div>
       ) : (

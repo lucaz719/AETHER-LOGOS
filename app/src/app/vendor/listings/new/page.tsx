@@ -8,6 +8,7 @@ import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID } from "@/lib/anchor";
 import { VendorDashboardNav } from "@/components/VendorDashboardNav";
 import Link from "next/link";
+import { CheckCircle2, ImageIcon } from "lucide-react";
 
 const CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "FoodBeverage", "Chemicals", "Automotive", "Healthcare", "Construction", "Other"];
 
@@ -140,7 +141,9 @@ export default function NewListingPage() {
         </h1>
         {done ? (
           <div className="glass" style={{ textAlign: "center", padding: "3rem" }}>
-            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✅</div>
+            <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
+              <CheckCircle2 size={44} color="var(--green)" />
+            </div>
             <h2 style={{ color: "var(--green)", marginBottom: "0.5rem" }}>Listing created on-chain!</h2>
             <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", marginTop: "1.25rem" }}>
               <Link href="/vendor/listings" className="btn-primary" style={{ textDecoration: "none" }}>
@@ -192,7 +195,9 @@ export default function NewListingPage() {
                   <span style={{ color: "var(--text-muted)" }}>Uploading to IPFS…</span>
                 ) : (
                   <>
-                    <div style={{ fontSize: "2rem", marginBottom: "0.4rem" }}>🖼️</div>
+                    <div style={{ marginBottom: "0.4rem", display: "flex", justifyContent: "center" }}>
+                      <ImageIcon size={28} color="var(--text-secondary)" />
+                    </div>
                     <div style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>Click to upload image (pinned to IPFS)</div>
                   </>
                 )}

@@ -49,7 +49,7 @@ function SearchResults() {
           </div>
         ) : listings.length === 0 ? (
           <EmptyState
-            icon="🔍"
+            icon=""
             title="No results found"
             message={q ? `We couldn't find any listings matching "${q}". Try adjusting your filters or search terms.` : "No listings match the selected filters."}
             action={q ? { label: "Clear Search", href: "/marketplace/search" } : undefined}

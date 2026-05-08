@@ -504,6 +504,7 @@ func VendorGetHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	wallet := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, prefix))
+	wallet = strings.TrimSuffix(wallet, "/")
 	if wallet == "" {
 		http.Error(w, "wallet is required", http.StatusBadRequest)
 		return

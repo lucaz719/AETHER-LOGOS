@@ -9,12 +9,12 @@ export default function CartPage() {
   return (
     <main className="page-container" style={{ maxWidth: 700 }}>
       <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "1.75rem" }}>
-        🛒 Cart
+        Cart
       </h1>
 
       {items.length === 0 ? (
         <div className="glass" style={{ textAlign: "center", padding: "4rem 2rem", color: "var(--text-muted)" }}>
-          <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🛒</div>
+          <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>Cart</div>
           <p style={{ marginBottom: "1.25rem" }}>Your cart is empty.</p>
           <Link href="/marketplace" className="btn-primary" style={{ textDecoration: "none" }}>
             Browse Marketplace →
@@ -101,7 +101,7 @@ export default function CartPage() {
             className="btn-primary"
             style={{ display: "block", textAlign: "center", fontSize: "1rem", padding: "0.85rem", textDecoration: "none" }}
           >
-            🔒 Proceed to Checkout
+            Proceed to Checkout
           </Link>
         </div>
       )}
