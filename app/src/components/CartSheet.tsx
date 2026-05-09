@@ -23,7 +23,7 @@ export default function CartSheet() {
     params.set('productId', String(primary.listingPubkey));
     params.set('title', primary.title);
     params.set('sellerWallet', primary.vendorAuthority);
-    params.set('usdcMint', DEVNET_USDC_MINT);
+    params.set('usdcMint', primary.usdcMint ?? DEVNET_USDC_MINT);
     params.set('tier', primary.tier ?? 'wholesaler');
     params.set('moq', String(primary.moq ?? primary.quantity ?? 1));
     params.set('leadTimeDays', String(primary.leadTimeDays ?? 7));
@@ -36,6 +36,7 @@ export default function CartSheet() {
       params.set(`item_${idx}_priceUsdc`, String(item.priceUsdc / 1_000_000));
       params.set(`item_${idx}_quantity`, String(item.quantity));
       params.set(`item_${idx}_sellerWallet`, item.vendorAuthority);
+      if (item.usdcMint) params.set(`item_${idx}_usdcMint`, String(item.usdcMint));
     });
 
     window.location.href = `/trades?${params.toString()}`;

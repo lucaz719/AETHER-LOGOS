@@ -84,6 +84,7 @@ export function ProductCard({
       title,
       priceUsdc: priceAtoms,
       quantity: moq,
+      usdcMint,
       tier: sellerTier,
       moq,
       leadTimeDays,
@@ -100,9 +101,9 @@ export function ProductCard({
   };
 
   return (
-    <article className="group glass flex flex-col overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5">
+    <article className="group glass dense-card flex flex-col overflow-hidden transition-all duration-300 border border-white/5 backdrop-blur-3xl hover:shadow-2xl hover:shadow-primary/20">
       {/* Visual Header */}
-      <div className="relative h-44 w-full bg-gradient-to-br from-secondary via-background to-secondary/50">
+      <div className="relative h-32 w-full bg-gradient-to-br from-secondary/10 via-background to-secondary/30">
         <div className="absolute inset-0 flex items-center justify-center opacity-10 transition-opacity group-hover:opacity-20">
            <div className="text-6xl font-black tracking-tighter uppercase select-none">
              {category.split(" ").map(w => w[0]).join("")}
@@ -125,7 +126,7 @@ export function ProductCard({
       </div>
 
       {/* Content Area */}
-      <div className="flex flex-1 flex-col p-6">
+      <div className="flex flex-1 flex-col p-4">
         <div className="mb-4">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1.5">
             {category}
@@ -136,23 +137,21 @@ export function ProductCard({
         </div>
 
         {/* Pricing Matrix */}
-        <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border/50 pt-4">
+        <div className="mt-auto grid grid-cols-3 gap-3 border-t border-border/30 pt-3 text-sm">
           <div>
-            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Unit Price</p>
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Unit</p>
             <p className="text-xl font-black text-foreground tracking-tight mt-0.5">
               {formatter.format(priceUsdc)}
             </p>
           </div>
-          <div className="text-right">
-             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Min. Quantity</p>
-             <p className="text-sm font-bold text-foreground mt-1">
-              {moq} <span className="text-[10px] text-muted-foreground uppercase ml-0.5">Units</span>
-            </p>
+          <div className="text-center">
+            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">MOQ</p>
+            <p className="text-sm font-bold text-foreground mt-1">{moq}</p>
           </div>
         </div>
 
         {/* Institutional Stats */}
-        <div className="mt-5 flex items-center justify-between rounded-xl border border-border/50 bg-secondary/30 px-3 py-2.5">
+        <div className="mt-3 flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 px-3 py-2.5 backdrop-blur-3xl border-white/5">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-0.5 text-xs font-bold text-foreground">
               <Star size={12} className="text-amber-500" />
@@ -171,9 +170,9 @@ export function ProductCard({
           <button
             type="button"
             onClick={handleQuickBuy}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-[10px] font-black text-primary-foreground transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/20 active:scale-[0.97]"
+            className="btn-primary w-full md:w-auto flex items-center justify-center gap-2"
           >
-            BUY NOW
+            BUY
             <ArrowRight size={12} />
           </button>
           
@@ -181,11 +180,7 @@ export function ProductCard({
             type="button"
             onClick={handleAddToCart}
             disabled={adding}
-            className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[10px] font-black transition-all active:scale-[0.97] ${
-              inCart || adding
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-white/10 bg-white/5 text-foreground hover:bg-white/10 hover:border-white/20"
-            }`}
+            className={`btn-ghost w-full md:w-auto flex items-center justify-center gap-2 ${inCart || adding ? 'opacity-80' : ''}`}
           >
             {adding ? (
               <span className="animate-pulse">ADDING...</span>

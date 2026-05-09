@@ -10,6 +10,7 @@ export type CartItem = {
   title: string;
   priceUsdc: number; // micro-USDC (6 decimals)
   quantity: number;
+  usdcMint?: string;
   imagesCid?: string;
   tier?: string;
   moq?: number;
@@ -51,7 +52,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw) as CartItem[]);
+      if (raw) {
+        let parsed = JSON.parse(raw) as CartItem[];
+        let dirty = false;
+        parsed = parsed.map(item => {
+          if (item.usdcMint === '9C7hcHjuGNBxcFMmw7F6X8NZwVkZ5HHd9LR8dYwCirRG' || item.usdcMint === 'EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi') {
+            dirty = true;
+            return { ...item, usdcMint: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU' };
+          }
+          return item;
+        });
+        setItems(parsed);
+        if (dirty) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        }
+      }
     } catch {}
   }, []);
 

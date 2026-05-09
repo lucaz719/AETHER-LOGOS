@@ -5,6 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
 import { useRegistrationStore } from "@/lib/stores/registrationStore";
+import { fetchAgent } from "@/lib/agentApi";
 
 const VENDOR_TYPES = ["Retailer", "Wholesaler", "Distributor", "Manufacturer"] as const;
 const ALL_CATEGORIES = ["Electronics", "Apparel", "HomeGoods", "Machinery", "FoodBeverage", "Chemicals", "Automotive", "Healthcare", "Construction", "Other"];
@@ -57,7 +58,7 @@ export default function VendorRegisterPage() {
 			setError(null);
 			try {
 				const emailHash = await hashEmail(email);
-				const response = await fetch('http://localhost:8080/api/vendor/register', {
+				const response = await fetchAgent('http://localhost:8080/api/vendor/register', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({

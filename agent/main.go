@@ -138,17 +138,42 @@ func main() {
 	}()
 
 	fmt.Printf("aether-logos agent listening on :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, corsMiddleware(http.DefaultServeMux)))
+	log.Fatal(http.ListenAndServe(":"+port, apiKeyMiddleware(corsMiddleware(http.DefaultServeMux))))
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func apiKeyMiddleware(next http.Handler) http.Handler {
+	expectedKey := os.Getenv("INTERNAL_API_KEY")
+	// If no key is configured, skip validation (development mode)
+	if expectedKey == "" {
+		return next
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip auth for /health endpoint
+		if r.URL.Path == "/health" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Verify X-API-Key header
+		apiKey := r.Header.Get("X-API-Key")
+		if apiKey != expectedKey {
+			http.Error(w, "Unauthorized: Invalid or missing API key", http.StatusUnauthorized)
 			return
 		}
 

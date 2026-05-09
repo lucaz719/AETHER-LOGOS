@@ -1,78 +1,47 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { ArrowRight, BadgeCheck, Clock3, Package, ShieldCheck, Truck } from "lucide-react";
-
-const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
-
-interface Order {
-  pubkey: string;
-  account: {
-    buyer: string;
-    seller: string;
-    total_amount: string | number;
-    quantity?: string | number;
-    status: Record<string, unknown>;
-    created_at?: string;
-    shipByDeadline?: string | number;
-  };
-}
+import { useBuyerOrders } from "@/hooks/useBuyerOrders";
+import { PublicKey } from "@solana/web3.js";
 
 const STATUS_META: Record<string, { label: string; tone: string }> = {
-  Created: { label: "Created", tone: "badge-cyan" },
-  EscrowLocked: { label: "Funds Locked", tone: "badge-amber" },
-  Shipped: { label: "Shipment Active", tone: "badge-violet" },
-  Delivered: { label: "Delivered", tone: "badge-green" },
-  Cancelled: { label: "Cancelled", tone: "badge-red" },
+  awaitingShipment: { label: "Awaiting Shipment", tone: "badge-amber" },
+  inTransit: { label: "Shipment Active", tone: "badge-violet" },
+  verified: { label: "Verified", tone: "badge-green" },
+  released: { label: "Settled", tone: "badge-cyan" },
+  disputed: { label: "Disputed", tone: "badge-red" },
+  cancelled: { label: "Cancelled", tone: "badge-red" },
 };
 
 function statusKey(status: unknown): string {
-  if (!status || typeof status !== "object") return "Unknown";
-  return Object.keys(status as Record<string, unknown>)[0] ?? "Unknown";
+  if (!status) return "Unknown";
+  if (typeof status === "string") return status;
+  if (typeof status === "object") return Object.keys(status as Record<string, unknown>)[0];
+  return "Unknown";
 }
 
-function shortKey(value: string): string {
-  return `${value.slice(0, 6)}…${value.slice(-6)}`;
+function shortKey(value: string | PublicKey): string {
+  const str = typeof value === 'string' ? value : value?.toBase58();
+  if (!str) return "Unknown";
+  return `${str.slice(0, 6)}…${str.slice(-6)}`;
 }
 
 export default function UserOrdersPage() {
   const { publicKey } = useWallet();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("");
-
-  useEffect(() => {
-    if (!publicKey) {
-      setLoading(false);
-      return;
-    }
-
-    const load = async () => {
-      try {
-        const res = await fetch(`${API}/api/marketplace/orders?buyer=${publicKey.toBase58()}`);
-        if (res.ok) {
-          const data = await res.json();
-          setOrders(data.orders ?? []);
-        }
-      } catch {
-        // offline fallback stays empty
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    void load();
-  }, [publicKey]);
+  const { orders, loading } = useBuyerOrders();
 
   const allStatuses = useMemo(
     () => Array.from(new Set(orders.map((o) => statusKey(o.account.status)))).filter(Boolean),
     [orders],
   );
+  
   const visible = filter ? orders.filter((o) => statusKey(o.account.status) === filter) : orders;
-  const activeCount = orders.filter((o) => !["Delivered", "Cancelled"].includes(statusKey(o.account.status))).length;
+  const activeCount = orders.filter((o) => !["released", "cancelled"].includes(statusKey(o.account.status))).length;
 
   if (!publicKey) {
     return (
@@ -165,19 +134,19 @@ export default function UserOrdersPage() {
           {visible.map((order) => {
             const status = statusKey(order.account.status);
             const meta = STATUS_META[status] ?? { label: status, tone: "badge-cyan" };
-            const amount = Number(order.account.total_amount ?? 0) / 1_000_000;
-            const quantity = order.account.quantity ? Number(order.account.quantity) : 1;
-            const deadline = order.account.shipByDeadline ? Number(order.account.shipByDeadline) : null;
-            const trackingHref = `/user/orders/${order.pubkey}`;
+            const amount = Number(order.account.amount?.toString() ?? 0) / 1_000_000;
+            const quantity = 1; // Trades aggregate quantity into amount on-chain
+            const deadline = order.account.shipByDeadline ? Number(order.account.shipByDeadline.toString()) : null;
+            const trackingHref = `/user/orders/${order.publicKey.toBase58()}`;
 
             return (
-              <article key={order.pubkey} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
+              <article key={order.publicKey.toBase58()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className={`badge ${meta.tone} px-3 py-1 rounded-full`}>{meta.label}</span>
                       <span className="badge badge-cyan px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        Ref: {shortKey(order.pubkey)}
+                        Ref: {shortKey(order.publicKey)}
                       </span>
                     </div>
                     <h3 className="mt-4 text-xl font-black text-foreground tracking-tight">{shortKey(order.account.seller)}</h3>

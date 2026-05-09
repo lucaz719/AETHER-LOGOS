@@ -99,7 +99,7 @@ export default function UserDashboardPage() {
     return (
       <main style={{ textAlign: "center", paddingTop: "4rem" }}>
         <div style={{ fontSize: "3rem", marginBottom: "1rem", opacity: 0.5 }}>◉</div>
-        <h2 style={{ color: "white", marginBottom: "0.5rem", fontSize: "1.125rem", fontWeight: 600 }}>
+        <h2 style={{ color: "var(--foreground)", marginBottom: "0.5rem", fontSize: "1.125rem", fontWeight: 600 }}>
           My Account
         </h2>
         <p style={{ color: "#9CA3AF", marginBottom: "1.5rem", fontSize: "0.8125rem" }}>
@@ -173,7 +173,7 @@ export default function UserDashboardPage() {
             </div>
           ) : (
             <>
-              <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "white", marginBottom: "0.25rem" }}>
+              <h1 style={{ fontSize: "1.125rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.25rem" }}>
                 {user?.username || "Anonymous"}
               </h1>
               <div style={{ fontSize: "0.6875rem", color: "#6B7280", fontFamily: "monospace" }}>
@@ -242,7 +242,7 @@ export default function UserDashboardPage() {
                 }}
                 onMouseEnter={(e) => {
                   (e.target as HTMLAnchorElement).style.background = "rgba(255,255,255,0.1)";
-                  (e.target as HTMLAnchorElement).style.color = "white";
+                  (e.target as HTMLAnchorElement).style.color = "var(--foreground)";
                 }}
                 onMouseLeave={(e) => {
                   (e.target as HTMLAnchorElement).style.background = "transparent";
@@ -291,7 +291,7 @@ export default function UserDashboardPage() {
               style={{
                 fontSize: "1.875rem",
                 fontWeight: 900,
-                color: stat.color || "white",
+                color: stat.color || "var(--foreground)",
               }}
             >
               {stat.value}
@@ -302,7 +302,7 @@ export default function UserDashboardPage() {
 
       {/* QUICK ACTIONS */}
       <div style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+        <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.75rem" }}>
           Quick Actions
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.75rem" }}>
@@ -351,7 +351,7 @@ export default function UserDashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 18rem", gap: "1.5rem" }}>
         {/* RECENT ORDERS */}
         <div>
-          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.75rem" }}>
             Recent Orders
           </h2>
           <div
@@ -389,7 +389,7 @@ export default function UserDashboardPage() {
                     display: "inline-block",
                     padding: "0.35rem 0.75rem",
                     background: "#3B82F6",
-                    color: "white",
+                    color: "var(--foreground)",
                     borderRadius: "0.5rem",
                     fontSize: "0.75rem",
                     textDecoration: "none",
@@ -419,7 +419,7 @@ export default function UserDashboardPage() {
                     }}
                   >
                     <div>
-                      <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "white", fontFamily: "monospace" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
                         {order.account?.id?.toString?.() || "Order #" + (idx + 1)}
                       </div>
                       <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
@@ -441,7 +441,9 @@ export default function UserDashboardPage() {
                         fontWeight: 600,
                       }}
                     >
-                      {String(order.account?.status || "Active")}
+                      {typeof order.account?.status === 'object' && order.account.status !== null 
+                        ? Object.keys(order.account.status)[0] 
+                        : String(order.account?.status || "Active")}
                     </div>
                   </div>
                 ))}
@@ -452,7 +454,7 @@ export default function UserDashboardPage() {
 
         {/* ACCOUNT STATUS */}
         <div>
-          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "white", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.75rem" }}>
             Account Status
           </h2>
           <div
@@ -511,7 +513,7 @@ export default function UserDashboardPage() {
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Followed Stores
                   </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "white" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--foreground)" }}>
                     {followerCount !== null ? followerCount : "—"}
                   </div>
                 </div>
@@ -521,7 +523,7 @@ export default function UserDashboardPage() {
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Reviews Given
                   </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "white" }}>
+                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--foreground)" }}>
                     {reviewCount !== null ? reviewCount : "—"}
                   </div>
                 </div>

@@ -17,14 +17,23 @@ import {
 
 // Load the Marketplace IDL from the built artifact.
 // Falls back to the app copy when running without a full anchor build.
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 let marketplaceIdl: anchor.Idl;
 let tradeEscrowIdl: anchor.Idl;
 try {
-  marketplaceIdl = require("../target/idl/marketplace.json");
-  tradeEscrowIdl = require("../target/idl/trade_escrow.json");
+  const p1 = path.resolve(__dirname, '../target/idl/marketplace.json');
+  const p2 = path.resolve(__dirname, '../target/idl/trade_escrow.json');
+  marketplaceIdl = JSON.parse(fs.readFileSync(p1, 'utf8')) as anchor.Idl;
+  tradeEscrowIdl = JSON.parse(fs.readFileSync(p2, 'utf8')) as anchor.Idl;
 } catch {
-  marketplaceIdl = require("../app/src/lib/idl/marketplace.json");
-  tradeEscrowIdl = require("../app/src/lib/idl/trade_escrow.json");
+  const p1 = path.resolve(__dirname, '../app/src/lib/idl/marketplace.json');
+  const p2 = path.resolve(__dirname, '../app/src/lib/idl/trade_escrow.json');
+  marketplaceIdl = JSON.parse(fs.readFileSync(p1, 'utf8')) as anchor.Idl;
+  tradeEscrowIdl = JSON.parse(fs.readFileSync(p2, 'utf8')) as anchor.Idl;
 }
 
 const MARKETPLACE_PROGRAM_ID = new PublicKey(

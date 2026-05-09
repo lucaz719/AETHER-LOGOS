@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PublicKey } from '@solana/web3.js';
 import { useAnchorClient } from '@/hooks/useAnchorClient';
+import { fetchAgent } from '@/lib/agentApi';
 import BN from 'bn.js';
 
 const CATEGORIES = [
@@ -58,7 +59,7 @@ export default function MarketplaceBrowseClient() {
           url += `?category=${encodeURIComponent(selectedCategory)}`;
         }
 
-        const response = await fetch(url);
+        const response = await fetchAgent(url);
         if (!response.ok) throw new Error('Failed to load products');
 
         const data = await response.json();
@@ -70,7 +71,7 @@ export default function MarketplaceBrowseClient() {
         for (const prod of prods) {
           if (!vendorMap.has(prod.vendor_wallet)) {
             try {
-              const vendorRes = await fetch(`http://localhost:8080/api/vendor/${prod.vendor_wallet}`);
+              const vendorRes = await fetchAgent(`http://localhost:8080/api/vendor/${prod.vendor_wallet}`);
               if (vendorRes.ok) {
                 const vendor = await vendorRes.json();
                 vendorMap.set(prod.vendor_wallet, vendor);
@@ -161,7 +162,7 @@ export default function MarketplaceBrowseClient() {
 
         // 7. Register with agent
         try {
-          const registerRes = await fetch('http://localhost:8080/register', {
+          const registerRes = await fetchAgent('http://localhost:8080/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

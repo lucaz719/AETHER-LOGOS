@@ -65,6 +65,8 @@ export default function ListingPage() {
   const ipfsGateway = process.env.NEXT_PUBLIC_IPFS_GATEWAY || "https://gateway.pinata.cloud/ipfs";
 
   const handleAddToCart = () => {
+    const savedMint = typeof window !== 'undefined' ? localStorage.getItem('aether_test_usdc_mint') : null;
+    const defaultDevMint = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
     addItem({
       listingPubkey: pubkey,
       vendorPubkey: pubkey,
@@ -72,6 +74,7 @@ export default function ListingPage() {
       title: String(account.title ?? ""),
       priceUsdc,
       quantity: qty,
+      usdcMint: savedMint ?? defaultDevMint,
       imagesCid,
     });
     toast.success(`Added ${qty} ${qty === 1 ? 'item' : 'items'} to cart`);

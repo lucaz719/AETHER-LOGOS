@@ -1,11 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react";
+import { useAnchorClient } from "@/hooks/useAnchorClient";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import { getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { useParams, useRouter } from "next/navigation";
 import { ProductCard } from "@/components/dashboard/ProductCard";
 import { Clock3, Heart, Repeat2, ShieldCheck, Star, Store } from "lucide-react";
 import {
   MOCK_STORES,
+  getCategoriesForVendorType,
   mapApiProductToDashboardProduct,
   type DashboardProduct,
   type PublicStore,
@@ -59,6 +63,8 @@ function toVendorType(value?: string): StoreVendorType {
 function buildStoreFromApi(storeId: string, payload: StoreApi): Omit<PublicStore, "products"> {
   const wallet = payload.owner_wallet ?? `store-${storeId}`;
   const categories = parseCategories(payload.categories);
+  const vendorType = toVendorType(payload.store_type);
+  const resolvedCategories = categories.length > 0 ? categories : getCategoriesForVendorType(vendorType);
   const seed = Array.from(wallet).reduce((acc, c) => acc + c.charCodeAt(0), 0);
   const ratingCount = 40 + (seed % 60);
   const ratingSum = Math.round((4.2 + (seed % 7) / 10) * ratingCount);
@@ -68,7 +74,7 @@ function buildStoreFromApi(storeId: string, payload: StoreApi): Omit<PublicStore
     slug: payload.slug ?? `store-${storeId}`,
     shopName: payload.store_name ?? "Supplier Store",
     shopDescription: payload.description ?? "Global supplier catalog with escrow-protected trade settlement.",
-    vendorType: toVendorType(payload.store_type),
+    vendorType: vendorType,
     isVerified: Boolean(payload.is_verified ?? true),
     location: "Global",
     memberSince: payload.created_at?.slice(0, 4) ?? "2023",
@@ -81,7 +87,7 @@ function buildStoreFromApi(storeId: string, payload: StoreApi): Omit<PublicStore
     onTimeDelivery: 88 + (seed % 12),
     repeatBuyers: 45 + (seed % 40),
     totalOrders: 200 + (seed % 2600),
-    categories: categories.length > 0 ? categories : ["Industrial Components", "Machinery"],
+    categories: resolvedCategories,
     walletAddr: wallet,
   };
 }
@@ -128,6 +134,38 @@ export default function StoreDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followedStores, setFollowedStores] = useState<string[]>([]);
+  const [mockFundsEnabled, setMockFundsEnabled] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('aether_mock_funds') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [testUsdcMint, setTestUsdcMint] = useState<string>(() => {
+    try {
+      return localStorage.getItem('aether_test_usdc_mint') ?? '';
+    } catch {
+      return '';
+    }
+  });
+
+  const { wallet, connection } = useAnchorClient();
+
+  // Auto-set test mint when a wallet is connected to avoid manual pasting during demos
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return;
+    if (!wallet?.publicKey) return;
+    try {
+      const saved = localStorage.getItem('aether_test_usdc_mint');
+      const defaultDevMint = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+      if (!saved || saved === '9C7hcHjuGNBxcFMmw7F6X8NZwVkZ5HHd9LR8dYwCirRG' || saved === 'EPjFWaLb3hyccqaAjRmjRAmsPd83Un1Zc1zLH3BckKQi') {
+        localStorage.setItem('aether_test_usdc_mint', defaultDevMint);
+        setTestUsdcMint(defaultDevMint);
+      } else {
+        setTestUsdcMint(saved);
+      }
+    } catch {}
+  }, [wallet?.publicKey]);
 
   useEffect(() => {
     try {
@@ -168,6 +206,16 @@ export default function StoreDetailPage() {
           ]);
 
           if (!vendorRes.ok) {
+            // If running in development, attempt to fall back to in-repo mock stores for fast iteration.
+            if (process.env.NODE_ENV !== "production") {
+              const fallback =
+                MOCK_STORES.find((s) => s.slug?.toLowerCase().includes(wallet.toLowerCase()) || s.shopName?.toLowerCase().includes(wallet.toLowerCase())) ?? MOCK_STORES[0];
+              setStore(fallback);
+              setProducts(fallback.products);
+              setLoading(false);
+              return;
+            }
+
             setError("Supplier not found.");
             setStore(null);
             setProducts([]);
@@ -191,6 +239,13 @@ export default function StoreDetailPage() {
             mappedProducts = (productsPayload.products ?? []).map((item: any) =>
               mapApiProductToDashboardProduct(item, mappedStore.shopName, mappedStore.walletAddr, mappedStore.vendorType)
             );
+          } else {
+            // If no products returned, in dev try to synthesize products based on vendorType categories.
+            if (process.env.NODE_ENV !== "production") {
+              const synthCategories = getCategoriesForVendorType(mappedStore.vendorType);
+              const fallbackStore = MOCK_STORES.find((s) => s.vendorType === mappedStore.vendorType) ?? MOCK_STORES[0];
+              mappedProducts = fallbackStore.products.map((p) => ({ ...p, sellerWallet: mappedStore.walletAddr, vendor: mappedStore.shopName }));
+            }
           }
 
           setStore({ ...mappedStore, products: mappedProducts });
@@ -254,6 +309,14 @@ export default function StoreDetailPage() {
     localStorage.setItem(FOLLOWED_STORES_KEY, JSON.stringify(next));
   };
 
+  const toggleMockFunds = () => {
+    const next = !mockFundsEnabled;
+    setMockFundsEnabled(next);
+    try {
+      localStorage.setItem('aether_mock_funds', next ? 'true' : 'false');
+    } catch {}
+  };
+
   const handleBuy = (payload: {
     productId: string;
     title: string;
@@ -268,6 +331,9 @@ export default function StoreDetailPage() {
     Object.entries(payload).forEach(([k, v]) => {
       if (v !== undefined) params.set(k, String(v));
     });
+    const usdcMintToUse = testUsdcMint && testUsdcMint.length > 0 ? testUsdcMint : payload.usdcMint;
+    if (usdcMintToUse) params.set('usdcMint', usdcMintToUse);
+    if (mockFundsEnabled) params.set('simulate', 'true');
     router.push(`/trades?${params.toString()}`);
   };
 
@@ -307,12 +373,43 @@ export default function StoreDetailPage() {
     return (
       <main className="min-h-screen bg-background relative overflow-hidden pt-24 pb-20">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
-          <button type="button" onClick={() => router.push("/stores")} className="btn-ghost" style={{ marginBottom: "1rem" }}>
-            ← Back to Suppliers
-          </button>
+          <div className="flex items-center gap-3 mb-6">
+            <button type="button" onClick={() => router.push("/stores")} className="btn-ghost">
+              ← Back to Suppliers
+            </button>
+            <button type="button" onClick={() => router.refresh()} className="btn-ghost">
+              Retry
+            </button>
+            {process.env.NODE_ENV !== 'production' && (
+              <button
+                type="button"
+                onClick={() => {
+                  const fallback = MOCK_STORES[0];
+                  setStore(fallback);
+                  setProducts(fallback.products);
+                }}
+                className="btn-ghost"
+              >
+                Load mock supplier (dev)
+              </button>
+            )}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span className="text-sm text-muted-foreground">Simulate funds</span>
+              <button type="button" onClick={toggleMockFunds} className={`btn-ghost ${mockFundsEnabled ? 'btn-follow-active' : ''}`}>
+                {mockFundsEnabled ? 'ON' : 'OFF'}
+              </button>
+            </div>
+          </div>
+
           <div className="glass p-12 text-center">
             <p style={{ color: "var(--red)", fontWeight: 700, marginBottom: "0.4rem" }}>{error ?? "Store unavailable."}</p>
-            <p style={{ color: "var(--text-muted)" }}>Try another supplier or retry in a moment.</p>
+            <p style={{ color: "var(--text-muted)", marginBottom: '1rem' }}>Try another supplier or retry in a moment.</p>
+            <div className="text-sm text-muted-foreground">
+              If you see "insufficient funds" when testing transactions, enable "Simulate funds" to bypass wallet balance checks in dev, or fund a test wallet via a Solana devnet faucet.
+              <div style={{ marginTop: '0.5rem' }}>
+                <a href="https://solfaucet.com/" target="_blank" rel="noreferrer" className="btn-ghost">Open Devnet Faucet</a>
+              </div>
+            </div>
           </div>
         </div>
       </main>
@@ -360,7 +457,7 @@ export default function StoreDetailPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 lg:justify-end">
+              <div className="flex flex-wrap gap-3 lg:justify-end items-center">
                 <button
                   type="button"
                   onClick={toggleFollow}
@@ -369,33 +466,106 @@ export default function StoreDetailPage() {
                   <Heart size={14} fill={isFollowed ? "currentColor" : "none"} />
                   {isFollowed ? "Following" : "Follow"}
                 </button>
+                {process.env.NODE_ENV !== 'production' && !wallet?.publicKey && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="input"
+                        placeholder="Test USDC mint (devnet)"
+                        value={testUsdcMint}
+                        onChange={(e) => setTestUsdcMint(e.target.value)}
+                        style={{ minWidth: 220 }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          try { localStorage.setItem('aether_test_usdc_mint', testUsdcMint); } catch {};
+                          alert('Saved test USDC mint.');
+                        }}
+                        className="btn-ghost"
+                      >
+                        Save
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!testUsdcMint) return alert('No mint to copy');
+                          try { await navigator.clipboard.writeText(testUsdcMint); alert('Mint copied to clipboard'); } catch { alert('Copy failed'); }
+                        }}
+                        className="btn-ghost"
+                      >
+                        Copy mint
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!testUsdcMint) return alert('Set a test mint first');
+                          const link = `${window.location.origin}/trades?usdcMint=${encodeURIComponent(testUsdcMint)}`;
+                          try { await navigator.clipboard.writeText(link); alert('Prefilled trade link copied'); } catch { alert('Copy failed'); }
+                        }}
+                        className="btn-ghost"
+                      >
+                        Copy trade link
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!wallet?.publicKey) return alert('Connect Phantom to create ATA');
+                          if (!testUsdcMint) return alert('Set a test mint first');
+                          try {
+                            const mintPub = new PublicKey(testUsdcMint);
+                            const ata = getAssociatedTokenAddressSync(mintPub, wallet.publicKey);
+                            const tx = new Transaction().add(createAssociatedTokenAccountInstruction(wallet.publicKey, ata, wallet.publicKey, mintPub));
+                            tx.feePayer = wallet.publicKey;
+                            const { blockhash } = await connection.getLatestBlockhash('finalized');
+                            tx.recentBlockhash = blockhash;
+                            const signed = await wallet.signTransaction(tx);
+                            const txid = await connection.sendRawTransaction(signed.serialize());
+                            await connection.confirmTransaction(txid, 'confirmed');
+                            alert(`ATA created: ${ata.toBase58()}`);
+                          } catch (err: any) {
+                            console.error(err);
+                            alert('Create ATA failed: ' + (err?.message || String(err)));
+                          }
+                        }}
+                        className="btn-ghost"
+                      >
+                        Create ATA
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
 
           <div className="grid gap-3 border-t border-border bg-background/60 p-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3 backdrop-blur-3xl border-white/5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <Star size={11} className="text-amber-500" />
                 Seller rating
               </div>
               <p className="mt-1 text-2xl font-black text-foreground">{averageRating.toFixed(1)}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3 backdrop-blur-3xl border-white/5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <Clock3 size={11} className="text-cyan-500" />
                 On-time delivery
               </div>
               <p className="mt-1 text-2xl font-black text-foreground">{store.onTimeDelivery}%</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3 backdrop-blur-3xl border-white/5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <Repeat2 size={11} className="text-emerald-500" />
                 Repeat buyers
               </div>
               <p className="mt-1 text-2xl font-black text-foreground">{store.repeatBuyers}%</p>
             </div>
-            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
+            <div className="rounded-2xl border border-border bg-background/70 px-4 py-3 backdrop-blur-3xl border-white/5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 <ShieldCheck size={11} className="text-primary" />
                 Total orders
@@ -412,8 +582,8 @@ export default function StoreDetailPage() {
               type="button"
               onClick={() => setActiveTab(tab)}
               className={`px-6 py-3 text-sm font-bold transition-all ${activeTab === tab
-                  ? "text-foreground border-b-2 border-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                ? "text-foreground border-b-2 border-primary"
+                : "text-muted-foreground hover:text-foreground"
                 }`}
               style={{ minHeight: "40px" }}
             >
@@ -509,7 +679,7 @@ export default function StoreDetailPage() {
                 No products match your search.
               </div>
             ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
                 {filteredProducts.map((product) => (
                   <ProductCard key={product.productId} {...product} onBuy={handleBuy} />
                 ))}
@@ -519,15 +689,47 @@ export default function StoreDetailPage() {
         )}
 
         {activeTab === "About" && (
-          <div className="glass rounded-xl p-6 max-w-2xl space-y-6">
-            <p style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>{store.shopDescription}</p>
-            <div className="grid grid-cols-2 gap-4" style={{ borderTop: "1px solid var(--border)", paddingTop: "1.5rem" }}>
-              <div><strong style={{ color: "var(--text-primary)" }}>Founded</strong><p style={{ color: "var(--text-secondary)" }}>{store.memberSince}</p></div>
-              <div><strong style={{ color: "var(--text-primary)" }}>Location</strong><p style={{ color: "var(--text-secondary)" }}>{store.location}</p></div>
-              <div><strong style={{ color: "var(--text-primary)" }}>Vendor Type</strong><p style={{ color: "var(--text-secondary)" }}>{store.vendorType}</p></div>
-              <div><strong style={{ color: "var(--text-primary)" }}>Response Time</strong><p style={{ color: "var(--text-secondary)" }}>{store.responseTime}</p></div>
-              <div><strong style={{ color: "var(--text-primary)" }}>Categories</strong><p style={{ color: "var(--text-secondary)" }}>{store.categories.join(", ")}</p></div>
-              <div><strong style={{ color: "var(--text-primary)" }}>Trade Terms</strong><p style={{ color: "var(--text-secondary)" }}>Escrow-protected via USDC</p></div>
+          <div className="glass rounded-xl p-6 max-w-4xl">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-xl font-extrabold text-foreground">Corporate Prospectus</h3>
+                <p className="text-sm text-muted-foreground" style={{ lineHeight: 1.7 }}>{store.shopDescription}</p>
+                <div className="mt-3 flex flex-col gap-3">
+                  <div className="flex items-center justify-between bg-background/60 px-4 py-3 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[12px] font-black text-muted-foreground">Trade Capacity</div>
+                    <div className="text-lg font-extrabold text-foreground">{(store.totalOrders * 0.8).toLocaleString()} units / mo</div>
+                  </div>
+                  <div className="flex items-center justify-between bg-background/60 px-4 py-3 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[12px] font-black text-muted-foreground">Production Lines</div>
+                    <div className="text-lg font-extrabold text-foreground">{Math.max(2, Math.floor(store.totalOrders / 1200))} active</div>
+                  </div>
+                  <div className="flex items-center justify-between bg-background/60 px-4 py-3 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[12px] font-black text-muted-foreground">Quality Certifications</div>
+                    <div className="text-lg font-extrabold text-foreground">ISO9001, ISO14001</div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Operational Snapshot</h4>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="px-3 py-2 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[11px] text-muted-foreground">Response Time</div>
+                    <div className="text-lg font-bold text-foreground">{store.responseTime}</div>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[11px] text-muted-foreground">On-time Delivery</div>
+                    <div className="text-lg font-bold text-foreground">{store.onTimeDelivery}%</div>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[11px] text-muted-foreground">Repeat Buyers</div>
+                    <div className="text-lg font-bold text-foreground">{store.repeatBuyers}%</div>
+                  </div>
+                  <div className="px-3 py-2 rounded-lg border border-white/5 backdrop-blur-3xl">
+                    <div className="text-[11px] text-muted-foreground">Avg. Rating</div>
+                    <div className="text-lg font-bold text-foreground">{averageRating.toFixed(1)}</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

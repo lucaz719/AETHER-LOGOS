@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useSellerOrders } from "@/hooks/useSellerOrders";
+import { fetchAgent } from "@/lib/agentApi";
 import { TrackingTimeline } from "@/components/TrackingTimeline";
 
 function statusKey(status: unknown): string {
@@ -63,7 +64,7 @@ export default function SellerDashboardPage() {
         .rpc();
 
       // Register with Go agent for automated proof submission
-      fetch("http://localhost:8080/register", {
+      fetchAgent("http://localhost:8080/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

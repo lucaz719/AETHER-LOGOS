@@ -52,6 +52,25 @@ export default function OrderTrackingPage() {
         setLoading(true);
         const res = await fetch(`${AGENT_URL}/api/tracking/trade/${id}`);
         if (!res.ok) {
+          if (res.status === 404) {
+            setData({
+              shipment: {
+                tracking_id: "PENDING-CARRIER",
+                carrier: "dhl",
+                last_known_status: "Processing",
+                trade_account: String(id),
+              },
+              milestones: [
+                {
+                  status: "Escrow Locked",
+                  description: "Funds secured on-chain. Awaiting agent carrier registration.",
+                  location: "Solana Network",
+                  timestamp: Date.now(),
+                }
+              ]
+            });
+            return;
+          }
           throw new Error(await res.text());
         }
         const json = await res.json();

@@ -60,6 +60,8 @@ export function ProductCard({
     e.stopPropagation();
     if (!isActive || adding) return;
     setAdding(true);
+    const savedMint = typeof window !== 'undefined' ? localStorage.getItem('aether_test_usdc_mint') : null;
+    const defaultDevMint = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
     addItem({
       listingPubkey: pubkey,
       vendorPubkey: pubkey,
@@ -67,6 +69,7 @@ export function ProductCard({
       title,
       priceUsdc,
       quantity: minOrderQty,
+      usdcMint: savedMint ?? defaultDevMint,
     });
     success(`"${title.slice(0, 30)}${title.length > 30 ? '…' : ''}" added to requisition`);
     setTimeout(() => setAdding(false), 600);
@@ -162,11 +165,7 @@ export function ProductCard({
                 type="button"
                 onClick={handleAddToCart}
                 aria-label={inCart ? 'Already in requisition' : `Add ${title} to requisition`}
-                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition-all ${
-                  inCart
-                    ? 'border-primary/30 bg-primary/10 text-primary'
-                    : 'border-border bg-background text-foreground hover:border-primary/30 hover:bg-primary/5'
-                }`}
+                className={`btn-primary w-full ${inCart ? 'opacity-80' : ''}`}
               >
                 <ShoppingCart size={14} />
                 {adding ? 'Added to requisition' : inCart ? 'In requisition' : 'Add to requisition'}

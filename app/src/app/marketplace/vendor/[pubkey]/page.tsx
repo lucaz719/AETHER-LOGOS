@@ -2,6 +2,7 @@ import { getCoder } from "@/lib/anchor";
 import { Connection, PublicKey } from "@solana/web3.js";
 import marketplaceIdl from "@/lib/idl/marketplace.json";
 import { VendorTabs } from "@/components/VendorTabs";
+import { fetchAgent } from "@/lib/agentApi";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -47,7 +48,7 @@ export default async function VendorPage({
   if (!info) {
     // Fallback: Fetch from agent API if no on-chain profile
     try {
-      const storeResp = await fetch(`http://localhost:8080/api/vendors/${pubkey}`, { cache: "no-store" });
+      const storeResp = await fetchAgent(`http://localhost:8080/api/vendors/${pubkey}`, { cache: "no-store" });
       if (!storeResp.ok) notFound();
       const storeData = await storeResp.json();
       profile = {
@@ -123,7 +124,7 @@ export default async function VendorPage({
   // Fallback: Fetch from agent API if no on-chain listings
   if (listings.length === 0) {
     try {
-      const productsResp = await fetch("http://localhost:8080/api/products", { cache: "no-store" });
+      const productsResp = await fetchAgent("http://localhost:8080/api/products", { cache: "no-store" });
       if (productsResp.ok) {
         const productsData = await productsResp.json();
         listings = (productsData.products || [])
