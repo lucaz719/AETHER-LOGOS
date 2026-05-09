@@ -21,14 +21,14 @@ The AETHER-LOGOS hybrid escrow platform has been successfully tested end-to-end 
 - SOLANA_RPC=https://api.devnet.solana.com - Devnet RPC
 - PORT=8080 - Agent server port
 - TRADE_ESCROW_PROGRAM_ID=EVn3aVUGYbx6yvHa5h4m5N3qfJkhKm1FnYeNsfbi34CZ - Smart contract ID
-- SOLANA_PRIVATE_KEY_BASE58=H7EJKdRvfFAQ45oQtr6T34GHo47ft4bLqdZToeps7HmX - Agent's signing key
+- SOLANA_PRIVATE_KEY_BASE58=<REDACTED_DEVNET_KEY> - Agent's signing key (redacted for security)
 
 ### Private Key Extraction
 User's Solana private key was extracted from local keypair file and converted to Base58 format:
 `
 Keypair location: ~/.config/solana/id.json
 Format conversion: Raw bytes → Hex → Base58 (local conversion, no external deps)
-Result: H7EJKdRvfFAQ45oQtr6T34GHo47ft4bLqdZToeps7HmX
+Result: <REDACTED_DEVNET_KEY> (use your own devnet keypair)
 `
 
 ---
