@@ -67,7 +67,7 @@ function patchIdl(idl: any): any {
 }
 
 export function getEscrowProgram(provider: AnchorProvider): Program<Idl> {
-  const idl = patchIdl(tradeEscrowIdl) as any;
+  const idl = tradeEscrowIdl as any;
   // Ensure the IDL has the correct program address
   if (!idl.metadata) idl.metadata = {};
   idl.metadata.address = ESCROW_PROGRAM_ID.toBase58();

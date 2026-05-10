@@ -399,6 +399,14 @@ func UpdateStatus(id int64, status string) error {
 	return err
 }
 
+func UpdateShipmentTracking(id int64, trackingID string) error {
+	_, err := db.Exec(
+		`UPDATE shipments SET tracking_id = ?, updated_at = ? WHERE id = ?`,
+		trackingID, time.Now().UTC().Format(time.RFC3339), id,
+	)
+	return err
+}
+
 func UpdateShipmentProof(id int64, proofHash, txSig string) error {
 	_, err := db.Exec(
 		`UPDATE shipments SET proof_hash = ?, proof_tx_sig = ?, updated_at = ? WHERE id = ?`,

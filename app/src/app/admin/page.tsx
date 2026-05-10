@@ -67,6 +67,7 @@ export default function AdminPage() {
         const agentTrades = data.trades || [];
         if (agentTrades.length > 0) {
           setTrades(agentTrades);
+          setLoadingTrades(false);
           return;
         }
       }
@@ -74,10 +75,11 @@ export default function AdminPage() {
       console.error("failed to fetch trades from agent, falling back to on-chain", e);
     }
     
-    // Fallback: fetch all trades directly from escrow program on-chain
+    // Fallback 1: Try Anchor SDK
     try {
       if (!escrowProgram) {
         setTrades([]);
+        setLoadingTrades(false);
         return;
       }
       const onChainTrades = (await (escrowProgram.account as any).tradeAccount.all()) as any[];
@@ -92,8 +94,55 @@ export default function AdminPage() {
         trade_account: t.pubkey?.toBase58() || "unknown",
       }));
       setTrades(converted);
+      setLoadingTrades(false);
+      return;
+    } catch (anchorErr: any) {
+      console.warn("Anchor SDK fetch failed:", anchorErr?.message);
+    }
+    
+    // Fallback 2: Use decodeUnchecked with error handling
+    try {
+      if (!escrowProgram || !connection) {
+        setTrades([]);
+        setLoadingTrades(false);
+        return;
+      }
+      
+      console.log("Admin: Fetching all program accounts with decodeUnchecked...");
+      const programId = escrowProgram.programId;
+      const accounts = await connection.getProgramAccounts(programId);
+      
+      console.log(`Admin: Found ${accounts.length} program accounts, decoding...`);
+      
+      const converted: any[] = [];
+      for (const { pubkey, account } of accounts) {
+        try {
+          const decoded = escrowProgram.coder.accounts.decodeUnchecked(
+            "tradeAccount", 
+            account.data
+          );
+          
+          // Add all decoded trades regardless of buyer
+          converted.push({
+            trade_id: decoded.tradeID?.toString() || "unknown",
+            wallet: decoded.buyer?.toBase58() || "unknown",
+            tracking_id: decoded.trackingNumber || "pending",
+            carrier: decoded.carrier?.dhl ? "dhl" : "unknown",
+            status: decoded.status,
+            created_at: new Date().toISOString(),
+            trade_account: pubkey.toBase58(),
+          });
+        } catch (decodeErr: any) {
+          // Skip accounts that don't decode
+          console.debug("Admin: Skipped non-tradeAccount:", decodeErr?.message);
+          continue;
+        }
+      }
+      
+      console.log(`Admin: Decoded ${converted.length} trades`);
+      setTrades(converted);
     } catch (e) {
-      console.error("failed to fetch trades from on-chain", e);
+      console.error("failed to fetch trades from on-chain with decodeUnchecked", e);
       setTrades([]);
     } finally {
       setLoadingTrades(false);
@@ -107,27 +156,23 @@ export default function AdminPage() {
   }, [tab]);
 
   // Force Ship handler
+  // HACKATHON MOCK - submit_tracking requires seller signature, so we call the agent API instead
   async function handleForceShip(trade: any) {
-    if (!escrowProgram || !publicKey || !trackingInput) return;
+    if (!trackingInput) return;
     setBusy(true); setStatus(null);
     try {
-      const tradeIdBytes = toByteArray(trade.trade_id);
-      const buyerPub = new PublicKey(trade.wallet);
-      const [tradePda] = PublicKey.findProgramAddressSync(
-        [Buffer.from("trade"), buyerPub.toBuffer(), Buffer.from(tradeIdBytes)],
-        ESCROW_PROGRAM_ID
-      );
+      const res = await fetchAgent(`${process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080"}/api/trades/${trade.trade_id}/force-ship`, {
+        method: "POST",
+        body: JSON.stringify({ tracking_id: trackingInput }),
+      });
 
-      const tx = await (escrowProgram.methods as any)
-        .submitTracking(tradeIdBytes, trackingInput, { dhl: {} })
-        .accounts({
-          seller: publicKey,
-          tradeAccount: tradePda,
-        })
-        .rpc();
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
 
-      setStatus(`SUCCESS: Force shipped trade — tx: ${tx}`);
-      setTxLink(`https://explorer.solana.com/tx/${tx}?cluster=devnet`);
+      const json = await res.json();
+      setStatus(`SUCCESS: Force shipped trade — status updated in agent DB`);
+      setTxLink(null);
       setForceShipForm(null);
       fetchTrades();
     } catch (e: unknown) {

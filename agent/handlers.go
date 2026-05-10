@@ -730,15 +730,101 @@ func TradeSimulateDeliveryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract trade ID from URL: /api/trades/:tradeId/simulate-delivery
+	// Extract trade ID and action from URL: /api/trades/:tradeId/action
 	path := strings.TrimPrefix(r.URL.Path, "/api/trades/")
-	tradeID := strings.Split(path, "/")[0]
+	parts := strings.Split(path, "/")
+	
+	if len(parts) < 2 {
+		http.Error(w, "invalid trade path", http.StatusBadRequest)
+		return
+	}
+
+	tradeID := parts[0]
+	action := parts[1]
 
 	if tradeID == "" {
 		http.Error(w, "missing trade id", http.StatusBadRequest)
 		return
 	}
 
+	// Dispatch based on action
+	if action == "force-ship" {
+		handleForceShip(w, r, tradeID)
+		return
+	}
+
+	if action == "simulate-delivery" {
+		handleSimulateDelivery(w, r, tradeID)
+		return
+	}
+
+	http.Error(w, "unknown action", http.StatusBadRequest)
+}
+
+func handleForceShip(w http.ResponseWriter, r *http.Request, tradeID string) {
+	// HACKATHON MOCK - admin force ship (seller signature not required for demo)
+	var req struct {
+		TrackingID string `json:"tracking_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.TrackingID == "" {
+		http.Error(w, "tracking_id required", http.StatusBadRequest)
+		return
+	}
+
+	// Find or create shipment by trade ID
+	shipments, err := GetAllShipments()
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	var shipment *Shipment
+	for _, s := range shipments {
+		if s.TradeID == tradeID {
+			shipment = &s
+			break
+		}
+	}
+
+	if shipment == nil {
+		// Create new shipment record for this trade
+		id, err := RegisterShipment(req.TrackingID, "", "", "dhl", "", tradeID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := UpdateStatus(id, "InTransit"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Update existing shipment
+		if err := UpdateStatus(shipment.ID, "InTransit"); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := UpdateShipmentTracking(shipment.ID, req.TrackingID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success":    true,
+		"tradeId":    tradeID,
+		"trackingId": req.TrackingID,
+		"status":     "InTransit",
+	})
+}
+
+func handleSimulateDelivery(w http.ResponseWriter, r *http.Request, tradeID string) {
 	shipment, err := GetShipmentByTrackingID(tradeID)
 	if err != nil {
 		// Try by trade_id if tracking lookup fails
@@ -757,8 +843,6 @@ func TradeSimulateDeliveryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// HACKATHON MOCK: Force status to Verified in DB
-	// In reality, this would submit a proof to Solana, but for the demo override
-	// we just update the agent state so the UI reflects "Verified"
 	if err := UpdateStatus(shipment.ID, "Verified"); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
