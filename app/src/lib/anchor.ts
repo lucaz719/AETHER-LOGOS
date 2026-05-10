@@ -67,15 +67,28 @@ function patchIdl(idl: any): any {
 }
 
 export function getEscrowProgram(provider: AnchorProvider): Program<Idl> {
-  return new Program(patchIdl(tradeEscrowIdl) as Idl, provider);
+  const idl = patchIdl(tradeEscrowIdl) as any;
+  // Ensure the IDL has the correct program address
+  if (!idl.metadata) idl.metadata = {};
+  idl.metadata.address = ESCROW_PROGRAM_ID.toBase58();
+  idl.address = ESCROW_PROGRAM_ID.toBase58();
+  return new Program(idl as Idl, provider);
 }
 
 export function getMarketProgram(provider: AnchorProvider): Program<Idl> {
-  return new Program(patchIdl(predictionMarketIdl) as Idl, provider);
+  const idl = patchIdl(predictionMarketIdl) as any;
+  if (!idl.metadata) idl.metadata = {};
+  idl.metadata.address = MARKET_PROGRAM_ID.toBase58();
+  idl.address = MARKET_PROGRAM_ID.toBase58();
+  return new Program(idl as Idl, provider);
 }
 
 export function getMarketplaceProgram(provider: AnchorProvider): Program<Idl> {
-  return new Program(patchIdl(marketplaceIdl) as Idl, provider);
+  const idl = patchIdl(marketplaceIdl) as any;
+  if (!idl.metadata) idl.metadata = {};
+  idl.metadata.address = MARKETPLACE_PROGRAM_ID.toBase58();
+  idl.address = MARKETPLACE_PROGRAM_ID.toBase58();
+  return new Program(idl as Idl, provider);
 }
 
 import { BorshAccountsCoder } from "@coral-xyz/anchor";
