@@ -3,6 +3,7 @@ import "./globals.css";
 import { CartProvider } from "@/hooks/useCart";
 import { ToastProvider } from "@/hooks/useToast";
 import { NavBarConditional } from "@/components/NavBarConditional";
+import { TradeProvider } from "@/context/TradeContext";
 import { WalletProviderWrapper } from "@/components/WalletProviderWrapper";
 import { OnboardingProvider } from "@/lib/context/OnboardingContext";
 import { ThemeProvider } from "next-themes";
@@ -29,10 +30,12 @@ export default function RootLayout({
             <WalletProviderWrapper>
               <CartProvider>
                 <ToastProvider>
-                  <NavBarConditional />
-                  <main className="min-h-screen">
-                    {children}
-                  </main>
+                  <TradeProvider>
+                    <NavBarConditional />
+                    <main className="min-h-screen">
+                      {children}
+                    </main>
+                  </TradeProvider>
                 </ToastProvider>
               </CartProvider>
             </WalletProviderWrapper>

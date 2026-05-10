@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from "react";
-import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { PublicKey, Transaction } from "@solana/web3.js";
-import { getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import { useParams, useRouter } from "next/navigation";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { ProductCard } from "@/components/dashboard/ProductCard";
 import { Clock3, Heart, Repeat2, ShieldCheck, Star, Store } from "lucide-react";
 import {
@@ -149,7 +147,8 @@ export default function StoreDetailPage() {
     }
   });
 
-  const { wallet, connection } = useAnchorClient();
+  const wallet = useWallet();
+  const { connection } = useConnection();
 
   // Auto-set test mint when a wallet is connected to avoid manual pasting during demos
   useEffect(() => {
@@ -511,12 +510,17 @@ export default function StoreDetailPage() {
                         Copy trade link
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={async () => {
+                        <button
+                          type="button"
+                          onClick={async () => {
                           if (!wallet?.publicKey) return alert('Connect Phantom to create ATA');
                           if (!testUsdcMint) return alert('Set a test mint first');
                           try {
+                            const [{ PublicKey, Transaction }, { getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction }] =
+                              await Promise.all([
+                                import("@solana/web3.js"),
+                                import("@solana/spl-token"),
+                              ]);
                             const mintPub = new PublicKey(testUsdcMint);
                             const ata = getAssociatedTokenAddressSync(mintPub, wallet.publicKey);
                             const tx = new Transaction().add(createAssociatedTokenAccountInstruction(wallet.publicKey, ata, wallet.publicKey, mintPub));

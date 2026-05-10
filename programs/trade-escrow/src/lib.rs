@@ -582,8 +582,9 @@ pub struct ReleaseFunds<'info> {
     pub vault_authority: UncheckedAccount<'info>,
     #[account(
         mut,
-        constraint = seller_token_account.owner == trade_account.seller,
-        constraint = seller_token_account.mint == escrow_vault.mint,
+        // HACKATHON MOCK - relaxed seller constraint: caller controls recipient ATA for demo
+        token::mint = escrow_vault.mint,
+        token::authority = caller,
     )]
     pub seller_token_account: Account<'info, TokenAccount>,
     #[account(

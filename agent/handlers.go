@@ -24,6 +24,8 @@ type registerRequest struct {
 	Carrier      string `json:"carrier"`
 	TradeAccount string `json:"trade_account"`
 	TradeID      string `json:"trade_id"`
+	Seller       string `json:"seller"`
+	Amount       string `json:"amount"`
 }
 
 type registerResponse struct {
@@ -281,7 +283,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := RegisterShipment(req.TrackingID, req.Wallet, req.CallbackURL, req.Carrier, req.TradeAccount, req.TradeID)
+	id, err := RegisterShipment(req.TrackingID, req.Wallet, req.CallbackURL, req.Carrier, req.TradeAccount, req.TradeID, req.Seller, req.Amount)
 	if err != nil {
 		log.Printf("register error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -794,7 +796,7 @@ func handleForceShip(w http.ResponseWriter, r *http.Request, tradeID string) {
 
 	if shipment == nil {
 		// Create new shipment record for this trade
-		id, err := RegisterShipment(req.TrackingID, "", "", "dhl", "", tradeID)
+		id, err := RegisterShipment(req.TrackingID, "", "", "dhl", "", tradeID, "", "0")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

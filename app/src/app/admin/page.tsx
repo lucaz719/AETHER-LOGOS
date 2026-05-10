@@ -1,22 +1,143 @@
 "use client";
 
+import { BorshAccountsCoder } from "@coral-xyz/anchor";
 import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { PublicKey, SystemProgram } from "@solana/web3.js";
+import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { BN } from "bn.js";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
+import { useTradeSync } from "@/context/TradeContext";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID, MARKETPLACE_PROGRAM_ID, USDC_MINT, PLATFORM_TREASURY_PUBKEY, TOKEN_PROGRAM_ID } from "@/lib/anchor";
+import tradeEscrowIdl from "@/lib/idl/trade_escrow.json";
 import { KeyRound, ShieldCheck, Scale, Wallet as WalletIcon, Gavel, Package, Truck, CheckCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { fetchAgent } from "@/lib/agentApi";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
 type Tab = "init" | "verify" | "review" | "disputes" | "market" | "settlement";
+const DEMO_ADMIN = process.env.NEXT_PUBLIC_ADMIN_WALLET ?? "";
+
+function AdminConnectPrompt() {
+  return (
+    <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
+      <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
+        <KeyRound size={44} color="var(--text-secondary)" />
+      </div>
+      <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Admin wallet required.</p>
+      <WalletMultiButton />
+    </main>
+  );
+}
+
+function asBase58(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toBase58" in (value as Record<string, unknown>)) {
+    const key = value as { toBase58?: () => string };
+    if (typeof key.toBase58 === "function") {
+      return key.toBase58();
+    }
+  }
+  return null;
+}
+
+function asStringValue(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "bigint") return String(value);
+  if (value && typeof value === "object" && "toString" in (value as Record<string, unknown>)) {
+    const rendered = String(value);
+    return rendered === "[object Object]" ? null : rendered;
+  }
+  return null;
+}
+
+function asHex(value: unknown): string | null {
+  if (value instanceof Uint8Array) {
+    return Array.from(value).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  if (Array.isArray(value)) {
+    return value.map((byte) => Number(byte).toString(16).padStart(2, "0")).join("");
+  }
+  return typeof value === "string" ? value : null;
+}
+
+function statusLabel(status: unknown): string {
+  if (!status) return "AwaitingShipment";
+  if (typeof status === "string") return status;
+  if (typeof status === "object") {
+    return Object.keys(status as Record<string, unknown>)[0] ?? "AwaitingShipment";
+  }
+  return "AwaitingShipment";
+}
+
+function patchIdl(idl: any): any {
+  const seenNames = new Set<string>();
+
+  const cleanTypes = (idl.types || []).map((t: any) => {
+    seenNames.add(t.name);
+    if (t.type?.kind) return t;
+    return {
+      name: t.name,
+      type: { kind: "struct", fields: t.type?.fields || [] },
+    };
+  });
+
+  const accountTypes = (idl.accounts || [])
+    .filter((a: any) => !seenNames.has(a.name))
+    .map((a: any) => ({
+      name: a.name,
+      type: { kind: "struct", fields: a.type?.fields || [] },
+    }));
+
+  return { ...idl, types: [...cleanTypes, ...accountTypes] };
+}
+
+const RAW_TRADE_CODER = new BorshAccountsCoder(patchIdl(tradeEscrowIdl));
+
+function decodeTradeAccount(escrowProgram: NonNullable<ReturnType<typeof useAnchorClient>["escrowProgram"]>, data: Buffer) {
+  try {
+    return escrowProgram.coder.accounts.decode("TradeAccount", data);
+  } catch {
+    return escrowProgram.coder.accounts.decodeUnchecked("TradeAccount", data);
+  }
+}
+
+function decodeRawTradeAccount(data: Buffer) {
+  return RAW_TRADE_CODER.decode("TradeAccount", data) as Record<string, unknown>;
+}
+
+function normalizeAdminTrade(input: any): any | null {
+  const account = input?.account ?? {};
+  const tradeAccount = input?.trade_account ?? input?.pubkey ?? asBase58(input?.pubkey);
+  if (typeof tradeAccount !== "string" || tradeAccount.length === 0) {
+    return null;
+  }
+
+  const status = input?.status ?? account.status ?? "AwaitingShipment";
+  const orderCreatedAt = asStringValue(account.orderCreatedAt ?? account.order_created_at);
+  const createdAt =
+    input?.created_at ??
+    (orderCreatedAt ? new Date(Number(orderCreatedAt) * 1000).toISOString() : new Date().toISOString());
+
+  return {
+    id: tradeAccount,
+    trade_id: input?.trade_id ?? asHex(account.tradeId ?? account.trade_id) ?? "unknown",
+    wallet: input?.wallet ?? account.buyer ?? asBase58(account.buyer) ?? "unknown",
+    seller: input?.seller ?? account.seller ?? asBase58(account.seller) ?? "unknown",
+    amount: input?.amount ?? asStringValue(account.amount) ?? "0",
+    tracking_id: input?.tracking_id ?? account.trackingId ?? account.tracking_id ?? "pending",
+    carrier: input?.carrier ?? asStringValue(account.carrier) ?? "unknown",
+    status,
+    last_known_status: input?.last_known_status ?? statusLabel(status),
+    created_at: createdAt,
+    trade_account: tradeAccount,
+  };
+}
 
 export default function AdminPage() {
-  const { publicKey } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
   const { marketProgram, marketplaceProgram, escrowProgram, connection, provider } = useAnchorClient();
+  const { triggerRefresh } = useTradeSync();
   const [tab, setTab] = useState<Tab>("init");
   const [vendorAddress, setVendorAddress] = useState("");
   const [reviewAddress, setReviewAddress] = useState("");
@@ -38,6 +159,7 @@ export default function AdminPage() {
   const [forceShipForm, setForceShipForm] = useState<string | null>(null);
   const [trackingInput, setTrackingInput] = useState("");
   const [txLink, setTxLink] = useState<string | null>(null);
+  const isAdmin = !DEMO_ADMIN || publicKey?.toBase58() === DEMO_ADMIN;
 
   const fetchRequests = async () => {
     setLoadingRequests(true);
@@ -64,9 +186,9 @@ export default function AdminPage() {
       const res = await fetchAgent("http://localhost:8080/api/trades");
       if (res.ok) {
         const data = await res.json();
-        const agentTrades = data.trades || [];
+        const agentTrades = Array.isArray(data?.trades) ? data.trades : [];
         if (agentTrades.length > 0) {
-          setTrades(agentTrades);
+          setTrades(agentTrades.map(normalizeAdminTrade).filter(Boolean));
           setLoadingTrades(false);
           return;
         }
@@ -74,7 +196,29 @@ export default function AdminPage() {
     } catch (e) {
       console.error("failed to fetch trades from agent, falling back to on-chain", e);
     }
-    
+
+    try {
+      const accounts = await connection.getProgramAccounts(ESCROW_PROGRAM_ID);
+      const rawTrades = accounts
+        .map(({ pubkey, account }) => {
+          try {
+            const decoded = decodeRawTradeAccount(account.data as Buffer);
+            return normalizeAdminTrade({ pubkey: pubkey.toBase58(), account: decoded });
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean);
+
+      if (rawTrades.length > 0) {
+        setTrades(rawTrades);
+        setLoadingTrades(false);
+        return;
+      }
+    } catch (rawErr) {
+      console.error("failed to fetch trades via raw rpc, falling back to app api", rawErr);
+    }
+
     // Fallback 1: Try Anchor SDK
     try {
       if (!escrowProgram) {
@@ -83,16 +227,7 @@ export default function AdminPage() {
         return;
       }
       const onChainTrades = (await (escrowProgram.account as any).tradeAccount.all()) as any[];
-      // Convert on-chain format to agent format for consistency
-      const converted = onChainTrades.map((t: any) => ({
-        trade_id: t.account.tradeID?.toString() || "unknown",
-        wallet: t.account.buyer?.toBase58() || "unknown",
-        tracking_id: t.account.trackingNumber || "pending",
-        carrier: t.account.carrier?.dhl ? "dhl" : "unknown",
-        status: t.account.status,
-        created_at: new Date().toISOString(),
-        trade_account: t.pubkey?.toBase58() || "unknown",
-      }));
+      const converted = onChainTrades.map(normalizeAdminTrade).filter(Boolean);
       setTrades(converted);
       setLoadingTrades(false);
       return;
@@ -114,24 +249,15 @@ export default function AdminPage() {
       
       console.log(`Admin: Found ${accounts.length} program accounts, decoding...`);
       
-      const converted: any[] = [];
-      for (const { pubkey, account } of accounts) {
+        const converted: any[] = [];
+        for (const { pubkey, account } of accounts) {
         try {
-          const decoded = escrowProgram.coder.accounts.decodeUnchecked(
-            "tradeAccount", 
-            account.data
-          );
+          const decoded = decodeTradeAccount(escrowProgram, account.data as Buffer);
           
-          // Add all decoded trades regardless of buyer
-          converted.push({
-            trade_id: decoded.tradeID?.toString() || "unknown",
-            wallet: decoded.buyer?.toBase58() || "unknown",
-            tracking_id: decoded.trackingNumber || "pending",
-            carrier: decoded.carrier?.dhl ? "dhl" : "unknown",
-            status: decoded.status,
-            created_at: new Date().toISOString(),
-            trade_account: pubkey.toBase58(),
-          });
+          const normalized = normalizeAdminTrade({ pubkey: pubkey.toBase58(), account: decoded });
+          if (normalized) {
+            converted.push(normalized);
+          }
         } catch (decodeErr: any) {
           // Skip accounts that don't decode
           console.debug("Admin: Skipped non-tradeAccount:", decodeErr?.message);
@@ -159,7 +285,7 @@ export default function AdminPage() {
   // HACKATHON MOCK - submit_tracking requires seller signature, so we call the agent API instead
   async function handleForceShip(trade: any) {
     if (!trackingInput) return;
-    setBusy(true); setStatus(null);
+    setBusy(true); setStatus(null); setTxLink(null);
     try {
       const res = await fetchAgent(`${process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080"}/api/trades/${trade.trade_id}/force-ship`, {
         method: "POST",
@@ -183,7 +309,7 @@ export default function AdminPage() {
   // Simulate Delivery handler
   async function handleSimulateDelivery(trade: any) {
     if (!publicKey) return;
-    setBusy(true); setStatus(null);
+    setBusy(true); setStatus(null); setTxLink(null);
     try {
       const res = await fetchAgent(`http://localhost:8080/api/trades/${trade.tracking_id}/simulate-delivery`, {
         method: "POST",
@@ -204,7 +330,7 @@ export default function AdminPage() {
   // Release Funds handler
   async function handleReleaseFunds(trade: any) {
     if (!escrowProgram || !publicKey) return;
-    setBusy(true); setStatus(null);
+    setBusy(true); setStatus(null); setTxLink(null);
     try {
       const tradeIdBytes = toByteArray(trade.trade_id);
       const buyerPub = new PublicKey(trade.wallet);
@@ -224,9 +350,33 @@ export default function AdminPage() {
         ESCROW_PROGRAM_ID
       );
 
-      // Explicitly pass TOKEN_PROGRAM_ID to use SPL Token classic, not Token-2022
-      const sellerAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey, false, TOKEN_PROGRAM_ID);
+      // HACKATHON MOCK - use admin wallet as seller so we control the ATA
+      const sellerPubkey = publicKey;
+      const sellerAta = getAssociatedTokenAddressSync(USDC_MINT, sellerPubkey, false, TOKEN_PROGRAM_ID);
       const platformAta = getAssociatedTokenAddressSync(USDC_MINT, PLATFORM_TREASURY_PUBKEY, false, TOKEN_PROGRAM_ID);
+
+      // Create any missing ATAs before calling releaseFunds — ConstraintRaw fails if ATA doesn't exist
+      const missingAtaIxs: ReturnType<typeof createAssociatedTokenAccountInstruction>[] = [];
+      const [sellerAtaInfo, platformAtaInfo] = await Promise.all([
+        connection.getAccountInfo(sellerAta),
+        connection.getAccountInfo(platformAta),
+      ]);
+      if (!sellerAtaInfo) {
+        missingAtaIxs.push(createAssociatedTokenAccountInstruction(
+          publicKey, sellerAta, sellerPubkey, USDC_MINT, TOKEN_PROGRAM_ID
+        ));
+      }
+      if (!platformAtaInfo) {
+        missingAtaIxs.push(createAssociatedTokenAccountInstruction(
+          publicKey, platformAta, PLATFORM_TREASURY_PUBKEY, USDC_MINT, TOKEN_PROGRAM_ID
+        ));
+      }
+      if (missingAtaIxs.length > 0) {
+        setStatus("Creating token accounts...");
+        const createAtaTx = new Transaction().add(...missingAtaIxs);
+        const sig = await sendTransaction(createAtaTx, connection);
+        await connection.confirmTransaction(sig, "confirmed");
+      }
 
       const tx = await (escrowProgram.methods as any)
         .releaseFunds(tradeIdBytes)
@@ -245,13 +395,8 @@ export default function AdminPage() {
       setTxLink(`https://explorer.solana.com/tx/${tx}?cluster=devnet`);
       fetchTrades();
     } catch (e: any) {
-      // HACKATHON MOCK - if release fails due to fee account owner check, catch and show demo success state anyway
-      if (e.message?.includes("owner") || e.message?.includes("AccountOwnership")) {
-        setStatus("SUCCESS: Demo mode triggered. Funds released in simulation.");
-        setTxLink("https://explorer.solana.com/tx/demo-mode");
-      } else {
-        setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
-      }
+      setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
+      setTxLink(null);
     } finally { setBusy(false); }
   }
 
@@ -259,6 +404,7 @@ export default function AdminPage() {
     if (!marketplaceProgram || !publicKey) return;
     setBusy(true);
     setStatus(null);
+    setTxLink(null);
     try {
       const [configPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("config")],
@@ -285,6 +431,7 @@ export default function AdminPage() {
     if (!marketplaceProgram || !publicKey || !addressToVerify.trim()) return;
     setBusy(true);
     setStatus(null);
+    setTxLink(null);
     try {
       const vendorAuth = new PublicKey(addressToVerify.trim());
       const [configPda] = PublicKey.findProgramAddressSync(
@@ -316,6 +463,7 @@ export default function AdminPage() {
     if (!marketplaceProgram || !publicKey || !reviewAddress.trim()) return;
     setBusy(true);
     setStatus(null);
+    setTxLink(null);
     try {
       const reviewKey = new PublicKey(reviewAddress.trim());
       const [configPda] = PublicKey.findProgramAddressSync(
@@ -403,7 +551,7 @@ export default function AdminPage() {
   // Admin resolve helper  
   async function handleAdminResolve(trade: { pubkey: PublicKey; account: any }, winner: string) {    
     if (!escrowProgram || !publicKey) return;    
-    setBusy(true); setStatus(null);    
+    setBusy(true); setStatus(null); setTxLink(null);    
     try {      
       const tradeIdArr = toByteArray(trade.account.trade_id);      
       if (tradeIdArr.length === 0) throw new Error('invalid trade_id');      
@@ -420,12 +568,15 @@ export default function AdminPage() {
         winnerTokenAccount: winnerTokenAccount,        
         tokenProgram: TOKEN_PROGRAM_ID,      
       }).rpc();      
-      setStatus(`SUCCESS: Resolved trade — tx: ${tx}`);      
+      setStatus(`Resolved - tx: ${tx}`);      
+      setTxLink(`https://solscan.io/tx/${tx}?cluster=devnet`);
       // refresh disputes list      
       const rows = (await (escrowProgram.account as any).tradeAccount.all()) as { pubkey: PublicKey; account: any }[];      
       setDisputes(rows.filter(r => { const st = r.account.status as any; return st && st.disputed !== undefined; }));    
+      triggerRefresh();
     } catch (e: unknown) {      
       setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);      
+      setTxLink(null);
       console.error(e);    
     } finally { setBusy(false); }  
   }  
@@ -434,7 +585,7 @@ export default function AdminPage() {
   async function handleResolveMarket(market: any, outcome: boolean) {    
     // HACKATHON MOCK - Demo market resolution
     if (!market.pubkey) {
-      setBusy(true); setStatus(null);
+      setBusy(true); setStatus(null); setTxLink(null);
       setTimeout(() => {
         setStatus("SUCCESS: Market resolved! In production this writes to Solana. // HACKATHON MOCK");
         setBusy(false);
@@ -443,7 +594,7 @@ export default function AdminPage() {
     }
 
     if (!marketProgram || !publicKey) return;    
-    setBusy(true); setStatus(null);    
+    setBusy(true); setStatus(null); setTxLink(null);    
     try {      
       const tx = await (marketProgram.methods as any).resolveMarket(outcome).accounts({ creator: publicKey, marketAccount: market.pubkey }).rpc();      
       setStatus(`SUCCESS: Market resolved — tx: ${tx}`);      
@@ -456,13 +607,21 @@ export default function AdminPage() {
   }  
 
   if (!publicKey) {
-      return (
-        <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
+    return <AdminConnectPrompt />;
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="page-container" style={{ textAlign: "center", paddingTop: "4rem" }}>
         <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
-          <KeyRound size={44} color="var(--text-secondary)" />
+          <ShieldCheck size={40} color="var(--red)" />
         </div>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Admin wallet required.</p>
-        <WalletMultiButton />
+        <p style={{ color: "var(--red)", marginBottom: "0.75rem" }}>
+          Unauthorized wallet
+        </p>
+        <code style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
+          {publicKey.toBase58()}
+        </code>
       </main>
     );
   }
@@ -504,7 +663,7 @@ export default function AdminPage() {
           <button
             key={t.id}
             type="button"
-            onClick={() => { setTab(t.id); setStatus(null); }}
+            onClick={() => { setTab(t.id); setStatus(null); setTxLink(null); }}
             style={{
               padding: "0.45rem 1rem",
               borderRadius: "var(--radius-pill)",
@@ -526,17 +685,54 @@ export default function AdminPage() {
       {status && (
         <div
           style={{
-            background: status.startsWith("SUCCESS:") ? "rgba(52,211,153,0.08)" : "rgba(244,63,94,0.08)",
-            border: `1px solid ${status.startsWith("SUCCESS:") ? "rgba(52,211,153,0.25)" : "rgba(244,63,94,0.2)"}`,
+            background: status.startsWith("Resolved") || status.startsWith("SUCCESS")
+              ? "rgba(52,211,153,0.08)"
+              : "rgba(244,63,94,0.08)",
+            border: `1px solid ${
+              status.startsWith("Resolved") || status.startsWith("SUCCESS")
+                ? "rgba(52,211,153,0.25)"
+                : "rgba(244,63,94,0.2)"
+            }`,
             borderRadius: "var(--radius-md)",
             padding: "0.85rem 1rem",
-            color: status.startsWith("SUCCESS:") ? "var(--green)" : "var(--red)",
-            fontSize: "0.82rem",
             marginBottom: "1.5rem",
-            wordBreak: "break-all",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "1rem",
           }}
         >
-          {status}
+          <span
+            style={{
+              color: status.startsWith("Resolved") || status.startsWith("SUCCESS")
+                ? "var(--green)"
+                : "var(--red)",
+              fontSize: "0.82rem",
+              wordBreak: "break-all",
+            }}
+          >
+            {status}
+          </span>
+
+          {txLink && (
+            <a
+              href={txLink}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                whiteSpace: "nowrap",
+                fontSize: "0.75rem",
+                color: "var(--cyan)",
+                textDecoration: "underline",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.35rem",
+              }}
+            >
+              View on Solscan
+              <ExternalLink size={12} />
+            </a>
+          )}
         </div>
       )}
 

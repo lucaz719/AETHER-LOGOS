@@ -160,13 +160,15 @@ export function useCheckout() {
                method: "POST",
                headers: { "Content-Type": "application/json" },
                body: JSON.stringify({
-                 trade_id: tradeIdHex,
-                 wallet: buyerKey.toBase58(),
-                 carrier: "dhl",
-                 trade_account: tradeAccountPda.toBase58(),
-                 tracking_id: "",
-                 callback_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/shipment-update`,
-               }),
+                trade_id: tradeIdHex,
+                wallet: buyerKey.toBase58(),
+                carrier: "dhl",
+                trade_account: tradeAccountPda.toBase58(),
+                seller: vendorAuthority.toBase58(),
+                amount: String(item.priceUsdc * item.quantity),
+                tracking_id: "",
+                callback_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/shipment-update`,
+              }),
              }).catch(err => {
                console.warn("Agent registration failed (non-blocking):", err);
              });

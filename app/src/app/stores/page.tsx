@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import { ArrowRight, Store } from "lucide-react";
+import { StoreCardGrid, type StoreCardItem } from "@/components/stores/StoreCardGrid";
+import { StoresStatsOverview } from "@/components/stores/StoresStatsOverview";
 import { MOCK_STORES, type PublicStore, vendorTypeToSellerTier } from "@/lib/data/mockStores";
-import type { StoreCardItem } from "@/components/stores/StoreCardGrid";
 
 const API = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 const FOLLOWED_STORES_KEY = "aether_followed_stores";
@@ -20,16 +20,6 @@ const FILTERS: Array<{ label: string; value: StoreFilter }> = [
   { label: "Distributor", value: "distributor" },
   { label: "Wholesaler", value: "wholesaler" },
 ];
-
-const StoresStatsOverview = dynamic(
-  () => import("@/components/stores/StoresStatsOverview").then((m) => m.StoresStatsOverview),
-  { ssr: false },
-);
-
-const StoreCardGrid = dynamic(
-  () => import("@/components/stores/StoreCardGrid").then((m) => m.StoreCardGrid),
-  { ssr: false },
-);
 
 function toVendorType(value?: string): PublicStore["vendorType"] {
   const v = (value ?? "").toLowerCase();

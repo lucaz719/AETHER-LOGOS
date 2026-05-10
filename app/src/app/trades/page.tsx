@@ -492,6 +492,8 @@ function TradesPageContent() {
                 carrier: "dhl",
                 trade_account: tradeAccount.toString(),
                 trade_id: Buffer.from(tradeId).toString("hex"),
+                seller: sellerPubkey.toString(),
+                amount: String(amountUsdc),
                 signature,
               }),
             });

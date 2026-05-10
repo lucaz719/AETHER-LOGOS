@@ -165,15 +165,17 @@ export default function MarketplaceBrowseClient() {
           const registerRes = await fetchAgent('http://localhost:8080/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              tracking_id: '',
-              wallet: publicKey.toString(),
-              callback_url: '',
-              carrier: '',
-              trade_account: tradeAccount.toString(),
-              trade_id: Buffer.from(tradeId).toString('hex'),
-            }),
-          });
+              body: JSON.stringify({
+                tracking_id: '',
+                wallet: publicKey.toString(),
+                callback_url: '',
+                carrier: '',
+                trade_account: tradeAccount.toString(),
+                trade_id: Buffer.from(tradeId).toString('hex'),
+                seller: seller.toString(),
+                amount: String(product.price_usdc * 1_000_000),
+              }),
+            });
 
           if (!registerRes.ok) {
             console.warn('Failed to register trade with agent');

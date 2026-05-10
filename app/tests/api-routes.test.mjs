@@ -60,19 +60,23 @@ test("GET /api/markets returns API payload shape", async () => {
   assert.equal(typeof body.updatedAt, "string");
 });
 
-test("GET /api/trades rejects missing buyer/seller filter", async () => {
+test("GET /api/trades returns API payload shape", async () => {
   const res = await fetch(`${BASE_URL}/api/trades`);
-  assert.equal(res.status, 400);
+  assert.equal(res.status, 200);
   const body = await res.json();
-  assert.equal(body.error, "buyer or seller query param is required");
+  assert.ok(Array.isArray(body.trades));
+  assert.deepEqual(body.filter, { buyer: null, seller: null });
 });
 
-test("GET /api/trades with filter responds without blockchain dependency", async () => {
+test("GET /api/trades with filter returns filtered payload shape", async () => {
   const res = await fetch(`${BASE_URL}/api/trades?buyer=ExampleBuyer1111111111111111111111111111111`);
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.ok(Object.prototype.hasOwnProperty.call(body, "trades"));
-  assert.equal(body.warning, "NEXT_PUBLIC_ESCROW_PROGRAM_ID not set");
+  assert.deepEqual(body.filter, {
+    buyer: "ExampleBuyer1111111111111111111111111111111",
+    seller: null,
+  });
 });
 
 test("GET /api/marketplace/vendors returns paginated vendor list shape", async () => {

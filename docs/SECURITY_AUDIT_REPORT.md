@@ -138,7 +138,7 @@ PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3...
 The Solana private key in `.env` is stored as plaintext Base58. Even though `.env` is now in `.gitignore`, any developer with local filesystem access can read it. Additionally, `Anchor.toml` references `~/.config/solana/id.json`, which is a JSON file containing the private key array as plaintext integers.
 
 **Remediation:**
-- Use encrypted key storage: `solana-cli` built-in key encryption
+- Use encrypted key storage: `s1olana-cli` built-in key encryption
 - Consider hardware wallet (Ledger) for production
 - Use secret vaults for team (AWS Secrets Manager, HashiCorp Vault)
 

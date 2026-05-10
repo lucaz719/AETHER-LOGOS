@@ -5,7 +5,9 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
 import { ClipboardList, Wallet, Store, Building2, AlertCircle, Heart } from "lucide-react";
+import { useTradeSync } from "@/context/TradeContext";
 import { useBuyerOrders } from "@/hooks/useBuyerOrders";
+import { getStatusMeta } from "@/lib/tradeStatus";
 import { SettlementStatusBadge, SettlementFlowViewer } from "@/components/SettlementStatus";
 
 interface UserProfile {
@@ -38,6 +40,68 @@ const SkeletonRow = () => (
   </div>
 );
 
+function bytesToHex(value: unknown): string | null {
+  if (value instanceof Uint8Array) {
+    return Array.from(value)
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  if (Array.isArray(value) && value.every((item) => typeof item === "number")) {
+    return value
+      .map((byte) => Number(byte).toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  return null;
+}
+
+function shortRef(value: string): string {
+  if (value.length <= 18) return value;
+  return `${value.slice(0, 6)}…${value.slice(-6)}`;
+}
+
+function formatOrderReference(order: TradeRow, index: number): string {
+  const rawId = order.account?.trade_id ?? order.account?.id ?? order.account?.tradeId;
+  const tradeId = typeof rawId === "string" ? rawId : bytesToHex(rawId);
+  if (tradeId) return shortRef(tradeId);
+
+  const pubkey = order.pubkey?.toBase58?.();
+  if (typeof pubkey === "string" && pubkey.length > 0) {
+    return shortRef(pubkey);
+  }
+
+  return `Order #${index + 1}`;
+}
+
+function toDateMs(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 1_000_000_000_000 ? value : value * 1000;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+
+    if (/^\d+$/.test(trimmed)) {
+      const numeric = Number(trimmed);
+      return Number.isFinite(numeric)
+        ? (numeric > 1_000_000_000_000 ? numeric : numeric * 1000)
+        : null;
+    }
+
+    const parsed = Date.parse(trimmed);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function formatOrderDate(value: unknown): string {
+  const ms = toDateMs(value);
+  return ms ? new Date(ms).toLocaleDateString() : "Pending timestamp";
+}
+
 // ============= MAIN COMPONENT =============
 export default function UserDashboardPage() {
   const { publicKey } = useWallet();
@@ -47,7 +111,8 @@ export default function UserDashboardPage() {
   const [reviewCount, setReviewCount] = useState<number | null>(null);
 
   const wallet = publicKey?.toBase58();
-  const { orders } = useBuyerOrders();
+  const { refreshKey } = useTradeSync();
+  const { orders } = useBuyerOrders(refreshKey);
 
   useEffect(() => {
     if (!wallet) {
@@ -405,51 +470,49 @@ export default function UserDashboardPage() {
                   Shop Now →
                 </Link>
               </div>
-            ) : (
-              <div>
-                {orders.slice(0, 5).map((order, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      padding: "1rem 1.5rem",
-                      borderBottom: idx < Math.min(4, orders.length - 1) ? "1px solid rgba(255,255,255,0.08)" : "none",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
-                        {order.account?.id?.toString?.() || "Order #" + (idx + 1)}
-                      </div>
-                      <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
-                        {new Date(
-                          typeof order.account?.created_at === "string" ||
-                          typeof order.account?.created_at === "number"
-                            ? order.account.created_at
-                            : Date.now()
-                        ).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        padding: "0.25rem 0.5rem",
-                        background: "rgba(34,212,34,0.15)",
-                        color: "#22C55E",
-                        borderRadius: "0.375rem",
-                        fontSize: "0.625rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {typeof order.account?.status === 'object' && order.account.status !== null 
-                        ? Object.keys(order.account.status)[0] 
-                        : String(order.account?.status || "Active")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+             ) : (
+               <div>
+                 {orders.slice(0, 5).map((order, idx) => {
+                   const meta = getStatusMeta(order.account?.status);
+
+                   return (
+                     <div
+                       key={idx}
+                       style={{
+                         padding: "1rem 1.5rem",
+                         borderBottom: idx < Math.min(4, orders.length - 1) ? "1px solid rgba(255,255,255,0.08)" : "none",
+                         display: "flex",
+                         justifyContent: "space-between",
+                         alignItems: "center",
+                       }}
+                     >
+                       <div>
+                         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
+                           {formatOrderReference(order, idx)}
+                         </div>
+                         <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
+                           {formatOrderDate(order.account?.created_at)}
+                         </div>
+                       </div>
+                       <div
+                         style={{
+                           padding: "0.25rem 0.6rem",
+                           background: meta.bg,
+                           color: meta.color,
+                           borderRadius: "0.375rem",
+                           fontSize: "0.625rem",
+                           fontWeight: 600,
+                           border: `1px solid ${meta.color}30`,
+                         }}
+                       >
+                         {meta.label}
+                       </div>
+                     </div>
+                   );
+                 })}
+               </div>
+             )}
+           </div>
         </div>
 
         {/* ACCOUNT STATUS */}

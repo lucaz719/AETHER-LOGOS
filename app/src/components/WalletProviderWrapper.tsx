@@ -1,12 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { ReactNode, useEffect, useState } from "react";
-
-const SolanaWalletProvider = dynamic(
-  () => import("@/lib/wallet-provider").then((m) => ({ default: m.SolanaWalletProvider })),
-  { ssr: false }
-);
+import { SolanaWalletProvider } from "@/lib/wallet-provider";
 
 export function WalletProviderWrapper({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
