@@ -5,9 +5,9 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram } from "@solana/web3.js";
 import { BN } from "bn.js";
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from "@solana/spl-token";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
-import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID, MARKETPLACE_PROGRAM_ID, USDC_MINT, PLATFORM_TREASURY_PUBKEY } from "@/lib/anchor";
+import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID, MARKETPLACE_PROGRAM_ID, USDC_MINT, PLATFORM_TREASURY_PUBKEY, TOKEN_PROGRAM_ID } from "@/lib/anchor";
 import { KeyRound, ShieldCheck, Scale, Wallet as WalletIcon, Gavel, Package, Truck, CheckCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { fetchAgent } from "@/lib/agentApi";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
@@ -224,8 +224,9 @@ export default function AdminPage() {
         ESCROW_PROGRAM_ID
       );
 
-      const sellerAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey); // Using connected wallet as seller for demo simplicity
-      const platformAta = getAssociatedTokenAddressSync(USDC_MINT, PLATFORM_TREASURY_PUBKEY);
+      // Explicitly pass TOKEN_PROGRAM_ID to use SPL Token classic, not Token-2022
+      const sellerAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey, false, TOKEN_PROGRAM_ID);
+      const platformAta = getAssociatedTokenAddressSync(USDC_MINT, PLATFORM_TREASURY_PUBKEY, false, TOKEN_PROGRAM_ID);
 
       const tx = await (escrowProgram.methods as any)
         .releaseFunds(tradeIdBytes)
@@ -410,7 +411,7 @@ export default function AdminPage() {
       const [vaultPda] = PublicKey.findProgramAddressSync([Buffer.from('vault'), tradeIdBuf], ESCROW_PROGRAM_ID);      
       const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from('authority')], ESCROW_PROGRAM_ID);      
       const winnerPub = new PublicKey(winner);      
-      const winnerTokenAccount = await getAssociatedTokenAddress(new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'), winnerPub);      
+      const winnerTokenAccount = await getAssociatedTokenAddress(new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'), winnerPub, false, TOKEN_PROGRAM_ID);      
       const tx = await (escrowProgram.methods as any).adminResolve(tradeIdArr, winnerPub).accounts({        
         admin: publicKey,        
         tradeAccount: trade.pubkey,        

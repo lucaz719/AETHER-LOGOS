@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-declare_id!("7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc");
+declare_id!("6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3");
 pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 pub const PLATFORM_FEE_BASIS_POINTS: u64 = 200; // 2%
 

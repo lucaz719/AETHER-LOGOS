@@ -4,7 +4,7 @@ import tradeEscrowIdl from "./idl/trade_escrow.json";
 import predictionMarketIdl from "./idl/prediction_market.json";
 import marketplaceIdl from "./idl/marketplace.json";
 
-const DEFAULT_ESCROW_PROGRAM_ID = "7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc";
+const DEFAULT_ESCROW_PROGRAM_ID = "6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3";
 const DEFAULT_MARKET_PROGRAM_ID = "Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr";
 
 export const ESCROW_PROGRAM_ID = new PublicKey(
@@ -37,6 +37,12 @@ export const PLATFORM_TREASURY_PUBKEY = new PublicKey(
 
 export const USDC_MINT = new PublicKey(
   process.env.NEXT_PUBLIC_USDC_MINT ?? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+);
+
+// SPL Token Program (classic, not Token-2022)
+// Must be TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+export const TOKEN_PROGRAM_ID = new PublicKey(
+  "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
 
 /**

@@ -20,4 +20,4 @@ zktls-verify = []
 
 [dependencies]
 anchor-lang = { version = "0.32.0", features = ["init-if-needed"] }
-anchor-spl = { version = "0.32.0", features = ["token", "token_2022"] }
+anchor-spl = { version = "0.32.0", features = ["token"] }

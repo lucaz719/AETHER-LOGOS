@@ -6,12 +6,12 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-trade_escrow = "7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc"
+trade_escrow = "6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3"
 prediction_market = "Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr"
 marketplace = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN"
 
 [programs.devnet]
-trade_escrow = "7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc"
+trade_escrow = "6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3"
 prediction_market = "Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr"
 marketplace = "6qjk2gfJTHhqYmTwUM4WnoKYpjrzeneqKdR5NH3jXdTj"
 
