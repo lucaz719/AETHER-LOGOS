@@ -107,7 +107,7 @@ export function useBuyerOrders() {
           }
         }
 
-        setOrders(orders);
+        setOrders(orders.filter(o => o.pubkey != null));
         setError(null);
       } catch (err: any) {
         console.warn("useBuyerOrders: Unexpected error:", err?.message || err, err?.stack);

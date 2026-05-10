@@ -136,11 +136,11 @@ export default function UserOrdersPage() {
             const meta = STATUS_META[status] ?? { label: status, tone: "badge-cyan" };
             const amount = Number(order.account.amount?.toString() ?? 0) / 1_000_000;
             const quantity = 1; // Trades aggregate quantity into amount on-chain
-            const deadline = order.account.shipByDeadline ? Number(order.account.shipByDeadline.toString()) : null;
-            const trackingHref = `/user/orders/${order.pubkey.toBase58()}`;
+            const deadline = order.account?.shipByDeadline ? Number(order.account.shipByDeadline.toString()) : null;
+            const trackingHref = `/user/orders/${order.pubkey?.toBase58() ?? order.account?.tradeId ?? 'unknown'}`;
 
             return (
-              <article key={order.pubkey.toBase58()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
+              <article key={order.pubkey?.toBase58() ?? Math.random().toString()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3">
