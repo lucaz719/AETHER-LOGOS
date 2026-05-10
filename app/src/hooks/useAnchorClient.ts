@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { AnchorProvider } from "@coral-xyz/anchor";
 import { Connection } from "@solana/web3.js";
 import { useAnchorWallet } from "@solana/wallet-adapter-react";
-import { getEscrowProgram, getMarketProgram } from "@/lib/anchor";
+import { getEscrowProgram, getMarketProgram, getMarketplaceProgram } from "@/lib/anchor";
 
 export function useAnchorClient() {
   const wallet = useAnchorWallet();
@@ -23,5 +23,10 @@ export function useAnchorClient() {
     [provider],
   );
 
-  return { escrowProgram, marketProgram, wallet, connection, provider };
+  const marketplaceProgram = useMemo(
+    () => (provider ? getMarketplaceProgram(provider) : null),
+    [provider],
+  );
+
+  return { escrowProgram, marketProgram, marketplaceProgram, wallet, connection, provider };
 }

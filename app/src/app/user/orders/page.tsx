@@ -137,19 +137,19 @@ export default function UserOrdersPage() {
             const amount = Number(order.account.amount?.toString() ?? 0) / 1_000_000;
             const quantity = 1; // Trades aggregate quantity into amount on-chain
             const deadline = order.account.shipByDeadline ? Number(order.account.shipByDeadline.toString()) : null;
-            const trackingHref = `/user/orders/${order.publicKey.toBase58()}`;
+            const trackingHref = `/user/orders/${order.pubkey.toBase58()}`;
 
             return (
-              <article key={order.publicKey.toBase58()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
+              <article key={order.pubkey.toBase58()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className={`badge ${meta.tone} px-3 py-1 rounded-full`}>{meta.label}</span>
                       <span className="badge badge-cyan px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                        Ref: {shortKey(order.publicKey)}
+                        Ref: {shortKey(order.pubkey)}
                       </span>
                     </div>
-                    <h3 className="mt-4 text-xl font-black text-foreground tracking-tight">{shortKey(order.account.seller)}</h3>
+                    <h3 className="mt-4 text-xl font-black text-foreground tracking-tight">{shortKey(order.account.seller as PublicKey)}</h3>
                     <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                       <span className="inline-flex items-center gap-2">
                         <Package size={14} className="text-primary" />

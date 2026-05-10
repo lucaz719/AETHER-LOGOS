@@ -75,6 +75,12 @@ export function NavBar() {
             >
               My Orders
             </Link>
+            <Link
+              href="/admin"
+              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+            >
+              Admin
+            </Link>
           </div>
 
           {/* Right Utilities: Wallet + Cart + Theme */}

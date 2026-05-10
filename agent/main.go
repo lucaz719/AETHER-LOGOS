@@ -85,11 +85,21 @@ func main() {
 	// Vendor API
 	http.HandleFunc("/api/vendor/register", VendorRegisterHandler)
 	http.HandleFunc("/api/vendor/", VendorGetHandler)
+	http.HandleFunc("/api/vendors", VendorsListHandler)
+	http.HandleFunc("/api/vendors/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/vendors" || r.URL.Path == "/api/vendors/" {
+			VendorsListHandler(w, r)
+		} else {
+			storeDispatch(w, r)
+		}
+	})
 
 	// Product API
 	http.HandleFunc("/api/vendor/products", ProductCreateHandler)
 	http.HandleFunc("/api/products", ProductsListHandler)
 	http.HandleFunc("/api/products/", ProductGetHandler)
+	http.HandleFunc("/api/trades", TradesListHandler)
+	http.HandleFunc("/api/trades/", TradeSimulateDeliveryHandler)
 
 	// User API
 	http.HandleFunc("/api/users/", userDispatch)
@@ -102,11 +112,8 @@ func main() {
 	})
 
 	// Store API
-	http.HandleFunc("/api/stores", func(w http.ResponseWriter, r *http.Request) {
-		storeDispatch(w, r)
-	})
+	http.HandleFunc("/api/stores", storeDispatch)
 	http.HandleFunc("/api/stores/", storeDispatch)
-	http.HandleFunc("/api/vendors/", storeDispatch)
 
 	pollIntervalSeconds := 30
 	if raw := os.Getenv("POLL_INTERVAL_SECONDS"); raw != "" {

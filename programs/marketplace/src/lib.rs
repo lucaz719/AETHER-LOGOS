@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN");
+declare_id!("6qjk2gfJTHhqYmTwUM4WnoKYpjrzeneqKdR5NH3jXdTj");
 
 pub const DEVNET_USDC_MINT: Pubkey = pubkey!("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 pub const MAX_CATEGORIES: usize = 8;
@@ -623,7 +623,7 @@ pub struct InitConfig<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
     #[account(
-        init,
+        init_if_needed,
         payer = admin,
         space = MARKETPLACE_CONFIG_SPACE,
         seeds = [b"config"],

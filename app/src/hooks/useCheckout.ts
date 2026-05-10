@@ -5,6 +5,7 @@ import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY, Transaction, type Connect
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
 import BN from "bn.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
+import { useToast } from "@/hooks/useToast";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import type { CartItem } from "@/hooks/useCart";
 
@@ -69,6 +70,7 @@ export type CheckoutState = "idle" | "signing" | "confirming" | "done" | "error"
 
 export function useCheckout() {
   const { marketProgram, wallet, provider, connection } = useAnchorClient();
+  const { info } = useToast();
   const [state, setState] = useState<CheckoutState>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txSigs, setTxSigs] = useState<string[]>([]);
@@ -149,16 +151,40 @@ export function useCheckout() {
              })
              .rpc();
            sigs.push(tx);
+
+           // After on-chain transaction succeeds, try to register with agent
+           // This is a best-effort call—if it fails, the trade still exists on-chain
+           try {
+             const tradeIdHex = Array.from(tradeIdBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+             await fetch("http://localhost:8080/api/register", {
+               method: "POST",
+               headers: { "Content-Type": "application/json" },
+               body: JSON.stringify({
+                 trade_id: tradeIdHex,
+                 wallet: buyerKey.toBase58(),
+                 carrier: "dhl",
+                 trade_account: tradeAccountPda.toBase58(),
+                 tracking_id: "",
+                 callback_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/shipment-update`,
+               }),
+             }).catch(err => {
+               console.warn("Agent registration failed (non-blocking):", err);
+             });
+           } catch (err) {
+             console.warn("Failed to register trade with agent:", err);
+           }
          }
 
          setTxSigs(sigs);
          setState("done");
+         // Show info toast if agent might be delayed
+         info("Trade committed on-chain ✅ — dashboard sync in progress ⏳", 5000);
        } catch (e: unknown) {
          setError(resolveSettlementError(e));
          setState("error");
        }
     },
-    [marketProgram, wallet, provider, connection],
+    [marketProgram, wallet, provider, connection, info],
   );
 
   return { checkout, state, error, txSigs };

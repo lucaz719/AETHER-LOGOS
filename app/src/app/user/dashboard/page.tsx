@@ -527,6 +527,23 @@ export default function UserDashboardPage() {
                     {reviewCount !== null ? reviewCount : "—"}
                   </div>
                 </div>
+
+                {/* Admin Shortcut */}
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
+                   <Link
+                      href="/admin"
+                      style={{
+                        display: "inline-block",
+                        fontSize: "0.8125rem",
+                        color: "var(--cyan)",
+                        textDecoration: "none",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Admin Panel →
+                    </Link>
+                </div>
               </>
             )}
           </div>

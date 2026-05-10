@@ -520,6 +520,33 @@ func VendorGetHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(vendor)
 }
 
+func VendorsListHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodOptions {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	vendors, err := GetAllVendors()
+	if err != nil {
+		log.Printf("list vendors error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if vendors == nil {
+		vendors = []Vendor{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"vendors": vendors,
+		"count":   len(vendors),
+	})
+}
+
 // Product API Handlers
 func ProductCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodOptions {
@@ -678,4 +705,68 @@ func ProductGetHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(product)
+}
+func TradesListHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	shipments, err := GetAllShipments()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"trades": shipments,
+	})
+}
+
+func TradeSimulateDeliveryHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Extract trade ID from URL: /api/trades/:tradeId/simulate-delivery
+	path := strings.TrimPrefix(r.URL.Path, "/api/trades/")
+	tradeID := strings.Split(path, "/")[0]
+
+	if tradeID == "" {
+		http.Error(w, "missing trade id", http.StatusBadRequest)
+		return
+	}
+
+	shipment, err := GetShipmentByTrackingID(tradeID)
+	if err != nil {
+		// Try by trade_id if tracking lookup fails
+		shipments, _ := GetAllShipments()
+		for _, s := range shipments {
+			if s.TradeID == tradeID || s.TrackingID == tradeID {
+				shipment = &s
+				break
+			}
+		}
+	}
+
+	if shipment == nil {
+		http.Error(w, "trade not found", http.StatusNotFound)
+		return
+	}
+
+	// HACKATHON MOCK: Force status to Verified in DB
+	// In reality, this would submit a proof to Solana, but for the demo override
+	// we just update the agent state so the UI reflects "Verified"
+	if err := UpdateStatus(shipment.ID, "Verified"); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"success": true,
+		"tradeId": tradeID,
+	})
 }

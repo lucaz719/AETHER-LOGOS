@@ -269,6 +269,41 @@ func RegisterShipment(trackingID, wallet, callbackURL, carrier, tradeAccount, tr
 	return result.LastInsertId()
 }
 
+func GetAllShipments() ([]Shipment, error) {
+	rows, err := db.Query(
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		 FROM shipments
+		 ORDER BY created_at DESC`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var shipments []Shipment
+	for rows.Next() {
+		var s Shipment
+		if err := rows.Scan(
+			&s.ID,
+			&s.TrackingID,
+			&s.Wallet,
+			&s.CallbackURL,
+			&s.Carrier,
+			&s.TradeAccount,
+			&s.TradeID,
+			&s.ProofHash,
+			&s.ProofTxSig,
+			&s.LastKnownStatus,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		shipments = append(shipments, s)
+	}
+	return shipments, rows.Err()
+}
+
 func GetPendingShipments() ([]Shipment, error) {
 	rows, err := db.Query(
 		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
@@ -432,6 +467,24 @@ func GetVendorByWallet(wallet string) (*Vendor, error) {
 		return nil, err
 	}
 	return &v, nil
+}
+
+func GetAllVendors() ([]Vendor, error) {
+	rows, err := db.Query(`SELECT id, wallet, shop_name, description, vendor_type, categories, email_hash, created_at FROM vendors`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var vendors []Vendor
+	for rows.Next() {
+		var v Vendor
+		if err := rows.Scan(&v.ID, &v.Wallet, &v.ShopName, &v.Description, &v.VendorType, &v.Categories, &v.EmailHash, &v.CreatedAt); err != nil {
+			return nil, err
+		}
+		vendors = append(vendors, v)
+	}
+	return vendors, nil
 }
 
 // Product database functions

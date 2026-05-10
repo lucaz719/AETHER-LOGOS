@@ -1,5 +1,5 @@
 {
-  "address": "EVn3aVUGYbx6yvHa5h4m5N3qfJkhKm1FnYeNsfbi34CZ",
+  "address": "7CN3FCG4rsVpuHPaMXtzsqb9GY7MmpNr4EYizFGKM7Gc",
   "metadata": {
     "name": "trade_escrow",
     "version": "0.1.0",
@@ -376,6 +376,50 @@
       ]
     },
     {
+      "name": "init_config",
+      "discriminator": [
+        23,
+        235,
+        115,
+        232,
+        168,
+        96,
+        1,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "open_dispute",
       "discriminator": [
         137,
@@ -524,6 +568,10 @@
           "writable": true
         },
         {
+          "name": "platform_fee_account",
+          "writable": true
+        },
+        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         }
@@ -669,6 +717,102 @@
           }
         }
       ]
+    },
+    {
+      "name": "withdraw_platform_fees",
+      "discriminator": [
+        87,
+        24,
+        138,
+        122,
+        62,
+        146,
+        186,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "fee_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  102,
+                  101,
+                  101,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
@@ -683,115 +827,36 @@
         69,
         11,
         236
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "trade_id",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "buyer",
-            "type": "pubkey"
-          },
-          {
-            "name": "seller",
-            "type": "pubkey"
-          },
-          {
-            "name": "amount",
-            "type": "u64"
-          },
-          {
-            "name": "milestone_hash",
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "milestone_verified",
-            "type": "bool"
-          },
-          {
-            "name": "proof_data",
-            "type": "bytes"
-          },
-          {
-            "name": "tracking_id",
-            "type": {
-              "option": "string"
-            }
-          },
-          {
-            "name": "carrier",
-            "type": {
-              "option": {
-                "defined": {
-                  "name": "Carrier"
-                }
-              }
-            }
-          },
-          {
-            "name": "seller_notified",
-            "type": "bool"
-          },
-          {
-            "name": "order_created_at",
-            "type": "i64"
-          },
-          {
-            "name": "ship_by_deadline",
-            "type": "i64"
-          },
-          {
-            "name": "shipped_at",
-            "type": {
-              "option": "i64"
-            }
-          },
-          {
-            "name": "signature_required",
-            "type": "bool"
-          },
-          {
-            "name": "signed_by",
-            "type": {
-              "option": "string"
-            }
-          },
-          {
-            "name": "invoice_cid",
-            "type": {
-              "option": "string"
-            }
-          },
-          {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "TradeStatus"
-              }
-            }
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
+      ]
+    },
+    {
+      "name": "TradeEscrowConfig",
+      "discriminator": [
+        169,
+        205,
+        243,
+        23,
+        178,
+        37,
+        106,
+        64
+      ]
     }
   ],
   "events": [
+    {
+      "name": "ConfigInitialized",
+      "discriminator": [
+        181,
+        49,
+        200,
+        156,
+        19,
+        167,
+        178,
+        91
+      ]
+    },
     {
       "name": "DisputeOpened",
       "discriminator": [
@@ -842,6 +907,19 @@
         60,
         190,
         159
+      ]
+    },
+    {
+      "name": "PlatformFeeWithdrawn",
+      "discriminator": [
+        202,
+        252,
+        221,
+        46,
+        197,
+        131,
+        140,
+        24
       ]
     },
     {
@@ -939,6 +1017,21 @@
       "code": 6010,
       "name": "InvalidInvoiceCid",
       "msg": "Invoice CID is invalid"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidFeeAccount",
+      "msg": "Platform fee account mismatch"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidPaymentMint",
+      "msg": "Unexpected payment token mint"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidFeeCalculation",
+      "msg": "Platform fee calculation resulted in invalid amount"
     }
   ],
   "types": [
@@ -961,6 +1054,22 @@
           },
           {
             "name": "USPS"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigInitialized",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_fee_bps",
+            "type": "u64"
           }
         ]
       }
@@ -1032,6 +1141,14 @@
           {
             "name": "amount",
             "type": "u64"
+          },
+          {
+            "name": "platform_fee",
+            "type": "u64"
+          },
+          {
+            "name": "seller_amount",
+            "type": "u64"
           }
         ]
       }
@@ -1064,6 +1181,30 @@
           },
           {
             "name": "ship_by_deadline",
+            "type": "i64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformFeeWithdrawn",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "withdrawal_amount",
+            "type": "u64"
+          },
+          {
+            "name": "payment_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "timestamp",
             "type": "i64"
           }
         ]
@@ -1144,6 +1285,14 @@
           {
             "name": "amount",
             "type": "u64"
+          },
+          {
+            "name": "platform_fee",
+            "type": "u64"
+          },
+          {
+            "name": "payment_token_mint",
+            "type": "pubkey"
           },
           {
             "name": "milestone_hash",
@@ -1248,6 +1397,40 @@
           {
             "name": "amount",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TradeEscrowConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_fee_bps",
+            "type": "u64"
+          },
+          {
+            "name": "total_fees_collected_usdc",
+            "type": "u64"
+          },
+          {
+            "name": "total_fees_collected_lamports",
+            "type": "u64"
+          },
+          {
+            "name": "last_withdrawal",
+            "type": {
+              "option": "i64"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
           }
         ]
       }
