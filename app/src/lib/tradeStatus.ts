@@ -2,9 +2,15 @@ export const STATUS_MAP: Record<string, {
   label: string
   color: string
   bg: string
+  border?: string
 }> = {
   Pending: { label: 'Pending', color: '#94A3B8', bg: 'rgba(148,163,184,0.1)' },
-  AwaitingShipment: { label: 'Awaiting Shipment', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)' },
+  AwaitingShipment: {
+    label: 'Awaiting Shipment',
+    color: '#FCD34D',
+    bg: 'rgba(251,191,36,0.08)',
+    border: 'rgba(251,191,36,0.24)',
+  },
   InTransit: { label: 'In Transit', color: '#A78BFA', bg: 'rgba(167,139,250,0.1)' },
   Verified: { label: 'Verified', color: '#34D399', bg: 'rgba(52,211,153,0.1)' },
   Released: { label: 'Settled', color: '#22D3EE', bg: 'rgba(34,211,238,0.1)' },

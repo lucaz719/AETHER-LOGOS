@@ -6,17 +6,21 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { BN } from "bn.js";
-import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction } from "@solana/spl-token";
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, getAssociatedTokenAddressSync } from "@solana/spl-token";
 import { useTradeSync } from "@/context/TradeContext";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID, MARKETPLACE_PROGRAM_ID, USDC_MINT, PLATFORM_TREASURY_PUBKEY, TOKEN_PROGRAM_ID } from "@/lib/anchor";
 import tradeEscrowIdl from "@/lib/idl/trade_escrow.json";
-import { KeyRound, ShieldCheck, Scale, Wallet as WalletIcon, Gavel, Package, Truck, CheckCircle, ExternalLink, RefreshCw } from "lucide-react";
+import {
+  KeyRound, ShieldCheck, Scale, Wallet as WalletIcon, Gavel, Package, Truck,
+  CheckCircle, ExternalLink, RefreshCw, Settings, Activity, AlertTriangle,
+  TrendingUp, UserCheck, BookOpen, Landmark, X, ChevronRight, Layers,
+  BarChart2, DollarSign, Percent, ArrowUpRight
+} from "lucide-react";
 import { fetchAgent } from "@/lib/agentApi";
 import { AGENT_URL } from "@/lib/config";
-import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
-type Tab = "init" | "verify" | "review" | "disputes" | "market" | "settlement";
+type Tab = "init" | "verify" | "review" | "disputes" | "market" | "settlement" | "analytics";
 const DEMO_ADMIN = process.env.NEXT_PUBLIC_ADMIN_WALLET ?? "";
 
 function AdminConnectPrompt() {
@@ -135,6 +139,36 @@ function normalizeAdminTrade(input: any): any | null {
   };
 }
 
+const SIDEBAR_GROUPS = [
+  {
+    label: "Protocol",
+    items: [
+      { id: "init" as Tab, label: "Protocol Settings", icon: Settings, description: "Manage on-chain MarketplaceConfig initialization" },
+      { id: "verify" as Tab, label: "Vendor Desk", icon: UserCheck, description: "Review and approve vendor applications" },
+      { id: "review" as Tab, label: "Moderation", icon: BookOpen, description: "Close abusive review accounts and return rent" },
+    ],
+  },
+  {
+    label: "Trade Ops",
+    items: [
+      { id: "settlement" as Tab, label: "Settlement Ledger", icon: Layers, description: "Manage active escrow settlements and fund releases" },
+      { id: "disputes" as Tab, label: "Risk Resolution", icon: Gavel, description: "Admin arbitration for disputed transactions" },
+    ],
+  },
+  {
+    label: "Market",
+    items: [
+      { id: "market" as Tab, label: "Market Resolution", icon: Scale, description: "Resolve prediction markets past their deadline" },
+    ],
+  },
+  {
+    label: "Analytics",
+    items: [
+      { id: "analytics" as Tab, label: "Business Analytics", icon: BarChart2, description: "Protocol revenue, trade volume and fee performance" },
+    ],
+  },
+];
+
 export default function AdminPage() {
   const { publicKey, sendTransaction } = useWallet();
   const { marketProgram, marketplaceProgram, escrowProgram, connection, provider } = useAnchorClient();
@@ -144,6 +178,7 @@ export default function AdminPage() {
   const [reviewAddress, setReviewAddress] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [protocolVerified, setProtocolVerified] = useState<boolean | null>(null);
 
   const [requests, setRequests] = useState<{ pubkey: string, account: any }[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
@@ -280,10 +315,25 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (tab === "settlement") {
+    if (tab === "settlement" || tab === "analytics") {
       fetchTrades();
     }
   }, [tab]);
+
+  // Protocol verification check on mount
+  useEffect(() => {
+    if (!connection) return;
+    const check = async () => {
+      try {
+        const [configPda] = PublicKey.findProgramAddressSync([Buffer.from("config")], MARKETPLACE_PROGRAM_ID);
+        const info = await connection.getAccountInfo(configPda);
+        setProtocolVerified(info !== null);
+      } catch {
+        setProtocolVerified(false);
+      }
+    };
+    void check();
+  }, [connection]);
 
   // Force Ship handler
   // HACKATHON MOCK - submit_tracking requires seller signature, so we call the agent API instead
@@ -621,434 +671,981 @@ export default function AdminPage() {
         <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "center" }}>
           <ShieldCheck size={40} color="var(--red)" />
         </div>
-        <p style={{ color: "var(--red)", marginBottom: "0.75rem" }}>
-          Unauthorized wallet
-        </p>
-        <code style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-          {publicKey.toBase58()}
-        </code>
+        <p style={{ color: "var(--red)", marginBottom: "0.75rem" }}>Unauthorized wallet</p>
+        <code style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{publicKey.toBase58()}</code>
       </main>
     );
   }
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "init", label: "Init Config" },
-    { id: "verify", label: "Verify Vendor" },
-    { id: "review", label: "Close Review" },
-    { id: "disputes", label: "Disputes" },
-    { id: "market", label: "Market Resolution" },
-    { id: "settlement", label: "Trade Settlement" },
-  ];
+  // USDC has 6 decimals on Solana — convert atomic units to display dollars
+  const USDC_DECIMALS = 1_000_000;
+  const fmtUSD = (atomic: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(
+      atomic / USDC_DECIMALS
+    );
+  const fmtUSDStat = (atomic: number) => fmtUSD(Number.isFinite(atomic) ? atomic : 0);
+
+  // Computed treasury stats from live trade data
+  const activeTVL = trades
+    .filter((t: any) => t.last_known_status !== "Released")
+    .reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+  const activeShipments = trades.filter((t: any) => t.last_known_status === "InTransit").length;
+
+  // Protocol revenue tracks earned fees from released trades plus projected fees from the active pipeline.
+  const PROTOCOL_FEE_RATE = 0.02;
+  const releasedTrades = trades.filter((t: any) => t.last_known_status === "Released");
+  const verifiedTrades = trades.filter((t: any) => t.last_known_status === "Verified");
+  const inTransitTrades = trades.filter((t: any) => t.last_known_status === "InTransit");
+  const releasedVolume = releasedTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+  const pendingSettlementVolume = verifiedTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+  const inTransitVolume = inTransitTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+  const earnedRevenue = releasedVolume * PROTOCOL_FEE_RATE;
+  const projectedFees = (pendingSettlementVolume + inTransitVolume) * PROTOCOL_FEE_RATE;
+  const pendingSettlementRevenue = pendingSettlementVolume * PROTOCOL_FEE_RATE;
+  const projectedRevenueTotal = earnedRevenue + projectedFees;
+  const protocolRevenueSubcopy =
+    earnedRevenue > 0
+      ? projectedFees > 0
+        ? `${fmtUSDStat(earnedRevenue)} earned · ${fmtUSDStat(projectedFees)} projected`
+        : "2% earned from released trades"
+      : pendingSettlementRevenue > 0
+        ? `Projected · ${fmtUSDStat(pendingSettlementRevenue)} pending settlement`
+        : projectedFees > 0
+          ? `Projected · ${fmtUSDStat(projectedFees)} in active pipeline`
+          : "2% of released and active trade volume";
+
+  // Resolve current sidebar item for page header
+  const allNavItems = SIDEBAR_GROUPS.flatMap(g => g.items);
+  const currentItem = allNavItems.find(i => i.id === tab) ?? allNavItems[0];
+  const PageIcon = currentItem.icon;
+
+  const isSuccess = (s: string) => s.startsWith("Resolved") || s.startsWith("SUCCESS");
 
   return (
-    <main className="page-container" style={{ maxWidth: 640 }}>
-      <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.4rem" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}>
-          <ShieldCheck size={22} />
-          Admin Panel
-        </span>
-      </h1>
-      <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "2rem" }}>
-        Connected as <code style={{ color: "var(--cyan)", fontSize: "0.82rem" }}>{publicKey.toBase58().slice(0, 12)}…</code> — ensure this matches the admin pubkey in MarketplaceConfig.
-      </p>
+    <>
+      <style>{`
+        @keyframes slideUpAdmin {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .admin-content-enter { animation: slideUpAdmin 0.22s cubic-bezier(0.4,0,0.2,1) forwards; }
+        .admin-nav-btn { transition: background 0.13s ease, color 0.13s ease; }
+        .admin-nav-btn:hover { background: var(--bg-hover) !important; color: var(--text-primary) !important; }
+        .admin-trade-row { transition: background 0.12s ease; }
+        .admin-trade-row:hover { background: var(--bg-hover) !important; }
+      `}</style>
 
-      {/* Tab bar */}
-      <div style={{
-        display: "flex",
-        gap: "0.5rem",
-        marginBottom: "2rem",
-        borderBottom: "1px solid var(--border)",
-        paddingBottom: "1rem",
-        overflowX: "auto",
-        flexWrap: "nowrap",
-        WebkitOverflowScrolling: "touch",
-        scrollbarWidth: "none"
-      }} className="no-scrollbar">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => { setTab(t.id); setStatus(null); setTxLink(null); }}
-            style={{
-              padding: "0.55rem 1rem",
-              borderRadius: "var(--radius-pill)",
-              border: `1px solid ${tab === t.id ? "var(--cyan)" : "var(--border)"}`,
-              background: tab === t.id ? "var(--cyan-dim)" : "transparent",
-              color: tab === t.id ? "var(--cyan)" : "var(--text-secondary)",
-              fontWeight: tab === t.id ? 700 : 500,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              minHeight: "44px",
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)", background: "var(--background)" }}>
 
-      {/* Status */}
-      {status && (
-        <div
-          style={{
-            background: status.startsWith("Resolved") || status.startsWith("SUCCESS")
-              ? "rgba(52,211,153,0.08)"
-              : "rgba(244,63,94,0.08)",
-            border: `1px solid ${status.startsWith("Resolved") || status.startsWith("SUCCESS")
-                ? "rgba(52,211,153,0.25)"
-                : "rgba(244,63,94,0.2)"
-              }`,
-            borderRadius: "var(--radius-md)",
-            padding: "0.85rem 1rem",
-            marginBottom: "1.5rem",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "1rem",
-          }}
-        >
-          <span
-            style={{
-              color: status.startsWith("Resolved") || status.startsWith("SUCCESS")
-                ? "var(--green)"
-                : "var(--red)",
-              fontSize: "0.82rem",
+        {/* ── LEFT SIDEBAR ── */}
+        <aside style={{
+          width: 236,
+          flexShrink: 0,
+          borderRight: "1px solid var(--border)",
+          background: "var(--bg-subtle)",
+          display: "flex",
+          flexDirection: "column",
+          position: "sticky",
+          top: 64,
+          height: "calc(100vh - 64px)",
+          overflowY: "auto",
+        }}>
+
+          {/* Sidebar brand */}
+          <div style={{ padding: "1.5rem 1.25rem 0.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginBottom: "0.2rem" }}>
+              <ShieldCheck size={13} color="var(--cyan)" />
+              <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.13em", color: "var(--cyan)", textTransform: "uppercase" }}>
+                Aether Admin
+              </span>
+            </div>
+            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", fontWeight: 500 }}>Protocol Command Center</div>
+          </div>
+
+          {/* Protocol status badge */}
+          {protocolVerified !== null && (
+            <div style={{
+              margin: "0.75rem 1rem",
+              padding: "0.55rem 0.75rem",
+              borderRadius: "var(--radius-md)",
+              background: protocolVerified ? "rgba(39,174,96,0.08)" : "rgba(243,156,18,0.08)",
+              border: `1px solid ${protocolVerified ? "rgba(39,174,96,0.22)" : "rgba(243,156,18,0.22)"}`,
+              display: "flex",
+              alignItems: "center",
+              gap: "0.45rem",
+            }}>
+              <ShieldCheck size={12} color={protocolVerified ? "var(--green)" : "var(--amber)"} />
+              <span style={{
+                fontSize: "0.66rem",
+                fontWeight: 700,
+                letterSpacing: "0.07em",
+                color: protocolVerified ? "var(--green)" : "var(--amber)",
+              }}>
+                {protocolVerified ? "SYSTEM VERIFIED" : "NEEDS INIT"}
+              </span>
+            </div>
+          )}
+
+          {/* Nav groups */}
+          <nav style={{ flex: 1, paddingBottom: "0.75rem", marginTop: "0.25rem" }}>
+            {SIDEBAR_GROUPS.map(group => (
+              <div key={group.label} style={{ marginBottom: "1.25rem" }}>
+                <div style={{
+                  padding: "0 1.25rem 0.35rem",
+                  fontSize: "0.59rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.13em",
+                  color: "var(--text-muted)",
+                  textTransform: "uppercase",
+                }}>
+                  {group.label}
+                </div>
+                {group.items.map(item => {
+                  const isActive = tab === item.id;
+                  const NavIcon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="admin-nav-btn"
+                      onClick={() => { setTab(item.id); setStatus(null); setTxLink(null); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.55rem",
+                        width: "100%",
+                        padding: "0.52rem 1.25rem",
+                        background: isActive ? "var(--cyan-dim)" : "transparent",
+                        border: "none",
+                        borderLeft: `2px solid ${isActive ? "var(--cyan)" : "transparent"}`,
+                        color: isActive ? "var(--cyan)" : "var(--text-secondary)",
+                        fontSize: "0.845rem",
+                        fontWeight: isActive ? 600 : 400,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <NavIcon size={15} />
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {isActive && <ChevronRight size={11} style={{ opacity: 0.55 }} />}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
+
+          {/* Security context footer */}
+          <div style={{ padding: "0.875rem 1.25rem", borderTop: "1px solid var(--border)" }}>
+            <div style={{
+              fontSize: "0.59rem",
+              color: "var(--text-muted)",
+              fontWeight: 700,
+              letterSpacing: "0.11em",
+              textTransform: "uppercase",
+              marginBottom: "0.4rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+            }}>
+              <KeyRound size={10} /> Security Context
+            </div>
+            <code style={{
+              display: "block",
+              fontSize: "0.68rem",
+              color: "var(--cyan)",
+              background: "var(--cyan-dim)",
+              padding: "0.28rem 0.5rem",
+              borderRadius: "var(--radius-sm)",
               wordBreak: "break-all",
-            }}
-          >
-            {status}
-          </span>
-
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-            {txLink && (
-              <a
-                href={txLink}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  whiteSpace: "nowrap",
-                  fontSize: "0.75rem",
-                  color: "var(--cyan)",
-                  textDecoration: "underline",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                }}
-              >
-                View on Solscan
-                <ExternalLink size={12} />
-              </a>
-            )}
-            <button
-              onClick={() => setStatus(null)}
-              aria-label="Dismiss"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                padding: "2px",
-                display: "flex",
-                alignItems: "center",
-                color: "var(--text-secondary)",
-                opacity: 0.7,
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
+              marginBottom: "0.75rem",
+            }}>
+              {publicKey.toBase58().slice(0, 10)}…{publicKey.toBase58().slice(-6)}
+            </code>
+            <WalletMultiButton />
           </div>
-        </div>
-      )}
+        </aside>
 
-      {/* Tab content wrappers for safety */}
-      <div className="admin-tab-content">
-        {tab === "init" && (
-          <div className="glass" style={{ padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
-              Initialise MarketplaceConfig
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
-              Must be called once after the marketplace programme is deployed. Creates the <code>config</code> PDA with your wallet as admin. Safe to call again — will fail gracefully if already initialised.
-            </p>
-            <button className="btn-primary" onClick={handleInitConfig} disabled={busy}>
-              {busy ? "Sending…" : "Init Config"}
-            </button>
+        {/* ── MAIN CONTENT ── */}
+        <div style={{ flex: 1, overflow: "auto", padding: "2rem 2.5rem", minWidth: 0 }}>
+
+          {/* Page header */}
+          <div style={{ marginBottom: "1.75rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.3rem" }}>
+              <PageIcon size={18} color="var(--cyan)" />
+              <h1 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--text-primary)" }}>
+                {currentItem.label}
+              </h1>
+            </div>
+            <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{currentItem.description}</p>
           </div>
-        )}
 
-        {tab === "verify" && (
-          <div className="glass" style={{ padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
-              Verify a Vendor
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
-              Sets <code>is_verified = true</code> on the vendor&apos;s profile PDA. Paste the vendor&apos;s wallet authority public key below.
-            </p>
-            <div className="form-group" style={{ marginBottom: "1.25rem" }}>
-              <label className="form-label">Vendor Authority Pubkey</label>
-              <input
-                className="form-input"
-                type="text"
-                placeholder="Base58 public key…"
-                value={vendorAddress}
-                onChange={(e) => setVendorAddress(e.target.value)}
-              />
+          {/* Status toast */}
+          {status && (
+            <div style={{
+              background: isSuccess(status) ? "rgba(39,174,96,0.07)" : "rgba(220,53,69,0.07)",
+              border: `1px solid ${isSuccess(status) ? "rgba(39,174,96,0.2)" : "rgba(220,53,69,0.2)"}`,
+              borderRadius: "var(--radius-md)",
+              padding: "0.85rem 1rem",
+              marginBottom: "1.5rem",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "1rem",
+            }}>
+              <span style={{ color: isSuccess(status) ? "var(--green)" : "var(--red)", fontSize: "0.82rem", wordBreak: "break-all" }}>
+                {status}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+                {txLink && (
+                  <a href={txLink} target="_blank" rel="noreferrer" style={{
+                    whiteSpace: "nowrap", fontSize: "0.75rem", color: "var(--cyan)",
+                    display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                  }}>
+                    View on Solscan <ExternalLink size={12} />
+                  </a>
+                )}
+                <button onClick={() => setStatus(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-secondary)", display: "flex", alignItems: "center" }}>
+                  <X size={14} />
+                </button>
+              </div>
             </div>
-            <button className="btn-primary" onClick={() => handleVerifyVendor()} disabled={busy || !vendorAddress.trim()}>
-              {busy ? "Sending…" : "Verify Vendor"}
-            </button>
+          )}
 
-            <hr style={{ margin: "2rem 0", borderColor: "var(--border)", opacity: 0.5 }} />
+          {/* ── Animated content area ── */}
+          <div key={tab} className="admin-content-enter">
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-              <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>Pending Requests</h3>
-              <button onClick={fetchRequests} className="btn-ghost" style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem" }}>Refresh</button>
-            </div>
-
-            {loadingRequests ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
-            ) : requests.length === 0 ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No pending requests found.</div>
-            ) : (
-              <div style={{ display: "grid", gap: "0.75rem" }}>
-                {requests.map(req => (
-                  <div key={req.pubkey} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1rem", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)" }}>
+            {/* PROTOCOL SETTINGS */}
+            {tab === "init" && (
+              <div style={{ display: "grid", gap: "1.25rem", maxWidth: 560 }}>
+                {protocolVerified === true ? (
+                  <div style={{
+                    padding: "1.75rem 2rem",
+                    borderRadius: "var(--radius-lg)",
+                    background: "rgba(39,174,96,0.06)",
+                    border: "1px solid rgba(39,174,96,0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "1.25rem",
+                  }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: "50%",
+                      background: "rgba(39,174,96,0.12)",
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>
+                      <ShieldCheck size={22} color="var(--green)" />
+                    </div>
                     <div>
-                      <div style={{ fontWeight: 700, color: "var(--text-primary)" }}>{req.account.shop_name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>
-                        Authority: <span className="addr">{req.account.authority}</span>
+                      <div style={{ fontSize: "0.67rem", fontWeight: 700, letterSpacing: "0.12em", color: "var(--green)", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                        SYSTEM VERIFIED
+                      </div>
+                      <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.25rem" }}>
+                        MarketplaceConfig Active
+                      </div>
+                      <div style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}>
+                        Protocol is fully initialized. Config PDA detected on-chain.
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleVerifyVendor(req.account.authority)}
-                      disabled={busy}
-                      className="btn-secondary"
-                      style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
-                    >
-                      Verify
+                  </div>
+                ) : (
+                  <div className="glass" style={{ padding: "1.5rem" }}>
+                    <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
+                      Initialise MarketplaceConfig
+                    </h2>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+                      Must be called once after the marketplace programme is deployed. Creates the <code>config</code> PDA with your wallet as admin. Safe to call again — will fail gracefully if already initialised.
+                    </p>
+                    <button className="btn-primary" onClick={handleInitConfig} disabled={busy}>
+                      {busy ? "Sending…" : "Init Config"}
                     </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {tab === "review" && (
-          <div className="glass" style={{ padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
-              Close (Delete) a Review
-            </h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
-              Permanently closes an abusive <code>VendorReview</code> PDA and returns rent to the admin wallet. Paste the review account public key below.
-            </p>
-            <div className="form-group" style={{ marginBottom: "1.25rem" }}>
-              <label className="form-label">Review Account Pubkey</label>
-              <input className="form-input" type="text" placeholder="Base58 public key…" value={reviewAddress} onChange={(e) => setReviewAddress(e.target.value)} />
-            </div>
-            <button className="btn-primary" onClick={handleCloseReview} disabled={busy || !reviewAddress.trim()}>{busy ? "Sending…" : "Close Review"}</button>
-          </div>
-        )}
-
-        {tab === "disputes" && (
-          <div className="glass" style={{ padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Gavel size={18} /> Disputed Trades</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>List of trades currently in Disputed state. Admin may resolve in favor of buyer or seller.</p>
-            {loadingDisputes ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
-            ) : disputes.length === 0 ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No disputes found.</div>
-            ) : (
-              <div style={{ display: 'grid', gap: '0.75rem' }}>{disputes.map(d => (
-                <div key={d.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{Buffer.from(toByteArray(d.account.trade_id || [])).toString('hex')}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Buyer: <span className="addr">{(d.account.buyer as PublicKey)?.toBase58?.() ?? String(d.account.buyer)}</span> • Seller: <span className="addr">{(d.account.seller as PublicKey)?.toBase58?.() ?? String(d.account.seller)}</span></div>
+            {/* VENDOR DESK */}
+            {tab === "verify" && (
+              <div style={{ display: "grid", gap: "1.5rem", maxWidth: 640 }}>
+                <div className="glass" style={{ padding: "1.5rem" }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
+                    Verify a Vendor
+                  </h2>
+                  <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+                    Sets <code>is_verified = true</code> on the vendor&apos;s profile PDA. Paste the vendor&apos;s wallet authority public key below.
+                  </p>
+                  <div style={{ marginBottom: "1.25rem" }}>
+                    <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                      Vendor Authority Pubkey
+                    </label>
+                    <input className="form-input" type="text" placeholder="Base58 public key…" value={vendorAddress} onChange={e => setVendorAddress(e.target.value)} />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn-ghost" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.buyer))}>Settle for Buyer</button>
-                    <button className="btn-primary" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.seller))}>Settle for Seller</button>
-                  </div>
+                  <button className="btn-primary" onClick={() => handleVerifyVendor()} disabled={busy || !vendorAddress.trim()}>
+                    {busy ? "Sending…" : "Verify Vendor"}
+                  </button>
                 </div>
-              ))}</div>
-            )}
-          </div>
-        )}
 
-        {tab === "market" && (
-          <div className="glass" style={{ padding: "1.5rem" }}>
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Scale size={18} /> Market Resolution</h2>
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>Open markets past their resolution time are shown here. The creator may resolve; admin may call resolve if needed.</p>
-            {loadingMarkets ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
-            ) : (markets.length === 0 && !showDemoMarkets) ? (
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No markets to resolve.</div>
-            ) : (
-              <div style={{ display: 'grid', gap: '1rem' }}>
-                {markets.map(m => (
-                  <div key={m.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{String(m.account.question ?? m.pubkey.toBase58())}</div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resolves at: {new Date(Number(m.account.resolution_time) * 1000).toLocaleString()}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button className="btn-ghost" disabled={busy} onClick={() => void handleResolveMarket(m, true)}>Outcome: YES</button>
-                      <button className="btn-primary" disabled={busy} onClick={() => void handleResolveMarket(m, false)}>Outcome: NO</button>
-                    </div>
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                    <h3 style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--text-primary)" }}>Pending Applications</h3>
+                    <button onClick={fetchRequests} className="btn-ghost" style={{ padding: "0.3rem 0.7rem", fontSize: "0.78rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                      <RefreshCw size={12} /> Refresh
+                    </button>
                   </div>
-                ))}
-
-                {showDemoMarkets && [
-                  {
-                    id: "demo-market-001",
-                    pubkey: null, // HACKATHON MOCK
-                    account: {
-                      question: "Shipment 64NXXi...NR4YNJ — Customs Delay Risk",
-                      total_yes: new BN(1200),
-                      total_no: new BN(800),
-                      resolution_time: new BN(Math.floor(Date.now() / 1000) - 3600)
-                    }
-                  }
-                ].map(m => (
-                  <div key={m.id} style={{ padding: '1.25rem', border: '1px solid var(--cyan-dim)', background: 'rgba(6, 182, 212, 0.03)', borderRadius: 'var(--radius-sm)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                      <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--cyan)', fontWeight: 700, marginBottom: '0.25rem' }}>DEMO MARKET // HACKATHON MOCK</div>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1rem' }}>{m.account.question}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Pool</div>
-                        <div style={{ fontWeight: 900, color: 'var(--text-primary)' }}>$2,000 USDC</div>
-                      </div>
+                  {loadingRequests ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1rem 0" }}>Loading...</div>
+                  ) : requests.length === 0 ? (
+                    <div style={{ color: "var(--text-muted)", fontSize: "0.85rem", padding: "1.75rem", textAlign: "center", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)" }}>
+                      No pending applications.
                     </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
-                      <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--green)', fontWeight: 600 }}>YES POOL</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>$1,200</div>
-                      </div>
-                      <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--red)', fontWeight: 600 }}>NO POOL</div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>$800</div>
-                      </div>
+                  ) : (
+                    <div style={{ display: "grid", gap: "0.6rem" }}>
+                      {requests.map(req => (
+                        <div key={req.pubkey} style={{
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                          padding: "0.875rem 1rem",
+                          border: "1px solid var(--border)",
+                          borderRadius: "var(--radius-md)",
+                          background: "var(--card)",
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: "0.9rem" }}>{req.account.shop_name}</div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                              <span className="addr">{req.account.authority}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleVerifyVendor(req.account.authority)}
+                            disabled={busy}
+                            style={{
+                              padding: "0.4rem 0.9rem", fontSize: "0.78rem", fontWeight: 600,
+                              background: "var(--cyan-dim)", color: "var(--cyan)",
+                              border: "1px solid var(--cyan)", borderRadius: "var(--radius-sm)",
+                              cursor: "pointer", whiteSpace: "nowrap",
+                              display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                            }}
+                          >
+                            <UserCheck size={13} /> Approve
+                          </button>
+                        </div>
+                      ))}
                     </div>
-
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <button className="btn-primary" style={{ flex: 1, background: 'var(--green)', borderColor: 'var(--green)' }} onClick={() => handleResolveMarket(m, true)} disabled={busy}>
-                        Resolve YES ✓
-                      </button>
-                      <button className="btn-primary" style={{ flex: 1, background: 'var(--red)', borderColor: 'var(--red)' }} onClick={() => handleResolveMarket(m, false)} disabled={busy}>
-                        Resolve NO ✗
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
             )}
-          </div>
-        )}
 
-        {tab === "settlement" && (
-          <div style={{ display: "grid", gap: "1.25rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Package size={20} /> Active Trades
-              </h2>
-              <button onClick={fetchTrades} className="btn-ghost" style={{ padding: "0.4rem 0.8rem", fontSize: "0.85rem" }}>
-                <RefreshCw size={14} style={{ marginRight: "0.4rem" }} /> Refresh
-              </button>
-            </div>
-
-            {loadingTrades ? (
-              <div className="glass" style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)" }}>Loading trades...</div>
-            ) : trades.length === 0 ? (
-              <div className="glass" style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)" }}>
-                No active trades. <br /> Go place a trade on the marketplace to see it here.
+            {/* MODERATION */}
+            {tab === "review" && (
+              <div className="glass" style={{ padding: "1.5rem", maxWidth: 540 }}>
+                <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}>
+                  Close a Review Account
+                </h2>
+                <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+                  Permanently closes an abusive <code>VendorReview</code> PDA and returns rent to the admin wallet.
+                </p>
+                <div style={{ marginBottom: "1.25rem" }}>
+                  <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 600, color: "var(--text-secondary)", marginBottom: "0.4rem", textTransform: "uppercase", letterSpacing: "0.07em" }}>
+                    Review Account Pubkey
+                  </label>
+                  <input className="form-input" type="text" placeholder="Base58 public key…" value={reviewAddress} onChange={e => setReviewAddress(e.target.value)} />
+                </div>
+                <button className="btn-primary" onClick={handleCloseReview} disabled={busy || !reviewAddress.trim()}>
+                  {busy ? "Sending…" : "Close Review"}
+                </button>
               </div>
-            ) : (
-              trades.map((t) => {
-                const status = t.last_known_status || "AwaitingShipment";
-                return (
-                  <div key={t.id} className="glass" style={{ padding: "1.5rem", borderLeft: status === "Verified" ? "4px solid var(--green)" : status === "InTransit" ? "4px solid var(--cyan)" : "4px solid var(--amber)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "1rem" }}>
-                      <div>
-                        <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginBottom: "0.25rem", fontFamily: "monospace" }}>
-                          REF: {t.trade_id.slice(0, 16)}...
-                        </div>
-                        <div style={{ fontSize: "0.88rem", color: "var(--text-primary)", fontWeight: 700 }}>
-                          Buyer: <span className="addr">{t.wallet.slice(0, 8)}...{t.wallet.slice(-4)}</span>
+            )}
+
+            {/* SETTLEMENT LEDGER */}
+            {tab === "settlement" && (
+              <div style={{ display: "grid", gap: "1.5rem" }}>
+
+                {/* Treasury stats row */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+                  {[
+                    {
+                      label: "Active TVL",
+                      value: fmtUSDStat(activeTVL),
+                      icon: Landmark,
+                      color: "var(--cyan)",
+                      glow: "rgba(34,211,238,0.18)",
+                      sub: "Escrow capital live",
+                    },
+                    {
+                      label: "Protocol Revenue",
+                      value: fmtUSDStat(projectedRevenueTotal),
+                      icon: TrendingUp,
+                      color: "var(--green)",
+                      glow: "rgba(39,174,96,0.18)",
+                      sub: protocolRevenueSubcopy,
+                    },
+                    {
+                      label: "Active Shipments",
+                      value: String(activeShipments),
+                      icon: Activity,
+                      color: "var(--amber)",
+                      glow: "rgba(243,156,18,0.18)",
+                      sub: "Operational pipeline",
+                    },
+                  ].map(stat => {
+                    const StatIcon = stat.icon;
+                    return (
+                      <div key={stat.label} style={{
+                        position: "relative",
+                        overflow: "hidden",
+                        padding: "1rem 1.25rem",
+                        background: "var(--card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "var(--radius-lg)",
+                        boxShadow: "0 10px 28px rgba(15,23,42,0.05)",
+                      }}>
+                        <div
+                          aria-hidden
+                          style={{
+                            position: "absolute",
+                            top: -30,
+                            right: -18,
+                            width: 96,
+                            height: 96,
+                            background: `radial-gradient(circle, ${stat.glow} 0%, rgba(0,0,0,0) 72%)`,
+                            pointerEvents: "none",
+                          }}
+                        />
+                        <div style={{ position: "relative", zIndex: 1 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                            <StatIcon size={13} color={stat.color} />
+                            <span style={{ fontSize: "0.63rem", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                              {stat.label}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.45rem", fontVariantNumeric: "tabular-nums" }}>{stat.value}</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                            <span style={{ width: 6, height: 6, borderRadius: 999, background: stat.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>{stat.sub}</span>
+                          </div>
                         </div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "1.1rem", fontWeight: 900, color: "var(--green)" }}>
-                          USDC Locked
+                    );
+                  })}
+                </div>
+
+                {/* Ledger header */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <Package size={18} color="var(--cyan)" /> Trade Ledger
+                  </h2>
+                  <button onClick={fetchTrades} className="btn-ghost" style={{ padding: "0.35rem 0.75rem", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <RefreshCw size={13} /> Sync
+                  </button>
+                </div>
+
+                {loadingTrades ? (
+                  <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
+                    Loading ledger…
+                  </div>
+                ) : trades.length === 0 ? (
+                  <div style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)", border: "1px dashed var(--border)", borderRadius: "var(--radius-lg)" }}>
+                    No active trades in the escrow system.
+                  </div>
+                ) : (
+                  <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+                    {/* Table header */}
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 2fr 1fr 1.4fr 2.2fr",
+                      padding: "0.6rem 1rem",
+                      background: "var(--bg-subtle)",
+                      borderBottom: "1px solid var(--border)",
+                      gap: "0.5rem",
+                    }}>
+                      {["Trade Ref", "Buyer", "Amount", "Status", "Actions"].map(col => (
+                        <div key={col} style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                          {col}
                         </div>
-                        <span className={`badge-pill ${status === "Verified" ? "badge-success" : status === "InTransit" ? "badge-info" : "badge-warning"}`} style={{ marginTop: "0.4rem" }}>
-                          {status === "AwaitingShipment" ? "Awaiting Shipment" : status}
+                      ))}
+                    </div>
+
+                    {/* Table rows */}
+                    {trades.map((t: any) => {
+                      const tradeStatus = t.last_known_status || "AwaitingShipment";
+                      const STATUS_MAP: Record<string, { color: string; bg: string; border: string; label: string }> = {
+                        AwaitingShipment: { color: "var(--amber)", bg: "rgba(243,156,18,0.08)", border: "rgba(243,156,18,0.25)", label: "Awaiting Ship" },
+                        InTransit: { color: "var(--cyan)", bg: "var(--cyan-dim)", border: "var(--cyan)", label: "In Transit" },
+                        Verified: { color: "var(--green)", bg: "rgba(39,174,96,0.08)", border: "rgba(39,174,96,0.25)", label: "Verified" },
+                        Released: { color: "var(--text-muted)", bg: "var(--bg-subtle)", border: "var(--border)", label: "Released" },
+                      };
+                      const sc = STATUS_MAP[tradeStatus] ?? STATUS_MAP.AwaitingShipment;
+
+                      return (
+                        <div
+                          key={t.id}
+                          className="admin-trade-row"
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "2fr 2fr 1fr 1.4fr 2.2fr",
+                            padding: "0.85rem 1rem",
+                            borderBottom: "1px solid var(--border)",
+                            borderLeft: `3px solid ${sc.color}`,
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            background: "var(--card)",
+                          }}
+                        >
+                          <div style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "var(--text-secondary)" }}>
+                            {t.trade_id.slice(0, 14)}…
+                          </div>
+                          <div style={{ fontSize: "0.78rem" }}>
+                            <span className="addr">{t.wallet.slice(0, 8)}…{t.wallet.slice(-4)}</span>
+                          </div>
+                          <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)" }}>
+                            {t.amount ? fmtUSD(parseFloat(t.amount)) : "—"}
+                          </div>
+                          <div>
+                            <span style={{
+                              display: "inline-block",
+                              padding: "0.22rem 0.55rem",
+                              borderRadius: "var(--radius-pill)",
+                              fontSize: "0.66rem",
+                              fontWeight: 700,
+                              letterSpacing: "0.04em",
+                              background: sc.bg,
+                              color: sc.color,
+                              border: `1px solid ${sc.border}`,
+                            }}>
+                              {sc.label}
+                            </span>
+                          </div>
+                          <div>
+                            {tradeStatus === "AwaitingShipment" && (
+                              forceShipForm === t.trade_id ? (
+                                <div>
+                                  <input
+                                    className="form-input"
+                                    style={{ marginBottom: "0.35rem", fontSize: "0.76rem", padding: "0.32rem 0.55rem" }}
+                                    value={trackingInput}
+                                    onChange={e => setTrackingInput(e.target.value)}
+                                    placeholder="Tracking ID…"
+                                  />
+                                  <div style={{ display: "flex", gap: "0.35rem" }}>
+                                    <button
+                                      style={{ flex: 1, padding: "0.32rem 0.5rem", fontSize: "0.72rem", fontWeight: 700, background: "var(--foreground)", color: "var(--background)", border: "none", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+                                      onClick={() => handleForceShip(t)} disabled={busy}
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button className="btn-ghost" style={{ padding: "0.32rem 0.5rem", fontSize: "0.72rem" }} onClick={() => setForceShipForm(null)}>
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  style={{
+                                    display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                                    padding: "0.36rem 0.8rem", fontSize: "0.74rem", fontWeight: 600,
+                                    background: "rgba(243,156,18,0.1)", color: "var(--amber)",
+                                    border: "1px solid rgba(243,156,18,0.3)", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                  }}
+                                  onClick={() => { setForceShipForm(t.trade_id); setTrackingInput("DHL-DEMO-" + Date.now().toString().slice(-6)); }}
+                                >
+                                  <Truck size={13} /> Force Ship
+                                </button>
+                              )
+                            )}
+                            {tradeStatus === "InTransit" && (
+                              <button
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                                  padding: "0.36rem 0.8rem", fontSize: "0.74rem", fontWeight: 600,
+                                  background: "var(--cyan-dim)", color: "var(--cyan)",
+                                  border: "1px solid var(--cyan)", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                }}
+                                onClick={() => handleSimulateDelivery(t)} disabled={busy}
+                              >
+                                <CheckCircle size={13} /> Sim. Delivery
+                              </button>
+                            )}
+                            {tradeStatus === "Verified" && (
+                              <button
+                                style={{
+                                  display: "inline-flex", alignItems: "center", gap: "0.35rem",
+                                  padding: "0.36rem 0.8rem", fontSize: "0.74rem", fontWeight: 600,
+                                  background: "rgba(39,174,96,0.1)", color: "var(--green)",
+                                  border: "1px solid rgba(39,174,96,0.3)", borderRadius: "var(--radius-sm)", cursor: "pointer",
+                                }}
+                                onClick={() => handleReleaseFunds(t)} disabled={busy}
+                              >
+                                <WalletIcon size={13} /> Release Funds
+                              </button>
+                            )}
+                            {tradeStatus === "Released" && (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", fontSize: "0.74rem", color: "var(--text-muted)" }}>
+                                <CheckCircle size={13} /> Complete
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* RISK RESOLUTION */}
+            {tab === "disputes" && (
+              <div style={{ display: "grid", gap: "1rem", maxWidth: 700 }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
+                  Trades in disputed state requiring admin arbitration.
+                </p>
+                {loadingDisputes ? (
+                  <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Loading disputes…</div>
+                ) : disputes.length === 0 ? (
+                  <div style={{ padding: "2.5rem", textAlign: "center", border: "1px dashed var(--border)", borderRadius: "var(--radius-lg)", color: "var(--text-muted)" }}>
+                    <AlertTriangle size={28} style={{ marginBottom: "0.75rem", opacity: 0.4, display: "block", margin: "0 auto 0.75rem" }} />
+                    No active disputes
+                  </div>
+                ) : (
+                  disputes.map(d => (
+                    <div key={d.pubkey.toBase58()} style={{
+                      padding: "1.25rem",
+                      border: "1px solid rgba(220,53,69,0.2)",
+                      borderLeft: "3px solid var(--red)",
+                      borderRadius: "var(--radius-lg)",
+                      background: "rgba(220,53,69,0.03)",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem" }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "monospace", fontSize: "0.75rem", color: "var(--text-secondary)", marginBottom: "0.45rem" }}>
+                            TXN: {Buffer.from(toByteArray(d.account.trade_id || [])).toString("hex").slice(0, 24)}…
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>
+                            Buyer: <span className="addr">{(d.account.buyer as PublicKey)?.toBase58?.() ?? String(d.account.buyer)}</span>
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.2rem" }}>
+                            Seller: <span className="addr">{(d.account.seller as PublicKey)?.toBase58?.() ?? String(d.account.seller)}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                          <button
+                            style={{ padding: "0.42rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, background: "rgba(39,174,96,0.1)", color: "var(--green)", border: "1px solid rgba(39,174,96,0.3)", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+                            disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.buyer))}
+                          >
+                            Settle → Buyer
+                          </button>
+                          <button
+                            style={{ padding: "0.42rem 0.9rem", fontSize: "0.78rem", fontWeight: 600, background: "var(--cyan-dim)", color: "var(--cyan)", border: "1px solid var(--cyan)", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+                            disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.seller))}
+                          >
+                            Settle → Seller
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {/* BUSINESS ANALYTICS */}
+            {tab === "analytics" && (() => {
+              const totalVolume = trades.reduce((s: number, t: any) => s + (parseFloat(t.amount) || 0), 0);
+              const byStatus: Record<string, number> = {};
+              trades.forEach((t: any) => {
+                const s = t.last_known_status || "AwaitingShipment";
+                byStatus[s] = (byStatus[s] || 0) + 1;
+              });
+              const STATUS_COLORS: Record<string, string> = {
+                AwaitingShipment: "var(--amber)",
+                InTransit: "var(--cyan)",
+                Verified: "var(--green)",
+                Released: "var(--text-muted)",
+              };
+
+              return (
+                <div style={{ display: "grid", gap: "1.5rem" }}>
+
+                  {/* KPI row */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
+                    {[
+                      {
+                        label: "Total Volume",
+                        value: fmtUSDStat(totalVolume),
+                        icon: DollarSign,
+                        color: "var(--cyan)",
+                        glow: "rgba(34,211,238,0.18)",
+                        sub: `${trades.length} trade${trades.length !== 1 ? "s" : ""}`,
+                      },
+                      {
+                        label: "Released Volume",
+                        value: fmtUSDStat(releasedVolume),
+                        icon: ArrowUpRight,
+                        color: "var(--green)",
+                        glow: "rgba(39,174,96,0.18)",
+                        sub: pendingSettlementVolume > 0
+                          ? `${releasedTrades.length} settled · ${fmtUSDStat(pendingSettlementVolume)} pending settlement`
+                          : `${releasedTrades.length} settled`,
+                      },
+                      {
+                        label: "Protocol Revenue",
+                        value: fmtUSDStat(projectedRevenueTotal),
+                        icon: TrendingUp,
+                        color: "var(--violet, #7c3aed)",
+                        glow: "rgba(124,58,237,0.16)",
+                        sub: protocolRevenueSubcopy,
+                      },
+                      {
+                        label: "Fee Rate",
+                        value: "2.00%",
+                        icon: Percent,
+                        color: "var(--amber)",
+                        glow: "rgba(243,156,18,0.18)",
+                        sub: "Fixed protocol fee",
+                      },
+                    ].map(stat => {
+                      const KpiIcon = stat.icon;
+                      return (
+                        <div key={stat.label} style={{
+                          position: "relative",
+                          overflow: "hidden",
+                          padding: "1.1rem 1.25rem",
+                          background: "var(--card)",
+                          border: "1px solid var(--border)",
+                          borderRadius: "var(--radius-lg)",
+                          borderTop: `3px solid ${stat.color}`,
+                          boxShadow: "0 12px 32px rgba(15,23,42,0.06)",
+                        }}>
+                          <div
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              top: -32,
+                              right: -16,
+                              width: 100,
+                              height: 100,
+                              background: `radial-gradient(circle, ${stat.glow} 0%, rgba(0,0,0,0) 72%)`,
+                              pointerEvents: "none",
+                            }}
+                          />
+                          <div style={{ position: "relative", zIndex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginBottom: "0.55rem" }}>
+                              <KpiIcon size={13} color={stat.color} />
+                              <span style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>{stat.label}</span>
+                            </div>
+                            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--text-primary)", marginBottom: "0.35rem", fontVariantNumeric: "tabular-nums" }}>{stat.value}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                              <span style={{ width: 6, height: 6, borderRadius: 999, background: stat.color, flexShrink: 0 }} />
+                              <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{stat.sub}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Revenue breakdown */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+
+                    {/* Fee accumulation */}
+                    <div style={{ padding: "1.25rem", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+                        <DollarSign size={15} color="var(--cyan)" />
+                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)" }}>Revenue Breakdown</span>
+                      </div>
+                      <div style={{ display: "grid", gap: "0.65rem" }}>
+                        {[
+                          { label: "Gross Released Volume", value: releasedVolume, color: "var(--green)" },
+                          { label: "Pending Settlement Volume", value: pendingSettlementVolume, color: "var(--amber)" },
+                          { label: "Earned Revenue (2%)", value: earnedRevenue, color: "var(--cyan)" },
+                          { label: "Projected Revenue (2%)", value: projectedFees, color: "var(--violet, #7c3aed)" },
+                          { label: "Seller Net Proceeds (98%)", value: releasedVolume - earnedRevenue, color: "var(--text-secondary)" },
+                        ].map(row => (
+                          <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.55rem 0.75rem", background: "var(--bg-subtle)", borderRadius: "var(--radius-sm)" }}>
+                            <span style={{ fontSize: "0.78rem", color: "var(--text-secondary)" }}>{row.label}</span>
+                            <span style={{ fontSize: "0.82rem", fontWeight: 700, color: row.color, fontVariantNumeric: "tabular-nums" }}>{fmtUSDStat(row.value)}</span>
+                          </div>
+                        ))}
+                        <div style={{ height: "1px", background: "var(--border)", margin: "0.15rem 0" }} />
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.45rem 0.75rem" }}>
+                          <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.07em", color: "var(--text-muted)", textTransform: "uppercase" }}>Active Escrow (TVL)</span>
+                          <span style={{ fontSize: "0.88rem", fontWeight: 800, color: "var(--cyan)", fontVariantNumeric: "tabular-nums" }}>{fmtUSDStat(activeTVL)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Trade status breakdown */}
+                    <div style={{ padding: "1.25rem", background: "var(--card)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
+                        <BarChart2 size={15} color="var(--cyan)" />
+                        <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)" }}>Trade Pipeline</span>
+                      </div>
+                      {trades.length === 0 ? (
+                        <div style={{ padding: "1.5rem", textAlign: "center", color: "var(--text-muted)", fontSize: "0.82rem" }}>No trade data — sync from Settlement Ledger</div>
+                      ) : (
+                        <div style={{ display: "grid", gap: "0.55rem" }}>
+                          {Object.entries(byStatus).map(([status, count]) => {
+                            const pct = Math.round((count / trades.length) * 100);
+                            const clr = STATUS_COLORS[status] ?? "var(--text-muted)";
+                            return (
+                              <div key={status}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                                  <span style={{ fontSize: "0.75rem", color: "var(--text-secondary)" }}>{status}</span>
+                                  <span style={{ fontSize: "0.75rem", fontWeight: 700, color: clr }}>{count} ({pct}%)</span>
+                                </div>
+                                <div style={{ height: 6, background: "var(--bg-subtle)", borderRadius: 99, overflow: "hidden" }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: clr, borderRadius: 99, transition: "width 0.4s ease" }} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Per-trade fee ledger */}
+                  {releasedTrades.length > 0 && (
+                    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
+                      <div style={{ padding: "0.75rem 1rem", background: "var(--bg-subtle)", borderBottom: "1px solid var(--border)" }}>
+                        <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+                          Fee Collection Ledger — Settled Trades
                         </span>
                       </div>
+                      <div style={{
+                        display: "grid",
+                        gridTemplateColumns: "2fr 2fr 1.2fr 1.2fr 1.2fr",
+                        padding: "0.5rem 1rem",
+                        background: "var(--bg-subtle)",
+                        borderBottom: "1px solid var(--border)",
+                        gap: "0.5rem",
+                      }}>
+                        {["Trade Ref", "Buyer", "Gross Amount", "Protocol Fee (2%)", "Seller Net"].map(col => (
+                          <div key={col} style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", color: "var(--text-muted)", textTransform: "uppercase" }}>{col}</div>
+                        ))}
+                      </div>
+                      {releasedTrades.map((t: any) => {
+                        const gross = parseFloat(t.amount) || 0;
+                        const fee = gross * PROTOCOL_FEE_RATE;
+                        const net = gross - fee;
+                        return (
+                          <div key={t.id} className="admin-trade-row" style={{
+                            display: "grid",
+                            gridTemplateColumns: "2fr 2fr 1.2fr 1.2fr 1.2fr",
+                            padding: "0.75rem 1rem",
+                            borderBottom: "1px solid var(--border)",
+                            borderLeft: "3px solid var(--text-muted)",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            background: "var(--card)",
+                          }}>
+                            <div style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "var(--text-secondary)" }}>{t.trade_id.slice(0, 14)}…</div>
+                            <div><span className="addr">{t.wallet.slice(0, 8)}…{t.wallet.slice(-4)}</span></div>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 700 }}>{fmtUSD(gross)}</div>
+                            <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--cyan)" }}>{fmtUSD(fee)}</div>
+                            <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{fmtUSD(net)}</div>
+                          </div>
+                        );
+                      })}
                     </div>
+                  )}
 
-                    <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
-                      {status === "AwaitingShipment" && (
-                        <div style={{ width: "100%" }}>
-                          {forceShipForm === t.trade_id ? (
-                            <div className="glass" style={{ padding: "1rem", marginTop: "0.5rem", background: "rgba(255,255,255,0.02)" }}>
-                              <label className="form-label">Demo Tracking ID</label>
-                              <input
-                                className="form-input"
-                                value={trackingInput}
-                                onChange={(e) => setTrackingInput(e.target.value)}
-                                style={{ marginBottom: "0.75rem" }}
-                              />
-                              <div style={{ display: "flex", gap: "0.5rem" }}>
-                                <button className="btn-primary" onClick={() => handleForceShip(t)} disabled={busy}>Confirm Force Ship</button>
-                                <button className="btn-ghost" onClick={() => setForceShipForm(null)}>Cancel</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <button className="btn-secondary" style={{ width: "100%" }} onClick={() => {
-                              setForceShipForm(t.trade_id);
-                              setTrackingInput("DHL-DEMO-" + Date.now().toString().slice(-6));
-                            }}>
-                              <Truck size={16} style={{ marginRight: "0.5rem" }} /> Force Ship
-                            </button>
-                          )}
-                        </div>
-                      )}
+                </div>
+              );
+            })()}
 
-                      {status === "InTransit" && (
-                        <button className="btn-primary" style={{ width: "100%" }} onClick={() => handleSimulateDelivery(t)} disabled={busy}>
-                          <CheckCircle size={16} style={{ marginRight: "0.5rem" }} /> Simulate Delivery
-                        </button>
-                      )}
-
-                      {status === "Verified" && (
-                        <button className="btn-primary" style={{ width: "100%", background: "var(--green)", border: "none" }} onClick={() => handleReleaseFunds(t)} disabled={busy}>
-                          <WalletIcon size={16} style={{ marginRight: "0.5rem" }} /> Release Funds
-                        </button>
-                      )}
-
-                      {status === "Released" && (
-                        <div style={{ width: "100%", textAlign: "center", color: "var(--green)", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-                          <CheckCircle size={20} /> Complete
-                        </div>
-                      )}
-                    </div>
-
-                    {status === "Released" && (
-                      <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.75rem", textAlign: "center" }}>
-                        ✓ Funds released to seller
-                      </p>
-                    )}
+            {/* MARKET RESOLUTION */}
+            {tab === "market" && (
+              <div style={{ display: "grid", gap: "1rem", maxWidth: 700 }}>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-secondary)", marginBottom: "0.25rem" }}>
+                  Open prediction markets past their resolution time.
+                </p>
+                {loadingMarkets ? (
+                  <div style={{ padding: "2rem", textAlign: "center", color: "var(--text-muted)" }}>Loading markets…</div>
+                ) : (markets.length === 0 && !showDemoMarkets) ? (
+                  <div style={{ padding: "2.5rem", textAlign: "center", border: "1px dashed var(--border)", borderRadius: "var(--radius-lg)", color: "var(--text-muted)" }}>
+                    <Scale size={28} style={{ marginBottom: "0.75rem", opacity: 0.4, display: "block", margin: "0 auto 0.75rem" }} />
+                    No markets pending resolution
                   </div>
-                );
-              })
+                ) : (
+                  <>
+                    {markets.map(m => (
+                      <div key={m.pubkey.toBase58()} style={{
+                        padding: "1.25rem", border: "1px solid var(--border)",
+                        borderRadius: "var(--radius-lg)", background: "var(--card)",
+                        display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem",
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.9rem" }}>
+                            {String(m.account.question ?? m.pubkey.toBase58())}
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>
+                            Resolves: {new Date(Number(m.account.resolution_time) * 1000).toLocaleString()}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+                          <button className="btn-ghost" style={{ fontSize: "0.8rem" }} disabled={busy} onClick={() => void handleResolveMarket(m, true)}>YES</button>
+                          <button className="btn-primary" style={{ fontSize: "0.8rem" }} disabled={busy} onClick={() => void handleResolveMarket(m, false)}>NO</button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {showDemoMarkets && [{
+                      id: "demo-market-001",
+                      pubkey: null,
+                      account: {
+                        question: "Shipment 64NXXi...NR4YNJ — Customs Delay Risk",
+                        total_yes: new BN(1200),
+                        total_no: new BN(800),
+                        resolution_time: new BN(Math.floor(Date.now() / 1000) - 3600),
+                      },
+                    }].map(m => (
+                      <div key={m.id} style={{ padding: "1.5rem", border: "1px solid var(--cyan-dim)", borderRadius: "var(--radius-lg)", background: "var(--card)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+                          <div>
+                            <div style={{ fontSize: "0.63rem", color: "var(--cyan)", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: "0.3rem" }}>
+                              DEMO MARKET
+                            </div>
+                            <div style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: "0.95rem" }}>{m.account.question}</div>
+                          </div>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>Total Pool</div>
+                            <div style={{ fontWeight: 800, color: "var(--text-primary)", fontSize: "1.05rem" }}>$2,000 USDC</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1.25rem" }}>
+                          <div style={{ padding: "0.75rem", background: "rgba(39,174,96,0.06)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(39,174,96,0.12)" }}>
+                            <div style={{ fontSize: "0.66rem", color: "var(--green)", fontWeight: 700, letterSpacing: "0.08em" }}>YES POOL</div>
+                            <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>$1,200</div>
+                          </div>
+                          <div style={{ padding: "0.75rem", background: "rgba(220,53,69,0.05)", borderRadius: "var(--radius-sm)", border: "1px solid rgba(220,53,69,0.12)" }}>
+                            <div style={{ fontSize: "0.66rem", color: "var(--red)", fontWeight: 700, letterSpacing: "0.08em" }}>NO POOL</div>
+                            <div style={{ fontSize: "1.05rem", fontWeight: 800 }}>$800</div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "0.75rem" }}>
+                          <button
+                            style={{ flex: 1, padding: "0.6rem", fontSize: "0.82rem", fontWeight: 700, background: "rgba(39,174,96,0.1)", color: "var(--green)", border: "1px solid rgba(39,174,96,0.3)", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+                            onClick={() => handleResolveMarket(m, true)} disabled={busy}
+                          >
+                            Resolve YES
+                          </button>
+                          <button
+                            style={{ flex: 1, padding: "0.6rem", fontSize: "0.82rem", fontWeight: 700, background: "rgba(220,53,69,0.06)", color: "var(--red)", border: "1px solid rgba(220,53,69,0.22)", borderRadius: "var(--radius-sm)", cursor: "pointer" }}
+                            onClick={() => handleResolveMarket(m, false)} disabled={busy}
+                          >
+                            Resolve NO
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             )}
-          </div>
-        )}
-      </div>
-    </main>
+
+          </div>{/* /admin-content-enter */}
+        </div>{/* /main content */}
+      </div>{/* /layout */}
+    </>
   );
 }
+

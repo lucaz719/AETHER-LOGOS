@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import Link from "next/link";
-import { ClipboardList, Wallet, Store, Building2, AlertCircle, Heart } from "lucide-react";
+import { ClipboardList, Wallet, Store, Building2, AlertCircle, Heart, ShieldCheck } from "lucide-react";
 import { useTradeSync } from "@/context/TradeContext";
 import { useBuyerOrders } from "@/hooks/useBuyerOrders";
 import { getStatusMeta } from "@/lib/tradeStatus";
@@ -220,11 +220,11 @@ export default function UserDashboardPage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: "1.25rem",
-              fontWeight: 900,
-              color: "#93C5FD",
-              flexShrink: 0,
-            }}
+               fontSize: "1.25rem",
+               fontWeight: 700,
+               color: "#93C5FD",
+               flexShrink: 0,
+             }}
           >
             {(user?.username || "A")[0]?.toUpperCase()}
           </div>
@@ -364,11 +364,11 @@ export default function UserDashboardPage() {
             </div>
             <div
               style={{
-                fontSize: "1.875rem",
-                fontWeight: 900,
-                color: stat.color || "var(--foreground)",
-              }}
-            >
+               fontSize: "1.875rem",
+               fontWeight: 700,
+               color: stat.color || "var(--foreground)",
+             }}
+           >
               {stat.value}
             </div>
           </div>
@@ -393,23 +393,25 @@ export default function UserDashboardPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "0.5rem",
-                  padding: "1rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid var(--border)",
-                  background: "var(--card)",
-                  textDecoration: "none",
-                  transition: "all 150ms ease",
-                  cursor: "pointer",
-                }}
+                   padding: "1rem",
+                   borderRadius: "0.75rem",
+                   border: "1px solid var(--border)",
+                   background: "var(--card)",
+                   textDecoration: "none",
+                   transition: "border-color 150ms ease, transform 150ms ease",
+                   cursor: "pointer",
+                 }}
                 onMouseEnter={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = "rgba(255,255,255,0.06)";
-                  el.style.borderColor = "rgba(255,255,255,0.15)";
+                  el.style.background = "var(--card)";
+                  el.style.borderColor = "rgba(6,182,212,0.5)";
+                  el.style.transform = "translateY(-1px)";
                 }}
                 onMouseLeave={(e) => {
                   const el = e.currentTarget as HTMLAnchorElement;
-                  el.style.background = "rgba(255,255,255,0.03)";
-                  el.style.borderColor = "rgba(255,255,255,0.08)";
+                  el.style.background = "var(--card)";
+                  el.style.borderColor = "var(--border)";
+                  el.style.transform = "translateY(0)";
                 }}
               >
                 <Icon size={28} style={{ color: "#60A5FA" }} />
@@ -426,7 +428,7 @@ export default function UserDashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 18rem", gap: "1.5rem" }}>
         {/* RECENT ORDERS */}
         <div>
-          <h2 style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.75rem" }}>
+          <h2 style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--foreground)", marginBottom: "0.75rem" }}>
             Recent Orders
           </h2>
           <div
@@ -500,7 +502,7 @@ export default function UserDashboardPage() {
                         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
                           {(order.account?.product_title as string | undefined)?.trim()
                             ? (order.account.product_title as string)
-                            : formatOrderReference(order, idx)}
+                            : `Trade Ref · ${formatOrderReference(order, idx)}`}
                         </div>
                         <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
                           {formatOrderDate(order.account?.created_at)}
@@ -512,11 +514,11 @@ export default function UserDashboardPage() {
                           background: meta.bg,
                           color: meta.color,
                           borderRadius: "0.375rem",
-                          fontSize: "0.625rem",
-                          fontWeight: 600,
-                          border: `1px solid ${meta.color}30`,
-                        }}
-                      >
+                           fontSize: "0.625rem",
+                           fontWeight: 600,
+                           border: `1px solid ${meta.border ?? `${meta.color}30`}`,
+                         }}
+                       >
                         {meta.label}
                       </div>
                     </div>
@@ -534,15 +536,15 @@ export default function UserDashboardPage() {
           </h2>
           <div
             style={{
-              border: "1px solid var(--border)",
-              borderRadius: "0.75rem",
-              background: "var(--card)",
-              padding: "1rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-            }}
-          >
+               border: "1px solid var(--border)",
+               borderRadius: "0.75rem",
+               background: "var(--card)",
+               padding: "0.75rem",
+               display: "flex",
+               flexDirection: "column",
+               gap: "0.5rem",
+             }}
+           >
             {loading ? (
               <>
                 <SkeletonRow />
@@ -561,85 +563,65 @@ export default function UserDashboardPage() {
                       ✓ Verified
                     </div>
                   ) : (
-                    <Link
-                      href="/user/profile"
-                      style={{
-                        display: "inline-block",
-                        fontSize: "0.8125rem",
-                        color: "#FB923C",
-                        textDecoration: "none",
-                        cursor: "pointer",
-                        transition: "color 150ms ease",
-                      }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = "#FED7AA";
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = "#FB923C";
-                      }}
-                    >
-                      Complete KYC →
-                    </Link>
-                  )}
-                </div>
+                     <Link
+                       href="/user/profile"
+                       style={{
+                         display: "inline-flex",
+                         alignItems: "center",
+                         gap: "0.35rem",
+                         minHeight: "2.25rem",
+                         padding: "0.45rem 0.7rem",
+                         fontSize: "0.8125rem",
+                         color: "#FB923C",
+                         background: "rgba(251,146,60,0.08)",
+                         border: "1px solid rgba(251,146,60,0.22)",
+                         borderRadius: "0.5rem",
+                         textDecoration: "none",
+                         cursor: "pointer",
+                         fontWeight: 600,
+                         transition: "all 150ms ease",
+                       }}
+                       onMouseEnter={(e) => {
+                         const el = e.currentTarget as HTMLAnchorElement;
+                         el.style.color = "#FED7AA";
+                         el.style.borderColor = "rgba(251,146,60,0.38)";
+                         el.style.background = "rgba(251,146,60,0.14)";
+                       }}
+                       onMouseLeave={(e) => {
+                         const el = e.currentTarget as HTMLAnchorElement;
+                         el.style.color = "#FB923C";
+                         el.style.borderColor = "rgba(251,146,60,0.22)";
+                         el.style.background = "rgba(251,146,60,0.08)";
+                       }}
+                     >
+                       <ShieldCheck size={14} />
+                       Complete KYC
+                     </Link>
+                   )}
+                 </div>
 
                 {/* Followed Stores */}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.55rem" }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Followed Stores
                   </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--foreground)" }}>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)" }}>
                     {followerCount !== null ? followerCount : "—"}
                   </div>
                 </div>
 
                 {/* Reviews Given */}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.55rem" }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Reviews Given
                   </div>
-                  <div style={{ fontSize: "1.5rem", fontWeight: 900, color: "var(--foreground)" }}>
+                  <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--foreground)" }}>
                     {reviewCount !== null ? reviewCount : "—"}
                   </div>
                 </div>
-
-                {/* Admin Shortcut */}
-                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
-                  <Link
-                    href="/admin"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "0.35rem",
-                      padding: "0.4rem 0.85rem",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      color: "var(--cyan)",
-                      background: "rgba(6,182,212,0.08)",
-                      border: "1px solid rgba(6,182,212,0.25)",
-                      borderRadius: "0.5rem",
-                      textDecoration: "none",
-                      cursor: "pointer",
-                      letterSpacing: "0.02em",
-                      transition: "all 150ms ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLAnchorElement;
-                      el.style.background = "rgba(6,182,212,0.15)";
-                      el.style.borderColor = "rgba(6,182,212,0.45)";
-                    }}
-                    onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLAnchorElement;
-                      el.style.background = "rgba(6,182,212,0.08)";
-                      el.style.borderColor = "rgba(6,182,212,0.25)";
-                    }}
-                  >
-                    Admin Panel →
-                  </Link>
-                </div>
-              </>
-            )}
-          </div>
+               </>
+             )}
+           </div>
         </div>
       </div>
     </div>
