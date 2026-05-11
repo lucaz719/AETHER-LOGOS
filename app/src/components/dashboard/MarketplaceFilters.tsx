@@ -1,4 +1,7 @@
-import { Filter, Star, Tag, ChevronRight } from "lucide-react";
+'use client';
+
+import { Filter, Star, ChevronRight, ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 type MarketplaceFiltersProps = {
   categories: string[];
@@ -19,23 +22,52 @@ export function MarketplaceFilters({
   minRating = 0,
   onRatingChange 
 }: MarketplaceFiltersProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const hasActiveFilters = selectedCategory !== "all" || selectedTier !== "all" || minRating > 0;
+
+  const handleReset = () => {
+    onCategoryChange?.("all");
+    onTierChange?.("all");
+    onRatingChange?.(0);
+  };
+
   return (
-    <aside className="lg:sticky lg:top-32 space-y-6">
-      <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-xl overflow-hidden shadow-sm">
-        {/* Header */}
+    <aside className="space-y-3 lg:sticky lg:top-32">
+
+      {/* ── Mobile toggle button (hidden on lg+) ── */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen((o) => !o)}
+        aria-expanded={mobileOpen}
+        className="flex min-h-[44px] w-full items-center justify-between rounded-2xl border border-border bg-card/80 px-5 py-3 text-left shadow-sm backdrop-blur-xl transition-colors hover:bg-secondary lg:hidden"
+      >
+        <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-foreground">
+          <Filter size={13} className="text-primary" />
+          Refine Selection
+          {hasActiveFilters && (
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-black text-white leading-none">
+              !
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-muted-foreground transition-transform duration-300 ${mobileOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {/* ── Filter panel ── always visible on lg+, toggle-controlled on mobile ── */}
+      <div className={`rounded-2xl border border-border bg-card/80 backdrop-blur-xl overflow-hidden shadow-sm transition-all ${mobileOpen ? "block" : "hidden lg:block"}`}>
+        {/* Desktop header */}
         <div className="bg-secondary px-5 py-4 border-b border-border flex justify-between items-center">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground flex items-center gap-2">
             <Filter size={13} className="text-primary" /> 
             Refine Selection
           </h3>
-          {(selectedCategory !== "all" || selectedTier !== "all" || minRating > 0) && (
+          {hasActiveFilters && (
             <button 
-              onClick={() => {
-                onCategoryChange?.("all");
-                onTierChange?.("all");
-                onRatingChange?.(0);
-              }}
-              className="text-[9px] font-black uppercase text-primary hover:underline"
+              onClick={handleReset}
+              className="min-h-[44px] px-3 text-[10px] font-black uppercase text-primary hover:underline"
             >
               Reset
             </button>
@@ -52,7 +84,7 @@ export function MarketplaceFilters({
               <li>
                 <button 
                   onClick={() => onCategoryChange?.("all")}
-                  className={`w-full flex items-center justify-between py-2.5 text-sm rounded-xl px-3 transition-all text-left group ${selectedCategory === "all" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:text-primary hover:bg-primary/5"}`}
+                  className={`group flex min-h-[44px] w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-all ${selectedCategory === "all" ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/5 hover:text-primary"}`}
                 >
                   <span className="font-semibold">All Categories</span>
                   <ChevronRight size={14} className={`transition-all ${selectedCategory === "all" ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"}`} />
@@ -60,10 +92,10 @@ export function MarketplaceFilters({
               </li>
               {categories.map((category) => (
                 <li key={category}>
-                  <button 
-                    onClick={() => onCategoryChange?.(category)}
-                    className={`w-full flex items-center justify-between py-2.5 text-sm rounded-xl px-3 transition-all text-left group ${selectedCategory === category ? "bg-primary/10 text-primary" : "text-foreground/70 hover:text-primary hover:bg-primary/5"}`}
-                  >
+                    <button 
+                      onClick={() => onCategoryChange?.(category)}
+                      className={`group flex min-h-[44px] w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition-all ${selectedCategory === category ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/5 hover:text-primary"}`}
+                    >
                     <span className="font-semibold">{category}</span>
                     <ChevronRight size={14} className={`transition-all ${selectedCategory === category ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"}`} />
                   </button>
@@ -84,7 +116,7 @@ export function MarketplaceFilters({
                 { label: "Wholesaler", value: "wholesaler" },
                 { label: "Distributor", value: "distributor" },
               ].map((tier) => (
-                <label key={tier.value} className="flex items-center gap-3 cursor-pointer group">
+                <label key={tier.value} className="group flex min-h-[44px] items-center gap-3 rounded-xl px-1.5 py-1 cursor-pointer">
                   <div className="relative flex items-center justify-center">
                     <input
                       type="radio"
@@ -112,7 +144,7 @@ export function MarketplaceFilters({
             </h4>
             <div className="space-y-3.5 px-1">
               {[5, 4.5, 4].map((rating) => (
-                <label key={rating} className="flex items-center gap-3 cursor-pointer group">
+                <label key={rating} className="group flex min-h-[44px] items-center gap-3 rounded-xl px-1.5 py-1 cursor-pointer">
                   <div className="relative flex items-center justify-center">
                     <input
                       type="radio"
@@ -142,7 +174,7 @@ export function MarketplaceFilters({
                 </label>
               ))}
               {minRating > 0 && (
-                 <label className="flex items-center gap-3 cursor-pointer group">
+                 <label className="group flex min-h-[44px] items-center gap-3 rounded-xl px-1.5 py-1 cursor-pointer">
                     <div className="relative flex items-center justify-center">
                         <input
                             type="radio"

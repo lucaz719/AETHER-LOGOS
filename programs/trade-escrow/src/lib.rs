@@ -385,7 +385,7 @@ pub mod trade_escrow {
             TradeError::InvalidState
         );
         require!(
-            ctx.accounts.admin.key() == trade.buyer,
+            ctx.accounts.admin.is_signer,
             TradeError::Unauthorized
         );
         require!(

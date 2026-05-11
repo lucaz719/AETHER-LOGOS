@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { 
@@ -15,6 +15,7 @@ import {
   ShieldCheck, 
   Truck 
 } from "lucide-react";
+import { useTradeSync } from "@/context/TradeContext";
 
 const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080";
 
@@ -45,59 +46,64 @@ export default function OrderTrackingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<TrackingResponse | null>(null);
+  const { refreshKey } = useTradeSync();
+
+  const fetchTracking = useCallback(async () => {
+    try {
+      const res = await fetch(`${AGENT_URL}/api/tracking/trade/${id}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          setData({
+            shipment: {
+              tracking_id: "PENDING-CARRIER",
+              carrier: "dhl",
+              last_known_status: "Processing",
+              trade_account: String(id),
+            },
+            milestones: [
+              {
+                status: "Escrow Locked",
+                description: "Funds secured on-chain. Awaiting agent carrier registration.",
+                location: "Solana Network",
+                timestamp: Date.now(),
+              }
+            ]
+          });
+          return;
+        }
+        throw new Error(await res.text());
+      }
+      const json = await res.json();
+      setData(json);
+    } catch (err) {
+      console.error("Tracking fetch error:", err);
+      setError(err instanceof Error ? err.message : "Unable to connect to Settlement Agent.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchTracking = async () => {
-      try {
-        setLoading(true);
-        const res = await fetch(`${AGENT_URL}/api/tracking/trade/${id}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            setData({
-              shipment: {
-                tracking_id: "PENDING-CARRIER",
-                carrier: "dhl",
-                last_known_status: "Processing",
-                trade_account: String(id),
-              },
-              milestones: [
-                {
-                  status: "Escrow Locked",
-                  description: "Funds secured on-chain. Awaiting agent carrier registration.",
-                  location: "Solana Network",
-                  timestamp: Date.now(),
-                }
-              ]
-            });
-            return;
-          }
-          throw new Error(await res.text());
-        }
-        const json = await res.json();
-        setData(json);
-      } catch (err) {
-        console.error("Tracking fetch error:", err);
-        setError(err instanceof Error ? err.message : "Unable to connect to Settlement Agent.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!id) {
       setError("Missing trade account.");
       setLoading(false);
       return;
     }
 
+    setLoading(true);
     void fetchTracking();
-  }, [id]);
+
+    // Poll every 5 seconds; also re-runs when admin triggers refresh
+    const interval = setInterval(() => void fetchTracking(), 5_000);
+    return () => clearInterval(interval);
+  }, [id, refreshKey, fetchTracking]);
 
   if (loading) return <div className="p-20 text-center">Initializing Settlement Protocol...</div>;
   if (error) {
     return (
       <main className="min-h-screen bg-background pt-24">
         <div className="mx-auto max-w-2xl px-4">
-          <section className="glass rounded-3xl p-8 text-center">
+          <section className="glass rounded-3xl p-5 sm:p-8 text-center">
             <h1 className="text-2xl font-black text-foreground">Tracking unavailable</h1>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <Link href="/user/orders" className="btn-primary mt-6 inline-flex">
@@ -110,19 +116,19 @@ export default function OrderTrackingPage() {
   }
 
   const currentStatus = data?.shipment?.last_known_status?.toLowerCase() ?? "pending";
-  const isDelivered = currentStatus === "delivered";
-  const hasProof = !!data?.shipment.proof_hash && data?.shipment.proof_hash !== "";
+  const isDelivered = currentStatus === "delivered" || currentStatus === "verified";
+  const hasProof = (!!data?.shipment?.proof_hash && data?.shipment?.proof_hash !== "") || isDelivered;
 
   return (
     <main className="min-h-screen bg-background pb-20 pt-24">
       <div className="mx-auto max-w-5xl px-4">
         {/* Header Navigation */}
-        <div className="mb-8 flex items-center justify-between">
-          <Link href="/user/orders" className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/user/orders" className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-3 text-sm font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors">
             <ArrowLeft size={16} />
             Back to Orders
           </Link>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <span className="badge badge-cyan">Trade: {String(id).slice(0, 8)}...</span>
             <span className={`badge ${isDelivered ? 'badge-green' : 'badge-amber'}`}>
               {data?.shipment.last_known_status ?? "Processing"}
@@ -133,20 +139,22 @@ export default function OrderTrackingPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column: Timeline & Milestones */}
           <div className="lg:col-span-2 space-y-6">
-            <section className="glass rounded-3xl p-8 shadow-2xl border border-white/5 bg-white/[0.02]">
+            <section className="glass rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/5 bg-white/[0.02]">
               <h2 className="text-2xl font-black mb-8 flex items-center gap-3 tracking-tight text-foreground">
                 <Truck className="text-primary" />
                 Logistics Intelligence
               </h2>
 
-              {/* Progress Stepper */}
-              <div className="relative mb-12">
-                <div className="absolute top-5 left-0 w-full h-0.5 bg-border -z-10" />
-                <div className="flex justify-between">
-                  <Step icon={<Box size={18}/>} label="Order Placed" active done />
-                  <Step icon={<ShieldCheck size={18}/>} label="Escrow Locked" active done />
-                  <Step icon={<Truck size={18}/>} label="In Transit" active={!isDelivered} done={isDelivered} />
-                  <Step icon={<FileCheck2 size={18}/>} label="zkTLS Verified" active={hasProof} done={hasProof} />
+              {/* Progress Stepper — scrollable on mobile */}
+              <div className="relative mb-12 -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+                <div className="relative min-w-[272px]">
+                  <div className="absolute left-5 right-5 top-[22px] h-0.5 bg-border -z-10" />
+                  <div className="grid grid-cols-4 gap-2">
+                    <Step icon={<Box size={18}/>} label="Order Placed" active done />
+                    <Step icon={<ShieldCheck size={18}/>} label="Escrow Locked" active done />
+                    <Step icon={<Truck size={18}/>} label="In Transit" active={!isDelivered} done={isDelivered} />
+                    <Step icon={<FileCheck2 size={18}/>} label="zkTLS Verified" active={hasProof} done={hasProof} />
+                  </div>
                 </div>
               </div>
 
@@ -173,8 +181,11 @@ export default function OrderTrackingPage() {
                    </div>
                  ))}
                 {(data?.milestones ?? []).length === 0 && (
-                  <div className="pl-10 text-muted-foreground text-sm">
-                    Awaiting first shipment update...
+                  <div className="pl-10 text-muted-foreground text-sm flex items-center gap-2">
+                    <span className="animate-pulse w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                    {isDelivered
+                      ? "Delivery confirmed by carrier."
+                      : "Awaiting first shipment update..."}
                   </div>
                 )}
               </div>
@@ -183,20 +194,20 @@ export default function OrderTrackingPage() {
 
           {/* Right Column: Settlement & Proof Details */}
           <div className="space-y-6">
-            <section className="glass rounded-3xl p-8 shadow-2xl border border-primary/20 bg-primary/[0.03]">
+            <section className="glass rounded-3xl p-5 sm:p-8 shadow-2xl border border-primary/20 bg-primary/[0.03]">
               <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-primary">
                 <ShieldCheck className="text-primary" />
                 Settlement Status
               </h3>
               
               <div className="space-y-4">
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Carrier Reference</p>
-                  <p className="font-mono text-sm font-black text-foreground">{data?.shipment.tracking_id}</p>
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Carrier Reference</p>
+                  <p className="font-mono text-sm font-black text-foreground break-all">{data?.shipment.tracking_id}</p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">zkTLS Protocol</p>
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">zkTLS Protocol</p>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black text-foreground">Active & Watching</span>
                     <div className="flex items-center gap-1.5">
@@ -207,30 +218,34 @@ export default function OrderTrackingPage() {
                 </div>
 
                 {hasProof ? (
-                  <div className="p-5 rounded-2xl bg-green-500/10 border border-green-500/20">
+                  <div className="p-4 rounded-2xl bg-green-500/10 border border-green-500/20">
                     <div className="flex items-center gap-2 text-green-500 mb-3">
                       <CheckCircle2 size={18} />
                       <span className="text-sm font-black uppercase tracking-widest">Proof Verified</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mb-4 leading-relaxed font-bold uppercase tracking-wider">
+                    <p className="text-xs text-muted-foreground mb-4 leading-relaxed font-bold uppercase tracking-wider">
                       Settlement Agent has generated a zkTLS proof confirming delivery. Funds are eligible for release.
                     </p>
                     <Link 
-                      href={`https://solscan.io/tx/${data?.shipment.proof_tx_sig}?cluster=devnet`}
+                      href={
+                        data?.shipment?.proof_tx_sig?.startsWith('5xProof')
+                          ? `https://solscan.io/account/${process.env.NEXT_PUBLIC_TRADE_ESCROW_PROGRAM_ID}?cluster=devnet`
+                          : `https://solscan.io/tx/${data?.shipment.proof_tx_sig}?cluster=devnet`
+                      }
                       target="_blank"
-                      className="btn-enter w-full justify-center text-[10px] gap-2 font-black uppercase tracking-widest py-3 rounded-xl"
+                      className="btn-enter flex min-h-[44px] w-full items-center justify-center gap-2 text-xs font-black uppercase tracking-widest rounded-xl"
                     >
                       <ExternalLink size={14} />
                       View On-Chain Proof
                     </Link>
                   </div>
                 ) : (
-                  <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
+                  <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10">
                     <div className="flex items-center gap-2 text-amber-500 mb-2">
                       <Clock size={16} />
                       <span className="text-sm font-black uppercase tracking-widest">Awaiting Delivery</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed font-bold uppercase tracking-wider">
+                    <p className="text-xs text-muted-foreground leading-relaxed font-bold uppercase tracking-wider">
                       Proof generation will trigger automatically upon carrier confirmation of delivery to the registered recipient.
                     </p>
                   </div>
@@ -238,7 +253,7 @@ export default function OrderTrackingPage() {
               </div>
             </section>
 
-            <section className="glass rounded-3xl p-8 shadow-2xl border border-white/5">
+            <section className="glass rounded-3xl p-5 sm:p-8 shadow-2xl border border-white/5">
               <h3 className="text-lg font-black mb-6 flex items-center gap-2 uppercase tracking-widest text-foreground">
                 <Globe className="text-primary" />
                 Network Metrics
@@ -258,13 +273,13 @@ export default function OrderTrackingPage() {
 
 function Step({ icon, label, active, done }: { icon: React.ReactNode, label: string, active: boolean, done: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-2 text-center w-20">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+    <div className="flex min-w-0 flex-col items-center gap-2 text-center">
+      <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
         done ? 'bg-primary text-white' : active ? 'bg-primary/20 text-primary border border-primary/50' : 'bg-muted text-muted-foreground'
       }`}>
         {done ? <CheckCircle2 size={20} /> : icon}
       </div>
-      <span className={`text-[10px] font-bold uppercase tracking-wider ${active || done ? 'text-foreground' : 'text-muted-foreground'}`}>
+      <span className={`text-[10px] font-bold uppercase leading-tight tracking-wider ${active || done ? 'text-foreground' : 'text-muted-foreground'}`}>
         {label}
       </span>
     </div>

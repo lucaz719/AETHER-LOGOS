@@ -31,26 +31,59 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   const pathname = usePathname();
   
   return (
-    <div className="mx-auto flex max-w-7xl gap-8 px-4 py-12 lg:px-8" style={{ paddingTop: "100px" }}>
-      {/* Sidebar */}
-      <aside className="hidden w-64 shrink-0 lg:block">
-        <nav className="glass sticky top-24 flex flex-col gap-8 rounded-3xl p-6 shadow-card">
-          <Section title="Trade Terminal" items={TRADE_NAV} pathname={pathname} />
-          <Section title="Institutional Account" items={ACCOUNT_NAV} pathname={pathname} />
-          
-          <div className="mt-4 rounded-2xl bg-primary/5 p-4 border border-primary/10">
-            <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Status</p>
-            <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-bold text-foreground">Verified Entity</span>
-            </div>
-          </div>
-        </nav>
-      </aside>
+    <div className="mx-auto max-w-7xl px-4 pt-24 pb-12 lg:px-8">
 
-      {/* Main content */}
-      <div className="min-w-0 flex-1">
-        {children}
+      {/* ── Mobile horizontal tab nav (hidden on lg+) ── */}
+      <nav
+        className="mb-6 overflow-x-auto hide-scrollbar lg:hidden"
+        aria-label="Account navigation"
+      >
+        <div className="flex gap-1 pb-1 min-w-max">
+          {[...TRADE_NAV, ...ACCOUNT_NAV].map((link) => {
+            const active =
+              pathname === link.href ||
+              (link.href !== "/user" && pathname.startsWith(link.href + "/"));
+            const Icon = link.icon;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex min-h-[44px] items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                <Icon size={15} />
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* ── Main layout: sidebar (desktop) + content ── */}
+      <div className="flex gap-8">
+        {/* Sidebar — desktop only */}
+        <aside className="hidden w-64 shrink-0 lg:block">
+          <nav className="glass sticky top-24 flex flex-col gap-8 rounded-3xl p-6 shadow-card">
+            <Section title="Trade Terminal" items={TRADE_NAV} pathname={pathname} />
+            <Section title="Institutional Account" items={ACCOUNT_NAV} pathname={pathname} />
+            
+            <div className="mt-4 rounded-2xl bg-primary/5 p-4 border border-primary/10">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Status</p>
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-xs font-bold text-foreground">Verified Entity</span>
+              </div>
+            </div>
+          </nav>
+        </aside>
+
+        {/* Main content */}
+        <div className="min-w-0 flex-1">
+          {children}
+        </div>
       </div>
     </div>
   );

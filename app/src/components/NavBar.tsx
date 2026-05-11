@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Moon, Sun } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import CartSheet from './CartSheet';
 
-// Dynamically import wallet button to avoid hydration issues
 const WalletMultiButton = dynamic(
   async () => {
     const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui');
@@ -16,13 +16,27 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
+const NAV_LINKS = [
+  { href: '/stores',      label: 'Suppliers'    },
+  { href: '/dashboard',   label: 'Procurement'  },
+  { href: '/user/orders', label: 'My Orders'    },
+  { href: '/admin',       label: 'Admin'        },
+];
+
 export function NavBar() {
   const [mounted, setMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { theme, setTheme } = useTheme();
+  const pathname = usePathname();
 
+  useEffect(() => { setMounted(true); }, []);
+  // Close drawer on route change
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+  // Lock body scroll when drawer is open
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
   if (!mounted) {
     return (
@@ -44,71 +58,118 @@ export function NavBar() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Single Row: Logo | Search | Utilities */}
-        <div className="flex h-16 items-center justify-between gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <div className="text-lg font-bold tracking-tighter text-foreground">
-              AETHER
-            </div>
-          </Link>
+    <>
+      <nav className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between gap-4">
+            {/* Logo */}
+            <Link href="/" className="flex-shrink-0">
+              <div className="text-lg font-bold tracking-tighter text-foreground">AETHER</div>
+            </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center gap-1">
-            <Link
-              href="/stores"
-              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
-            >
-              Suppliers
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
-            >
-              Procurement
-            </Link>
-            <Link
-              href="/user/orders"
-              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
-            >
-              My Orders
-            </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground transition"
-            >
-              Admin
-            </Link>
-          </div>
-
-          {/* Right Utilities: Wallet + Cart + Theme */}
-          <div className="flex items-center gap-3 ml-auto">
-            {/* Wallet Button - Wrapped with styling override */}
-            <div className="wallet-button-wrapper">
-              <WalletMultiButton />
+            {/* Desktop nav links */}
+            <div className="hidden md:flex items-center gap-1">
+              {NAV_LINKS.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`inline-flex items-center rounded-lg px-3 py-2 text-sm font-semibold transition ${
+                    pathname === href
+                      ? 'bg-secondary text-foreground'
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
 
-            {/* Cart Button */}
-            <CartSheet />
+            {/* Right utilities */}
+            <div className="flex items-center gap-2 ml-auto">
+              <div className="wallet-button-wrapper">
+                <WalletMultiButton />
+              </div>
+              <CartSheet />
+              <button
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="flex items-center justify-center w-11 h-11 rounded-lg hover:bg-secondary transition"
+                aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
+                {theme === 'dark'
+                  ? <Sun className="h-5 w-5 text-foreground" />
+                  : <Moon className="h-5 w-5 text-foreground" />}
+              </button>
 
-            {/* Theme Toggle */}
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-lg hover:bg-secondary transition"
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-5 w-5 text-foreground" />
-              ) : (
-                <Moon className="h-5 w-5 text-foreground" />
-              )}
-            </button>
+              {/* Burger button — mobile only */}
+              <button
+                onClick={() => setMenuOpen(o => !o)}
+                className="flex items-center justify-center w-11 h-11 rounded-lg hover:bg-secondary transition md:hidden"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={menuOpen}
+                aria-controls="mobile-nav-drawer"
+              >
+                {menuOpen ? <X className="h-5 w-5 text-foreground" /> : <Menu className="h-5 w-5 text-foreground" />}
+              </button>
+            </div>
           </div>
         </div>
+      </nav>
 
+      {/* Mobile drawer backdrop */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div
+        id="mobile-nav-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+        className={`fixed top-0 right-0 z-50 h-full w-72 max-w-[85vw] bg-background border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out md:hidden ${
+          menuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-6 h-16 border-b border-border flex-shrink-0">
+          <span className="text-lg font-bold tracking-tighter text-foreground">AETHER</span>
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="flex items-center justify-center w-11 h-11 rounded-lg hover:bg-secondary transition"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5 text-foreground" />
+          </button>
+        </div>
+
+        {/* Drawer nav links */}
+        <nav className="flex-1 overflow-y-auto px-4 py-6 space-y-1">
+          {NAV_LINKS.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center rounded-xl px-4 py-3 text-base font-semibold transition min-h-[44px] ${
+                pathname === href
+                  ? 'bg-secondary text-foreground'
+                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+              }`}
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Wallet button at bottom of drawer */}
+        <div className="flex-shrink-0 px-6 py-6 border-t border-border">
+          <div className="wallet-button-wrapper w-full">
+            <WalletMultiButton />
+          </div>
+        </div>
       </div>
-    </nav>
+    </>
   );
 }

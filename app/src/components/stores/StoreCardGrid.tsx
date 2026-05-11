@@ -143,7 +143,7 @@ function StoreCard({
         <div className="mt-auto flex gap-2">
           <button
             type="button"
-            className="flex-1 bg-foreground text-background py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-primary hover:shadow-lg active:scale-95"
+            className="min-h-[44px] flex-1 rounded-xl bg-foreground py-3 text-xs font-black uppercase tracking-widest text-background transition-all hover:bg-primary hover:shadow-lg active:scale-95"
             onClick={() => onEnterStore(store)}
           >
             Enter Store
@@ -151,7 +151,8 @@ function StoreCard({
           <button
             type="button"
             onClick={() => onToggleFollow(store.storeId)}
-            className={`px-4 rounded-xl border-2 transition-all active:scale-95 flex items-center justify-center ${isFollowed
+            aria-label={isFollowed ? `Unfollow ${store.shopName}` : `Follow ${store.shopName}`}
+            className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl border-2 px-3 transition-all active:scale-95 sm:px-4 ${isFollowed
               ? "bg-primary/10 border-primary/20 text-primary"
               : "bg-transparent border-foreground text-foreground hover:bg-foreground hover:text-background"
               }`}

@@ -319,6 +319,7 @@ export default function AdminPage() {
       if (res.ok) {
         setStatus("SUCCESS: Delivery simulated in agent database.");
         fetchTrades();
+        triggerRefresh();
       } else {
         throw new Error(await res.text());
       }
@@ -665,15 +666,16 @@ export default function AdminPage() {
             type="button"
             onClick={() => { setTab(t.id); setStatus(null); setTxLink(null); }}
             style={{
-              padding: "0.45rem 1rem",
+              padding: "0.55rem 1rem",
               borderRadius: "var(--radius-pill)",
               border: `1px solid ${tab === t.id ? "var(--cyan)" : "var(--border)"}`,
               background: tab === t.id ? "var(--cyan-dim)" : "transparent",
               color: tab === t.id ? "var(--cyan)" : "var(--text-secondary)",
-              fontWeight: tab === t.id ? 700 : 400,
+              fontWeight: tab === t.id ? 700 : 500,
               fontSize: "0.85rem",
               cursor: "pointer",
-              whiteSpace: "nowrap"
+              whiteSpace: "nowrap",
+              minHeight: "44px",
             }}
           >
             {t.label}

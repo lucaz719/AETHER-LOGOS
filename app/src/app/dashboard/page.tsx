@@ -58,44 +58,52 @@ function normalizeTier(value?: string): SellerTier {
 
 const hedgeMarkets = [
   {
-    marketType: "DHL Customs Event",
-    title: "Will the shipment be held at Customs for > 48 hours?",
-    yesProbability: 64.2,
-    yesLiquidity: 860000,
-    noLiquidity: 520000,
-    expiry: "2026-05-05 18:00 UTC",
-    verificationSignal: "DHL event code: customs-clearance + hold duration",
-    riskLevel: "high" as const,
+    id: 'dhl-customs',
+    marketPubkey: 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS',
+    category: 'DHL CUSTOMS EVENT',
+    question: 'WILL THE SHIPMENT BE HELD AT CUSTOMS FOR > 48 HOURS?',
+    risk: 'HIGH' as const,
+    liquidity: 1_380_000,
+    yesLiquidity: 880_000,
+    noLiquidity: 500_000,
+    yesPercent: 64.2,
+    resolveDate: '2026-06-20T12:00:00Z',
   },
   {
-    marketType: "DHL Delivery SLA",
-    title: "Will the delivery be completed before 2026-05-07 12:00 UTC?",
-    yesProbability: 58.4,
-    yesLiquidity: 420000,
-    noLiquidity: 310000,
-    expiry: "2026-05-07 12:00 UTC",
-    verificationSignal: "DHL delivered timestamp vs target deadline",
-    riskLevel: "medium" as const,
+    id: 'dhl-delivery',
+    marketPubkey: 'HELPmBPeGPy8bkRS2bFdZ3fvqNFrgwHdFCQp7TvEDN8c',
+    category: 'DHL DELIVERY SLA',
+    question: 'WILL THE DELIVERY BE COMPLETED BEFORE 2026-06-07 12:00 UTC?',
+    risk: 'MEDIUM' as const,
+    liquidity: 730_000,
+    yesLiquidity: 426_000,
+    noLiquidity: 304_000,
+    yesPercent: 58.4,
+    resolveDate: '2026-06-07T12:00:00Z',
   },
   {
-    marketType: "DHL Transit Exception",
-    title: "Will the shipment encounter a 'Transit Exception'?",
-    yesProbability: 33.6,
-    yesLiquidity: 510000,
-    noLiquidity: 1020000,
-    expiry: "2026-05-06 20:00 UTC",
-    verificationSignal: "DHL status stream includes TRANSIT_EXCEPTION",
-    riskLevel: "low" as const,
+    id: 'dhl-transit',
+    marketPubkey: 'TRANSjdWBpZMCkpR8gVDGSjZsJ3YqJQmfQpGPnR7kzA',
+    category: 'DHL TRANSIT EXCEPTION',
+    question: "WILL THE SHIPMENT ENCOUNTER A 'TRANSIT EXCEPTION'?",
+    risk: 'MEDIUM' as const,
+    liquidity: 1_530_000,
+    yesLiquidity: 893_000,
+    noLiquidity: 637_000,
+    yesPercent: 58.4,
+    resolveDate: '2026-06-15T12:00:00Z',
   },
   {
-    marketType: "Weather Delay",
-    title: "Will weather delays push delivery by more than 24 hours?",
-    yesProbability: 22.1,
-    yesLiquidity: 280000,
-    noLiquidity: 975000,
-    expiry: "2026-05-08 06:00 UTC",
-    verificationSignal: "Weather service data + carrier delay logs",
-    riskLevel: "low" as const,
+    id: 'weather-delay',
+    marketPubkey: 'WEATHmBPeGPy8bkRS2bFdZ3fvqNFrgwHdFCQp7TvABC',
+    category: 'WEATHER DELAY',
+    question: 'WILL WEATHER DELAYS PUSH DELIVERY BY MORE THAN 24 HOURS?',
+    risk: 'LOW' as const,
+    liquidity: 1_255_000,
+    yesLiquidity: 277_000,
+    noLiquidity: 978_000,
+    yesPercent: 22.1,
+    resolveDate: '2026-06-18T12:00:00Z',
   },
 ];
 
@@ -222,30 +230,30 @@ function DashboardContent() {
   };
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden pt-28 pb-20">
+    <main className="min-h-screen bg-background relative overflow-hidden pt-20 pb-20 sm:pt-24 lg:pt-28">
       {/* Premium Atmospheric Backgrounds */}
       <div className="absolute top-0 left-1/4 w-[800px] h-[800px] bg-indigo-500/5 rounded-full blur-[160px] pointer-events-none -z-10"></div>
       <div className="absolute bottom-0 right-1/4 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[160px] pointer-events-none -z-10"></div>
 
       <div className="mx-auto w-full max-w-[1400px] px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Top Header Section */}
-        <header className="mb-16 flex flex-col lg:flex-row lg:items-end justify-between gap-8 border-b border-border/50 pb-10">
-          <div className="space-y-3">
+        <header className="mb-12 flex flex-col justify-between gap-6 border-b border-border/50 pb-8 sm:mb-16 sm:gap-8 sm:pb-10 lg:flex-row lg:items-end">
+          <div className="max-w-3xl space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-primary">
               <Zap size={12} />
               AETHER Protocol v2.4
             </div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-foreground leading-[0.9]">
+            <h1 className="text-[clamp(2.5rem,10vw,4.5rem)] font-black leading-[0.92] tracking-tighter text-foreground">
               {mode === "marketplace" ? "Procurement" : "Risk Desk"}
             </h1>
-            <p className="text-base md:text-lg font-bold text-muted-foreground max-w-2xl">
+            <p className="max-w-2xl text-sm font-bold text-muted-foreground sm:text-base md:text-lg">
               {mode === "marketplace"
                 ? "Unified B2B procurement terminal with integrated zkTLS logistics verification and automated escrow settlement."
                 : "Predictive logistics hedge terminal. Analyze DHL event streams and secure your supply chain against latency."}
             </p>
           </div>
 
-          <div className="shrink-0">
+          <div className="w-full sm:w-auto lg:max-w-[360px]">
             <DashboardModeToggle mode={mode} onChange={handleModeChange} />
           </div>
         </header>
@@ -256,8 +264,8 @@ function DashboardContent() {
             className={`transition-all duration-500 ease-in-out ${mode === "marketplace" ? "translate-x-0 opacity-100" : "absolute inset-0 -translate-x-8 opacity-0 pointer-events-none"}`}
             aria-hidden={mode !== "marketplace"}
           >
-            <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
-              <aside className="sticky top-28 h-fit">
+            <div className="grid gap-8 lg:grid-cols-[280px_1fr] lg:gap-10">
+              <aside className="h-fit">
                 <MarketplaceFilters
                   categories={["Industrial Components", "IoT Hardware", "Cold Chain", "Security Systems"]}
                   selectedCategory={selectedCategory}

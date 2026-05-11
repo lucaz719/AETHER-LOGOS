@@ -114,8 +114,9 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         boxShadow: '0 4px 24px rgba(0,0,0,0.45)',
-        maxWidth: 360,
-        transform: visible ? 'translateX(0)' : 'translateX(120%)',
+        width: '100%',
+        maxWidth: '100%',
+        transform: visible ? 'translateY(0)' : 'translateY(16px)',
         opacity: visible ? 1 : 0,
         transition: 'transform 0.3s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease',
       }}
@@ -141,10 +142,12 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
           color: 'var(--text-muted)',
           cursor: 'pointer',
           fontSize: '0.8rem',
-          padding: '0 2px',
+          padding: '0.375rem',
           flexShrink: 0,
-          marginTop: 1,
+          marginTop: -2,
           lineHeight: 1,
+          minWidth: 32,
+          minHeight: 32,
         }}
       >
         ×
@@ -190,11 +193,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         aria-label="Notifications"
         style={{
           position: 'fixed',
-          bottom: '1.5rem',
-          right: '1.5rem',
+          bottom: '1rem',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'min(calc(100vw - 2rem), 360px)',
           zIndex: 9999,
           display: 'flex',
           flexDirection: 'column',
+          alignItems: 'stretch',
           gap: '0.6rem',
           pointerEvents: 'none',
         }}

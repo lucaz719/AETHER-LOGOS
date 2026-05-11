@@ -456,7 +456,7 @@ export default function StoreDetailPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 lg:justify-end items-center">
+              <div className="flex w-full flex-wrap items-stretch gap-3 lg:w-auto lg:items-center lg:justify-end">
                 <button
                   type="button"
                   onClick={toggleFollow}
@@ -467,13 +467,12 @@ export default function StoreDetailPage() {
                 </button>
                 {process.env.NODE_ENV !== 'production' && !wallet?.publicKey && (
                   <>
-                    <div className="flex items-center gap-2">
+                    <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                       <input
-                        className="input"
+                        className="input min-w-0 w-full sm:min-w-[220px] sm:flex-1"
                         placeholder="Test USDC mint (devnet)"
                         value={testUsdcMint}
                         onChange={(e) => setTestUsdcMint(e.target.value)}
-                        style={{ minWidth: 220 }}
                       />
 
                       <button
@@ -482,7 +481,7 @@ export default function StoreDetailPage() {
                           try { localStorage.setItem('aether_test_usdc_mint', testUsdcMint); } catch {};
                           alert('Saved test USDC mint.');
                         }}
-                        className="btn-ghost"
+                        className="btn-ghost w-full sm:w-auto"
                       >
                         Save
                       </button>
@@ -493,7 +492,7 @@ export default function StoreDetailPage() {
                           if (!testUsdcMint) return alert('No mint to copy');
                           try { await navigator.clipboard.writeText(testUsdcMint); alert('Mint copied to clipboard'); } catch { alert('Copy failed'); }
                         }}
-                        className="btn-ghost"
+                        className="btn-ghost w-full sm:w-auto"
                       >
                         Copy mint
                       </button>
@@ -505,7 +504,7 @@ export default function StoreDetailPage() {
                           const link = `${window.location.origin}/trades?usdcMint=${encodeURIComponent(testUsdcMint)}`;
                           try { await navigator.clipboard.writeText(link); alert('Prefilled trade link copied'); } catch { alert('Copy failed'); }
                         }}
-                        className="btn-ghost"
+                        className="btn-ghost w-full sm:w-auto"
                       >
                         Copy trade link
                       </button>
@@ -513,7 +512,7 @@ export default function StoreDetailPage() {
                         <button
                           type="button"
                           onClick={async () => {
-                          if (!wallet?.publicKey) return alert('Connect Phantom to create ATA');
+                          if (!wallet?.publicKey || !wallet.signTransaction) return alert('Connect Phantom to create ATA');
                           if (!testUsdcMint) return alert('Set a test mint first');
                           try {
                             const [{ PublicKey, Transaction }, { getAssociatedTokenAddressSync, createAssociatedTokenAccountInstruction }] =
@@ -536,7 +535,7 @@ export default function StoreDetailPage() {
                             alert('Create ATA failed: ' + (err?.message || String(err)));
                           }
                         }}
-                        className="btn-ghost"
+                        className="btn-ghost w-full sm:w-auto"
                       >
                         Create ATA
                       </button>
@@ -579,17 +578,16 @@ export default function StoreDetailPage() {
           </div>
         </section>
 
-        <div className="flex gap-1 mb-8 border-b border-border">
+        <div className="no-scrollbar -mx-4 mb-8 flex gap-1 overflow-x-auto border-b border-border px-4 sm:mx-0 sm:px-0">
           {(["Store", "Products", "About"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 text-sm font-bold transition-all ${activeTab === tab
-                ? "text-foreground border-b-2 border-primary"
+              className={`shrink-0 rounded-t-xl px-5 py-3 text-sm font-bold transition-all min-h-[44px] ${activeTab === tab
+                ? "border-b-2 border-primary text-foreground"
                 : "text-muted-foreground hover:text-foreground"
                 }`}
-              style={{ minHeight: "40px" }}
             >
               {tab}
             </button>
@@ -608,7 +606,7 @@ export default function StoreDetailPage() {
                     setActiveTab("Products");
                   }}
                   style={{
-                    padding: "0.3rem 0.75rem",
+                    padding: "0.5rem 0.9rem",
                     borderRadius: "var(--radius-pill)",
                     border: "1px solid var(--border)",
                     background: "var(--cyan-dim)",
@@ -616,6 +614,7 @@ export default function StoreDetailPage() {
                     fontSize: "0.8rem",
                     cursor: "pointer",
                     transition: "all var(--transition)",
+                    minHeight: "44px",
                   }}
                 >
                   {category}
@@ -652,7 +651,7 @@ export default function StoreDetailPage() {
                 onChange={(event) => setSearch(event.target.value)}
                 className="input"
                 placeholder="Search products in this store..."
-                style={{ flex: 1, minWidth: 200 }}
+                style={{ flex: "1 1 220px", minWidth: 0 }}
               />
               <div className="flex gap-2 flex-wrap">
                 {["All", ...store.categories].map((category) => (
@@ -661,7 +660,7 @@ export default function StoreDetailPage() {
                     type="button"
                     onClick={() => setCategoryFilter(category)}
                     style={{
-                      padding: "0.3rem 0.75rem",
+                      padding: "0.5rem 0.9rem",
                       borderRadius: "var(--radius-pill)",
                       border: categoryFilter === category ? "1px solid var(--cyan)" : "1px solid var(--border)",
                       background: categoryFilter === category ? "var(--cyan-dim)" : "transparent",
@@ -669,7 +668,7 @@ export default function StoreDetailPage() {
                       fontSize: "0.8rem",
                       cursor: "pointer",
                       transition: "all var(--transition)",
-                      minHeight: "40px",
+                      minHeight: "44px",
                     }}
                   >
                     {category}

@@ -675,9 +675,9 @@ small { font-size: 0.875rem; color: var(--text-secondary); }
 }
 
 .wallet-adapter-button {
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border: 1px solid var(--primary) !important;
+  background: var(--bg-card) !important;
+  color: var(--foreground) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px !important;
   font-size: 0.875rem !important;
   font-weight: 600 !important;
@@ -688,8 +688,9 @@ small { font-size: 0.875rem; color: var(--text-secondary); }
 }
 
 .wallet-adapter-button:not([disabled]):hover {
-  background: #0052CC !important;
-  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3) !important;
+  background: var(--bg-surface) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -697,17 +698,21 @@ small { font-size: 0.875rem; color: var(--text-secondary); }
   transform: translateY(0) !important;
 }
 
-.dark .wallet-adapter-button {
-  background: var(--primary) !important;
-  color: var(--primary-foreground) !important;
-  border: 1px solid rgba(0, 102, 255, 0.5) !important;
-}
-
-.wallet-adapter-button img {
+.wallet-adapter-button img,
+.wallet-adapter-button-start-icon img {
   width: 24px !important;
   height: 24px !important;
   object-fit: contain !important;
-  margin-right: 12px !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  margin-right: 0 !important;
+}
+
+.wallet-adapter-button-start-icon {
+  margin-right: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  background: transparent !important;
 }
 
 .wallet-adapter-dropdown-list {
@@ -770,9 +775,15 @@ small { font-size: 0.875rem; color: var(--text-secondary); }
   color: #97a6ba !important;
 }
 
-/* Wallet list items — kill gradient background */
-.wallet-adapter-modal-list {
-  background: transparent !important;
+/* ---- Landing page font utilities (avoids next/font/google network calls) --- */
+.font-cormorant {
+  font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+}
+.font-inter-landing {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.font-mono-landing {
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
 }
 
 .wallet-adapter-modal-list li {
@@ -914,3 +925,15 @@ small { font-size: 0.875rem; color: var(--text-secondary); }
   .btn-primary-mobile-full { width: 100%; }
 }
 
+/* Wallet button: icon-only on mobile, icon + address on sm+ */
+@media (max-width: 639px) {
+  .wallet-button-wrapper .wallet-adapter-button {
+    font-size: 0 !important;       /* hides bare text node */
+    padding: 0 10px !important;
+    min-width: 44px !important;
+    width: 44px !important;
+  }
+  .wallet-button-wrapper .wallet-adapter-button img {
+    margin-right: 0 !important;    /* remove icon trailing gap when no text */
+  }
+}

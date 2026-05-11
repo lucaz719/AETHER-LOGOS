@@ -551,12 +551,12 @@ function TradesPageContent() {
       <div className="mx-auto w-full max-w-7xl px-4 pb-10 pt-8 sm:px-6 lg:px-8">
         {/* HACKATHON MOCK - show success screen after successful trade commit */}
         {successSignatures.length > 0 && (
-          <div className="mb-8 rounded-3xl border border-green-500/30 bg-green-500/10 p-8 shadow-2xl">
+          <div className="mb-8 rounded-3xl border border-green-500/30 bg-green-500/10 p-4 sm:p-8 shadow-2xl">
             <div className="flex items-start gap-4">
               <CheckCircle2 size={32} className="text-green-500 shrink-0 mt-1" />
               <div className="flex-1">
-                <h2 className="text-2xl font-black text-green-500 tracking-tight mb-2">
-                  ✓ Trade Committed Successfully!
+                <h2 className="text-lg sm:text-2xl font-black text-green-500 tracking-tight mb-2">
+                  Trade Committed Successfully!
                 </h2>
                 <p className="text-sm text-muted-foreground mb-4">
                   Funds are now locked in escrow. The vendor will ship on delivery, and your USDC will release after signature verification.
@@ -591,7 +591,7 @@ function TradesPageContent() {
                     Place Another Trade
                   </button>
                   <a
-                    href="/trades"
+                    href="/user/orders"
                     className="px-4 py-2 rounded-lg bg-primary text-sm font-bold text-white hover:bg-primary/90 transition-all text-center"
                   >
                     View Active Trades

@@ -1,7 +1,6 @@
 "use client";
 
-import { ArrowRight, CheckCircle, Globe, Lock, Package, Shield, TrendingUp, Zap } from "lucide-react";
-import { Cormorant_Garamond, Inter, JetBrains_Mono } from "next/font/google";
+import { ArrowRight, CheckCircle, Globe, Lock, Menu, Package, Shield, TrendingUp, X, Zap } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,15 +9,18 @@ import { useOnboardingStore } from "@/lib/stores/onboardingStore";
 
 const EarthHero = dynamic(() => import("../components/EarthHero"), { ssr: false });
 
-const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["300", "400"], display: "swap" });
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500"], display: "swap" });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], display: "swap" });
+// Use CSS classes defined in globals.css to avoid Google Fonts network calls at compile time.
+// Fonts still load at runtime via the @import in globals.css.
+const cormorant = { className: 'font-cormorant' };
+const inter = { className: 'font-inter-landing' };
+const jetbrainsMono = { className: 'font-mono-landing' };
 
 /* ═══════════════════════════ HEADER ═══════════════════════════ */
 
 function LandingHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const { onboardingCompleted, userRole } = useOnboardingStore();
 
@@ -28,8 +30,13 @@ function LandingHeader() {
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
 
   const handleLaunch = () => {
+    setMenuOpen(false);
     if (!onboardingCompleted) return router.push("/onboarding");
     if (userRole === "seller") return router.push("/vendor/dashboard");
     return router.push("/stores");
@@ -37,32 +44,104 @@ function LandingHeader() {
 
   if (!mounted) return null;
 
+  const navLinks = [
+    { href: "#how-it-works", label: "How It Works" },
+    { href: "#features",     label: "Features"     },
+    { href: "#hedge",        label: "Risk Markets" },
+  ];
+
   return (
-    <header
-      className={`fixed left-0 right-0 top-0 z-50 transition-colors duration-300 ${inter.className} ${scrolled ? "bg-[#0d0d14]/90 backdrop-blur-md" : "bg-transparent"}`}
-      style={scrolled ? { borderBottom: "0.5px solid rgba(255,255,255,0.08)" } : undefined}
-    >
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <Link href="/" className="text-base font-medium tracking-tight text-white">
-          ◯ AETHER-LOGOS
-        </Link>
-        <div className="flex items-center gap-8">
+    <>
+      <header
+        className={`fixed left-0 right-0 top-0 z-50 transition-colors duration-300 ${inter.className} ${scrolled ? "bg-[#0d0d14]/90 backdrop-blur-md" : "bg-transparent"}`}
+        style={scrolled ? { borderBottom: "0.5px solid rgba(255,255,255,0.08)" } : undefined}
+      >
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          <Link href="/" className="text-base font-medium tracking-tight text-white flex-shrink-0">
+            ◯ AETHER-LOGOS
+          </Link>
+
+          {/* Desktop nav links */}
           <div className="hidden items-center gap-6 sm:flex">
-            <a href="#how-it-works" className="text-[13px] text-[#a0a0b0] transition-colors duration-150 hover:text-white">How It Works</a>
-            <a href="#features" className="text-[13px] text-[#a0a0b0] transition-colors duration-150 hover:text-white">Features</a>
-            <a href="#hedge" className="text-[13px] text-[#a0a0b0] transition-colors duration-150 hover:text-white">Risk Markets</a>
+            {navLinks.map(({ href, label }) => (
+              <a key={href} href={href} onClick={() => setMenuOpen(false)} className="text-[13px] text-[#a0a0b0] transition-colors duration-150 hover:text-white">
+                {label}
+              </a>
+            ))}
           </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleLaunch}
+              className={`${inter.className} hidden sm:inline-flex items-center gap-2 border px-4 py-2.5 text-[13px] text-white transition-all duration-200 hover:bg-white hover:text-[#0d0d14]`}
+              style={{ borderWidth: "0.5px", borderColor: "rgba(255,255,255,0.3)" }}
+            >
+              Launch App
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Mobile burger */}
+            <button
+              onClick={() => setMenuOpen(o => !o)}
+              className="flex items-center justify-center w-11 h-11 sm:hidden text-white"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* Mobile menu backdrop */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 sm:hidden"
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }}
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation"
+        className={`fixed top-0 right-0 z-50 h-full w-64 max-w-[80vw] sm:hidden flex flex-col transition-transform duration-300 ease-in-out ${menuOpen ? "translate-x-0" : "translate-x-full"}`}
+        style={{ background: "#0d0d14", borderLeft: "0.5px solid rgba(255,255,255,0.1)" }}
+      >
+        <div className="flex items-center justify-between px-6 h-[72px] flex-shrink-0" style={{ borderBottom: "0.5px solid rgba(255,255,255,0.08)" }}>
+          <span className="text-base font-medium tracking-tight text-white">Menu</span>
+          <button onClick={() => setMenuOpen(false)} className="flex items-center justify-center w-11 h-11 text-white" aria-label="Close menu">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-1">
+          {navLinks.map(({ href, label }) => (
+            <a
+              key={href}
+              href={href}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center min-h-[44px] px-4 py-3 text-[15px] text-[#a0a0b0] hover:text-white transition-colors rounded-lg"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="flex-shrink-0 px-6 py-8" style={{ borderTop: "0.5px solid rgba(255,255,255,0.08)" }}>
           <button
             onClick={handleLaunch}
-            className="inline-flex items-center gap-2 border px-4 py-2 text-[13px] text-white transition-all duration-200 hover:bg-white hover:text-[#0d0d14]"
-            style={{ borderWidth: "0.5px", borderColor: "rgba(255,255,255,0.3)" }}
+            className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-[#0d0d14] bg-white"
           >
             Launch App
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>
-      </nav>
-    </header>
+      </div>
+    </>
   );
 }
 
@@ -123,9 +202,9 @@ export default function LandingPage() {
       {/* ════════════════ HERO ════════════════ */}
       <section className="relative z-10 flex min-h-screen items-center" style={{ background: "transparent" }}>
         <div
-          className="ml-0 w-full max-w-[50%] px-16 py-24"
+          className="w-full md:max-w-[58%] px-6 sm:px-10 md:px-16 py-32 md:py-24"
           style={{
-            background: "linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.6) 70%, transparent 100%)",
+            background: "linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.75) 70%, transparent 100%)",
             minHeight: "100vh",
             display: "flex",
             flexDirection: "column",
@@ -148,11 +227,11 @@ export default function LandingPage() {
             Buy and sell industrial goods with confidence. Every order is protected by smart contract escrow — funds only release when delivery is verified on-chain.
           </p>
 
-          <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
             <button
               onClick={handleLaunch}
               id="hero-get-started"
-              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none bg-white px-8 py-3 text-sm font-medium text-[#0d0d14] transition-transform duration-200 hover:scale-[1.02]`}
+              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none bg-white px-8 py-3.5 text-sm font-medium text-[#0d0d14] transition-transform duration-200 hover:scale-[1.02] sm:py-3`}
             >
               Start Trading
               <ArrowRight className="h-4 w-4" />
@@ -160,7 +239,7 @@ export default function LandingPage() {
             <button
               onClick={handleLaunch}
               id="hero-browse-marketplace"
-              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none border px-8 py-3 text-sm font-medium text-white transition-colors duration-200 hover:border-white`}
+              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none border px-8 py-3.5 text-sm font-medium text-white transition-colors duration-200 hover:border-white sm:py-3`}
               style={{ borderWidth: "0.5px", borderColor: "rgba(255,255,255,0.4)" }}
             >
               Browse Marketplace
@@ -168,15 +247,15 @@ export default function LandingPage() {
             </button>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 sm:grid-cols-3">
+          <div className="mt-12 grid grid-cols-3 gap-0 border-t sm:grid-cols-3" style={{ borderTopColor: "rgba(255,255,255,0.1)" }}>
             {heroStats.map((stat, index) => (
               <div
                 key={stat.label}
-                className={`py-4 text-left ${index > 0 ? "sm:border-l sm:pl-6" : "sm:pr-6"}`}
-                style={index > 0 ? { borderLeftWidth: "0.5px", borderLeftColor: "rgba(255,255,255,0.2)" } : undefined}
+                className={`py-5 text-left ${index > 0 ? "border-l pl-4 sm:pl-6" : "sm:pr-6"}`}
+                style={index > 0 ? { borderLeftWidth: "0.5px", borderLeftColor: "rgba(255,255,255,0.15)" } : undefined}
               >
-                <p className={`${cormorant.className} text-[36px] leading-none text-white`} style={{ fontWeight: 300 }}>{stat.value}</p>
-                <p className={`${jetbrainsMono.className} mt-2 text-[10px] uppercase tracking-[0.15em] text-[#666680]`}>{stat.label}</p>
+                <p className={`${cormorant.className} text-[clamp(22px,5vw,36px)] leading-none text-white`} style={{ fontWeight: 300 }}>{stat.value}</p>
+                <p className={`${jetbrainsMono.className} mt-2 text-[9px] sm:text-[10px] uppercase tracking-[0.12em] sm:tracking-[0.15em] text-[#666680]`}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -294,11 +373,11 @@ export default function LandingPage() {
           <p className={`${inter.className} mx-auto mt-5 max-w-2xl text-[16px] leading-[1.7] text-[#a0a0b0]`}>
             Join enterprise buyers and verified vendors on the only marketplace where escrow is the default.
           </p>
-          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
             <button
               onClick={handleLaunch}
               id="final-cta-start"
-              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none bg-white px-8 py-3 text-sm font-medium text-[#0d0d14] transition-transform duration-200 hover:scale-[1.02]`}
+              className={`${inter.className} w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-none bg-white px-8 py-3.5 sm:py-3 text-sm font-medium text-[#0d0d14] transition-transform duration-200 hover:scale-[1.02]`}
             >
               Start Trading
               <ArrowRight className="h-4 w-4" />
@@ -306,7 +385,7 @@ export default function LandingPage() {
             <button
               onClick={handleLaunch}
               id="final-cta-browse"
-              className={`${inter.className} inline-flex items-center justify-center gap-2 rounded-none border px-8 py-3 text-sm font-medium text-white transition-colors duration-200 hover:border-white`}
+              className={`${inter.className} w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-none border px-8 py-3.5 sm:py-3 text-sm font-medium text-white transition-colors duration-200 hover:border-white`}
               style={{ borderWidth: "0.5px", borderColor: "rgba(255,255,255,0.4)" }}
             >
               Browse Marketplace
@@ -317,12 +396,12 @@ export default function LandingPage() {
 
       {/* ════════════════ FOOTER ════════════════ */}
       <footer
-        className="relative z-10 px-8 py-20 lg:px-16"
+        className="relative z-10 px-6 py-16 sm:px-8 lg:px-16 sm:py-20"
         style={{ background: "#060608", borderTop: "0.5px solid rgba(255,255,255,0.08)" }}
       >
         <div className="mx-auto max-w-7xl">
-          <div className="grid gap-12 md:grid-cols-4 lg:gap-24">
-            <div className="col-span-1 md:col-span-1">
+          <div className="grid grid-cols-2 gap-10 sm:gap-12 md:grid-cols-4 lg:gap-24">
+            <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2.5 text-lg font-black tracking-tighter text-white uppercase">
                 <div className="h-2 w-2 rounded-full bg-primary" />
                 AETHER

@@ -10,7 +10,7 @@ type DashboardModeToggleProps = {
 export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps) {
   return (
     // Uses CSS tokens → theme-aware automatically in both light and dark
-    <div className="rounded-xl border border-border bg-secondary backdrop-blur-md p-1.5 shadow-inner min-w-[320px]">
+    <div className="w-full max-w-full rounded-xl border border-border bg-secondary p-1 shadow-inner backdrop-blur-md sm:min-w-[320px]">
       <div className="relative flex items-center">
         <span
           aria-hidden="true"
@@ -23,7 +23,7 @@ export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps
         <button
           type="button"
           onClick={() => onChange("marketplace")}
-          className={`relative z-10 flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-all duration-200 ${
+          className={`relative z-10 inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-2 text-xs font-bold transition-all duration-200 sm:text-[13px] ${
             mode === "marketplace"
               ? "text-white"
               : "text-muted-foreground hover:text-foreground"
@@ -35,7 +35,7 @@ export function DashboardModeToggle({ mode, onChange }: DashboardModeToggleProps
         <button
           type="button"
           onClick={() => onChange("hedge")}
-          className={`relative z-10 flex-1 inline-flex h-10 items-center justify-center gap-2 rounded-lg text-[13px] font-bold transition-all duration-200 ${
+          className={`relative z-10 inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-2 text-xs font-bold transition-all duration-200 sm:text-[13px] ${
             mode === "hedge"
               ? "text-white"
               : "text-muted-foreground hover:text-foreground"

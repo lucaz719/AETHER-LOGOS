@@ -163,7 +163,7 @@ export default function CartSheet() {
       {/* Trigger - Icon Restored */}
       <button
         onClick={() => setOpen(true)}
-        className="group relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
+        className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-md transition-all hover:bg-white/10 active:scale-95"
       >
         <ShoppingCart size={15} className="text-foreground group-hover:text-primary transition-colors" />
         {items.length > 0 && (

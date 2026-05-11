@@ -850,6 +850,37 @@ func handleSimulateDelivery(w http.ResponseWriter, r *http.Request, tradeID stri
 		return
 	}
 
+	// Write fake zkTLS proof
+	fakeProofHash := fmt.Sprintf("zkTLS-%s-%d", shipment.TrackingID, time.Now().Unix())
+	trackingPrefix := shipment.TrackingID
+	if len(trackingPrefix) > 8 {
+		trackingPrefix = trackingPrefix[:8]
+	}
+	fakeProofTx := "5xProof" + trackingPrefix
+	if err := UpdateShipmentProof(shipment.ID, fakeProofHash, fakeProofTx); err != nil {
+		log.Printf("simulate delivery: failed to write proof for %d: %v", shipment.ID, err)
+	}
+
+	// Write delivery milestones
+	now := time.Now().Unix()
+	milestones := []ShipmentMilestone{
+		{
+			Status:      "InTransit",
+			Description: "Shipment picked up by carrier.",
+			Location:    "Origin Warehouse",
+			Timestamp:   now - 3600,
+		},
+		{
+			Status:      "Delivered",
+			Description: "Package delivered and verified by zkTLS protocol.",
+			Location:    "Destination",
+			Timestamp:   now,
+		},
+	}
+	if err := UpsertMilestones(shipment.ID, milestones); err != nil {
+		log.Printf("simulate delivery: failed to write milestones for %d: %v", shipment.ID, err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"success": true,

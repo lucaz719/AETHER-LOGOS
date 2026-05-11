@@ -7,6 +7,7 @@ const withBundleAnalyzer = process.env.ANALYZE === 'true'
 const webpack = require('webpack');
 
 const nextConfig = {
+  devIndicators: false,
   transpilePackages: [
     '@solana/wallet-adapter-base',
     '@solana/wallet-adapter-react',

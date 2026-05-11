@@ -45,9 +45,9 @@ export default function UserOrdersPage() {
 
   if (!publicKey) {
     return (
-      <main style={{ textAlign: "center", paddingTop: "4rem" }}>
-        <h2 style={{ color: "var(--text-primary)", marginBottom: "0.5rem" }}>My Orders</h2>
-        <p style={{ color: "var(--text-secondary)", marginBottom: "1.5rem" }}>Connect your wallet to view your orders.</p>
+      <main className="flex flex-col items-center gap-4 pt-16 text-center px-4">
+        <h2 className="text-xl font-black text-foreground">My Orders</h2>
+        <p className="text-sm text-muted-foreground max-w-xs">Connect your wallet to view your orders.</p>
         <WalletMultiButton />
       </main>
     );
@@ -70,15 +70,15 @@ export default function UserOrdersPage() {
 
           <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[420px] lg:grid-cols-3">
             <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Orders</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Orders</p>
               <p className="mt-1 text-2xl font-black text-foreground">{orders.length}</p>
             </div>
             <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Active</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Active</p>
               <p className="mt-1 text-2xl font-black text-foreground">{activeCount}</p>
             </div>
             <div className="rounded-2xl border border-border bg-background/70 px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Tracked</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Tracked</p>
               <p className="mt-1 text-2xl font-black text-foreground">{orders.length - activeCount}</p>
             </div>
           </div>
@@ -89,7 +89,7 @@ export default function UserOrdersPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilter("")}
-            className="badge-pill badge-pill-primary"
+            className="inline-flex min-h-[44px] items-center rounded-xl px-4 py-2 text-sm font-bold transition-colors badge-pill badge-pill-primary"
             style={{ background: !filter ? "var(--primary-light)" : "var(--bg-surface)", color: !filter ? "var(--primary)" : "var(--text-secondary)" }}
           >
             All
@@ -101,7 +101,7 @@ export default function UserOrdersPage() {
               <button
                 key={s}
                 onClick={() => setFilter(s)}
-                className={`badge-pill ${meta.tone}`}
+                className={`inline-flex min-h-[44px] items-center rounded-xl px-4 py-2 text-sm font-bold transition-colors badge-pill ${meta.tone}`}
                 style={{
                   background: active ? "var(--primary-light)" : "var(--bg-surface)",
                   color: active ? "var(--primary)" : "var(--text-secondary)",
@@ -124,7 +124,7 @@ export default function UserOrdersPage() {
           </div>
           <p className="text-sm font-semibold text-foreground">No orders yet</p>
           <p className="mt-1 text-sm text-muted-foreground">Place an order to start tracking settlement here.</p>
-          <Link href="/marketplace" className="btn-primary mt-5 inline-flex">
+          <Link href="/marketplace" className="btn-primary mt-5 inline-flex min-h-[44px]">
             Browse marketplace
             <ArrowRight size={15} />
           </Link>
@@ -140,17 +140,17 @@ export default function UserOrdersPage() {
             const trackingHref = `/user/orders/${order.pubkey?.toBase58() ?? order.account?.tradeId ?? 'unknown'}`;
 
             return (
-              <article key={order.pubkey?.toBase58() ?? Math.random().toString()} className="glass rounded-3xl p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <article key={order.pubkey?.toBase58() ?? Math.random().toString()} className="glass rounded-3xl p-5 sm:p-8 border border-white/5 shadow-2xl bg-white/[0.02]">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-3">
                       <span className={`badge ${meta.tone} px-3 py-1 rounded-full`}>{meta.label}</span>
-                      <span className="badge badge-cyan px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      <span className="badge badge-cyan px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest">
                         Ref: {shortKey(order.pubkey)}
                       </span>
                     </div>
                     <h3 className="mt-4 text-xl font-black text-foreground tracking-tight">{shortKey(order.account.seller as PublicKey)}</h3>
-                    <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-bold text-muted-foreground uppercase tracking-widest">
                       <span className="inline-flex items-center gap-2">
                         <Package size={14} className="text-primary" />
                         Qty {quantity}
@@ -168,12 +168,12 @@ export default function UserOrdersPage() {
                     </div>
                   </div>
  
-                  <div className="flex shrink-0 items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Settlement locked</p>
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                    <div className="text-right shrink-0">
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Settlement locked</p>
                       <p className="mt-1 text-2xl font-black text-foreground">${amount.toFixed(2)}</p>
                     </div>
-                    <Link href={trackingHref} className="btn-enter flex items-center gap-3 px-6 py-3 rounded-2xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-black text-xs uppercase tracking-widest">
+                    <Link href={trackingHref} className="btn-enter flex items-center gap-3 min-h-[44px] px-5 py-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 transition-all font-black text-xs uppercase tracking-widest">
                       Live tracking
                       <BadgeCheck size={16} />
                     </Link>
