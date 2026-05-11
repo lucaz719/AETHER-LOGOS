@@ -5,6 +5,7 @@ import { PublicKey } from "@solana/web3.js";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useSellerOrders } from "@/hooks/useSellerOrders";
 import { fetchAgent } from "@/lib/agentApi";
+import { AGENT_URL } from "@/lib/config";
 import { TrackingTimeline } from "@/components/TrackingTimeline";
 
 function statusKey(status: unknown): string {
@@ -64,7 +65,7 @@ export default function SellerDashboardPage() {
         .rpc();
 
       // Register with Go agent for automated proof submission
-      fetchAgent("http://localhost:8080/register", {
+      fetchAgent(`${AGENT_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

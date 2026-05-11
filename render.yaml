@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: aether-agent
+    runtime: go
+    rootDir: agent
+    buildCommand: go build -o agent .
+    startCommand: ./agent
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: MOCK_PROOF
+        value: "true"
+      - key: AGENT_DB_PATH
+        value: /tmp/agent.db
+      - key: SOLANA_RPC
+        value: https://api.devnet.solana.com
+      - key: TRADE_ESCROW_PROGRAM_ID
+        value: 6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3
+      - key: MARKETPLACE_PROGRAM_ID
+        value: 6qjk2gfJTHhqYmTwUM4WnoKYpjrzeneqKdR5NH3jXdTj
+      - key: INTERNAL_API_KEY
+        value: aether-demo-key-2026

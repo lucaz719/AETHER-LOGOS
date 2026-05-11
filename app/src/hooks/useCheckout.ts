@@ -8,6 +8,7 @@ import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { useToast } from "@/hooks/useToast";
 import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID } from "@/lib/anchor";
 import type { CartItem } from "@/hooks/useCart";
+import { AGENT_URL } from "@/lib/config";
 
 const USDC_MINT = new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU");
 
@@ -156,7 +157,7 @@ export function useCheckout() {
            // This is a best-effort call—if it fails, the trade still exists on-chain
            try {
              const tradeIdHex = Array.from(tradeIdBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-             await fetch("http://localhost:8080/api/register", {
+             await fetch(`${AGENT_URL}/api/register`, {
                method: "POST",
                headers: { "Content-Type": "application/json" },
                body: JSON.stringify({

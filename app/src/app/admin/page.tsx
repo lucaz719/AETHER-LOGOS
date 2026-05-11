@@ -13,6 +13,7 @@ import { MARKET_PROGRAM_ID, ESCROW_PROGRAM_ID, MARKETPLACE_PROGRAM_ID, USDC_MINT
 import tradeEscrowIdl from "@/lib/idl/trade_escrow.json";
 import { KeyRound, ShieldCheck, Scale, Wallet as WalletIcon, Gavel, Package, Truck, CheckCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { fetchAgent } from "@/lib/agentApi";
+import { AGENT_URL } from "@/lib/config";
 import { getAssociatedTokenAddressSync } from "@solana/spl-token";
 
 type Tab = "init" | "verify" | "review" | "disputes" | "market" | "settlement";
@@ -183,7 +184,7 @@ export default function AdminPage() {
   const fetchTrades = async () => {
     setLoadingTrades(true);
     try {
-      const res = await fetchAgent("http://localhost:8080/api/trades");
+      const res = await fetchAgent(`${AGENT_URL}/api/trades`);
       if (res.ok) {
         const data = await res.json();
         const agentTrades = Array.isArray(data?.trades) ? data.trades : [];
@@ -287,7 +288,7 @@ export default function AdminPage() {
     if (!trackingInput) return;
     setBusy(true); setStatus(null); setTxLink(null);
     try {
-      const res = await fetchAgent(`${process.env.NEXT_PUBLIC_AGENT_URL ?? "http://localhost:8080"}/api/trades/${trade.trade_id}/force-ship`, {
+      const res = await fetchAgent(`${AGENT_URL}/api/trades/${trade.trade_id}/force-ship`, {
         method: "POST",
         body: JSON.stringify({ tracking_id: trackingInput }),
       });
@@ -311,7 +312,7 @@ export default function AdminPage() {
     if (!publicKey) return;
     setBusy(true); setStatus(null); setTxLink(null);
     try {
-      const res = await fetchAgent(`http://localhost:8080/api/trades/${trade.tracking_id}/simulate-delivery`, {
+      const res = await fetchAgent(`${AGENT_URL}/api/trades/${trade.tracking_id}/simulate-delivery`, {
         method: "POST",
         body: JSON.stringify({ confirmed: true }),
       });

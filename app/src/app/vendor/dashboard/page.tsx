@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAnchorClient } from "@/hooks/useAnchorClient";
 import { fetchAgent } from "@/lib/agentApi";
+import { AGENT_URL } from "@/lib/config";
 
 interface Vendor {
   id: number;
@@ -67,13 +68,13 @@ export default function VendorDashboardPage() {
     const fetchData = async () => {
       try {
         // Fetch vendor profile
-        const vendorRes = await fetchAgent(`http://localhost:8080/api/vendor/${walletAddr}`);
+        const vendorRes = await fetchAgent(`${AGENT_URL}/api/vendor/${walletAddr}`);
         if (vendorRes.ok) {
           const vendorData = await vendorRes.json();
           setVendor(vendorData);
 
           // Fetch products
-          const productsRes = await fetchAgent(`http://localhost:8080/api/products?vendor=${walletAddr}`);
+          const productsRes = await fetchAgent(`${AGENT_URL}/api/products?vendor=${walletAddr}`);
           if (productsRes.ok) {
             const productsData = await productsRes.json();
             setProducts(productsData.products || []);
@@ -106,7 +107,7 @@ export default function VendorDashboardPage() {
     setMessage(null);
 
     try {
-      const response = await fetchAgent('http://localhost:8080/api/vendor/products', {
+      const response = await fetchAgent(`${AGENT_URL}/api/vendor/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
