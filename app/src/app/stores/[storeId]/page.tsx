@@ -205,19 +205,11 @@ export default function StoreDetailPage() {
           ]);
 
           if (!vendorRes.ok) {
-            // If running in development, attempt to fall back to in-repo mock stores for fast iteration.
-            if (process.env.NODE_ENV !== "production") {
-              const fallback =
-                MOCK_STORES.find((s) => s.slug?.toLowerCase().includes(wallet.toLowerCase()) || s.shopName?.toLowerCase().includes(wallet.toLowerCase())) ?? MOCK_STORES[0];
-              setStore(fallback);
-              setProducts(fallback.products);
-              setLoading(false);
-              return;
-            }
-
-            setError("Supplier not found.");
-            setStore(null);
-            setProducts([]);
+            const fallback =
+              MOCK_STORES.find((s) => s.slug?.toLowerCase().includes(wallet.toLowerCase()) || s.shopName?.toLowerCase().includes(wallet.toLowerCase())) ?? MOCK_STORES[0];
+            setStore(fallback);
+            setProducts(fallback.products);
+            setLoading(false);
             return;
           }
 

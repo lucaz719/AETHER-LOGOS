@@ -29,6 +29,7 @@ func main() {
 	if err := InitDB(dbPath); err != nil {
 		log.Fatalf("failed to initialise database: %v", err)
 	}
+	SeedDemoDataIfEmpty()
 
 	dhlClient = carrier.NewDHLClient(os.Getenv("DHL_API_KEY"))
 	mockProof := false
@@ -145,7 +146,7 @@ func main() {
 	}()
 
 	fmt.Printf("aether-logos agent listening on :%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, apiKeyMiddleware(corsMiddleware(http.DefaultServeMux))))
+	log.Fatal(http.ListenAndServe(":"+port, corsMiddleware(apiKeyMiddleware(http.DefaultServeMux))))
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
@@ -165,19 +166,23 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 func apiKeyMiddleware(next http.Handler) http.Handler {
 	expectedKey := os.Getenv("INTERNAL_API_KEY")
-	// If no key is configured, skip validation (development mode)
+	// If no key is configured, skip validation entirely.
 	if expectedKey == "" {
 		return next
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip auth for /health endpoint
+		// Public read routes: browser fetches these directly — no API key required.
+		if r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
+		// Health check always public.
 		if r.URL.Path == "/health" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Verify X-API-Key header
 		apiKey := r.Header.Get("X-API-Key")
 		if apiKey != expectedKey {
 			http.Error(w, "Unauthorized: Invalid or missing API key", http.StatusUnauthorized)
