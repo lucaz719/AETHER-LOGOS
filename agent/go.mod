@@ -1,6 +1,6 @@
 module github.com/aether-logos/agent
 
-go 1.25.0
+go 1.22.0
 
 require (
 	github.com/gagliardetto/solana-go v1.9.3
