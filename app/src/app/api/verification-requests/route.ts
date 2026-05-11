@@ -6,9 +6,23 @@ import marketplaceIdl from "@/lib/idl/marketplace.json";
 const PROGRAM_ID = process.env.NEXT_PUBLIC_MARKETPLACE_PROGRAM_ID ?? "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnN";
 const RPC = process.env.SOLANA_RPC_URL ?? process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? "https://api.devnet.solana.com";
 
-export async function GET(req: NextRequest) {
+// Reuse connection across requests (avoids new websocket per call)
+const connection = new Connection(RPC, "confirmed");
+
+// Simple in-process cache: max one RPC call per 30 seconds
+let cachedResult: { requests: unknown[]; ts: number } | null = null;
+const CACHE_TTL_MS = 30_000;
+
+export async function GET(_req: NextRequest) {
   try {
-    const connection = new Connection(RPC, "confirmed");
+    const now = Date.now();
+    if (cachedResult && now - cachedResult.ts < CACHE_TTL_MS) {
+      return NextResponse.json(
+        { requests: cachedResult.requests },
+        { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" } }
+      );
+    }
+
     const programKey = new PublicKey(PROGRAM_ID);
     const coder = getCoder(marketplaceIdl);
 
@@ -34,7 +48,12 @@ export async function GET(req: NextRequest) {
       .filter((r): r is NonNullable<typeof r> => r !== null)
       .filter((r) => !Boolean(r.account.is_verified)); // Only pending verification
 
-    return NextResponse.json({ requests });
+    cachedResult = { requests, ts: now };
+
+    return NextResponse.json(
+      { requests },
+      { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=60" } }
+    );
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to fetch verification requests" }, { status: 500 });

@@ -175,10 +175,13 @@ export default function AdminPage() {
     }
   };
 
-  // Fetch when verify tab is opened
-  if (tab === "verify" && requests.length === 0 && !loadingRequests) {
-    void fetchRequests();
-  }
+  // Fetch when verify tab is opened (must be in useEffect, not render body)
+  useEffect(() => {
+    if (tab === "verify") {
+      void fetchRequests();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   // Fetch trades from agent, fall back to on-chain if agent fails
   const fetchTrades = async () => {
