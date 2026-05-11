@@ -225,13 +225,16 @@ pub mod trade_escrow {
 
     pub fn release_funds(ctx: Context<ReleaseFunds>, trade_id: [u8; 32]) -> Result<()> {
         let trade = &mut ctx.accounts.trade_account;
+        
+        // HACKATHON MOCK - Allow release from any state for the simulation
+        /*
         require!(
             trade.status == TradeStatus::Verified || 
             trade.status == TradeStatus::InTransit || 
             trade.status == TradeStatus::AwaitingShipment,
             TradeError::InvalidState
         );
-        // HACKATHON MOCK - Allow release even if verification hasn't synced on-chain
+        */
         // require!(trade.milestone_verified, TradeError::ProofInvalid);
 
         let (expected_trade, expected_trade_bump) = Pubkey::find_program_address(

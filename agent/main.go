@@ -100,7 +100,13 @@ func main() {
 	http.HandleFunc("/api/products", ProductsListHandler)
 	http.HandleFunc("/api/products/", ProductGetHandler)
 	http.HandleFunc("/api/trades", TradesListHandler)
-	http.HandleFunc("/api/trades/", TradeSimulateDeliveryHandler)
+	http.HandleFunc("/api/trades/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/sync-status") {
+			TradeSyncStatusHandler(w, r)
+		} else {
+			TradeSimulateDeliveryHandler(w, r)
+		}
+	})
 
 	// User API
 	http.HandleFunc("/api/users/", userDispatch)

@@ -426,6 +426,14 @@ func UpdateStatus(id int64, status string) error {
 	return err
 }
 
+func UpdateStatusByTradeID(tradeID string, status string) error {
+	_, err := db.Exec(
+		`UPDATE shipments SET last_known_status = ?, updated_at = ? WHERE trade_id = ?`,
+		status, time.Now().UTC().Format(time.RFC3339), tradeID,
+	)
+	return err
+}
+
 func UpdateShipmentTracking(id int64, trackingID string) error {
 	_, err := db.Exec(
 		`UPDATE shipments SET tracking_id = ?, updated_at = ? WHERE id = ?`,
