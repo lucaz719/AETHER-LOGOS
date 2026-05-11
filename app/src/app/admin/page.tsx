@@ -111,9 +111,22 @@ function decodeRawTradeAccount(data: Buffer) {
   return RAW_TRADE_CODER.decode("TradeAccount", data) as Record<string, unknown>;
 }
 
+function truncateMiddle(value: unknown, start: number, end: number, fallback = "unknown"): string {
+  const rendered = asBase58(value) ?? asStringValue(value) ?? fallback;
+  if (end <= 0) {
+    return rendered.length <= start ? rendered : `${rendered.slice(0, start)}…`;
+  }
+  if (rendered.length <= start + end) return rendered;
+  return `${rendered.slice(0, start)}…${rendered.slice(-end)}`;
+}
+
 function normalizeAdminTrade(input: any): any | null {
   const account = input?.account ?? {};
-  const tradeAccount = input?.trade_account ?? input?.pubkey ?? asBase58(input?.pubkey);
+  const tradeAccount =
+    asBase58(input?.trade_account) ??
+    asStringValue(input?.trade_account) ??
+    asBase58(input?.pubkey) ??
+    asStringValue(input?.pubkey);
   if (typeof tradeAccount !== "string" || tradeAccount.length === 0) {
     return null;
   }
@@ -126,12 +139,22 @@ function normalizeAdminTrade(input: any): any | null {
 
   return {
     id: tradeAccount,
-    trade_id: input?.trade_id ?? asHex(account.tradeId ?? account.trade_id) ?? "unknown",
-    wallet: input?.wallet ?? account.buyer ?? asBase58(account.buyer) ?? "unknown",
-    seller: input?.seller ?? account.seller ?? asBase58(account.seller) ?? "unknown",
-    amount: input?.amount ?? asStringValue(account.amount) ?? "0",
-    tracking_id: input?.tracking_id ?? account.trackingId ?? account.tracking_id ?? "pending",
-    carrier: input?.carrier ?? asStringValue(account.carrier) ?? "unknown",
+    trade_id: asStringValue(input?.trade_id) ?? asHex(account.tradeId ?? account.trade_id) ?? "unknown",
+    wallet:
+      asBase58(input?.wallet) ??
+      asStringValue(input?.wallet) ??
+      asBase58(account.buyer) ??
+      asStringValue(account.buyer) ??
+      "unknown",
+    seller:
+      asBase58(input?.seller) ??
+      asStringValue(input?.seller) ??
+      asBase58(account.seller) ??
+      asStringValue(account.seller) ??
+      "unknown",
+    amount: asStringValue(input?.amount) ?? asStringValue(account.amount) ?? "0",
+    tracking_id: asStringValue(input?.tracking_id) ?? asStringValue(account.trackingId ?? account.tracking_id) ?? "pending",
+    carrier: asStringValue(input?.carrier) ?? asStringValue(account.carrier) ?? "unknown",
     status,
     last_known_status: input?.last_known_status ?? statusLabel(status),
     created_at: createdAt,
@@ -1219,10 +1242,10 @@ export default function AdminPage() {
                           }}
                         >
                           <div style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "var(--text-secondary)" }}>
-                            {t.trade_id.slice(0, 14)}…
+                            {truncateMiddle(t.trade_id, 14, 0)}
                           </div>
                           <div style={{ fontSize: "0.78rem" }}>
-                            <span className="addr">{t.wallet.slice(0, 8)}…{t.wallet.slice(-4)}</span>
+                            <span className="addr">{truncateMiddle(t.wallet, 8, 4)}</span>
                           </div>
                           <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)" }}>
                             {t.amount ? fmtUSD(parseFloat(t.amount)) : "—"}
@@ -1565,8 +1588,8 @@ export default function AdminPage() {
                             gap: "0.5rem",
                             background: "var(--card)",
                           }}>
-                            <div style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "var(--text-secondary)" }}>{t.trade_id.slice(0, 14)}…</div>
-                            <div><span className="addr">{t.wallet.slice(0, 8)}…{t.wallet.slice(-4)}</span></div>
+                            <div style={{ fontFamily: "monospace", fontSize: "0.7rem", color: "var(--text-secondary)" }}>{truncateMiddle(t.trade_id, 14, 0)}</div>
+                            <div><span className="addr">{truncateMiddle(t.wallet, 8, 4)}</span></div>
                             <div style={{ fontSize: "0.8rem", fontWeight: 700 }}>{fmtUSD(gross)}</div>
                             <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--cyan)" }}>{fmtUSD(fee)}</div>
                             <div style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{fmtUSD(net)}</div>
