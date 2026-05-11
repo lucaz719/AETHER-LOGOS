@@ -26,6 +26,7 @@ type registerRequest struct {
 	TradeID      string `json:"trade_id"`
 	Seller       string `json:"seller"`
 	Amount       string `json:"amount"`
+	ProductTitle string `json:"product_title"`
 }
 
 type registerResponse struct {
@@ -283,7 +284,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := RegisterShipment(req.TrackingID, req.Wallet, req.CallbackURL, req.Carrier, req.TradeAccount, req.TradeID, req.Seller, req.Amount)
+	id, err := RegisterShipment(req.TrackingID, req.Wallet, req.CallbackURL, req.Carrier, req.TradeAccount, req.TradeID, req.Seller, req.Amount, req.ProductTitle)
 	if err != nil {
 		log.Printf("register error: %v", err)
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -796,7 +797,7 @@ func handleForceShip(w http.ResponseWriter, r *http.Request, tradeID string) {
 
 	if shipment == nil {
 		// Create new shipment record for this trade
-		id, err := RegisterShipment(req.TrackingID, "", "", "dhl", "", tradeID, "", "0")
+		id, err := RegisterShipment(req.TrackingID, "", "", "dhl", "", tradeID, "", "0", "")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -862,19 +863,19 @@ func handleSimulateDelivery(w http.ResponseWriter, r *http.Request, tradeID stri
 	}
 
 	// Write delivery milestones
-	now := time.Now().Unix()
+	nowMs := time.Now().Unix() * 1000
 	milestones := []ShipmentMilestone{
 		{
 			Status:      "InTransit",
 			Description: "Shipment picked up by carrier.",
 			Location:    "Origin Warehouse",
-			Timestamp:   now - 3600,
+			Timestamp:   nowMs - 3600000,
 		},
 		{
 			Status:      "Delivered",
 			Description: "Package delivered and verified by zkTLS protocol.",
 			Location:    "Destination",
-			Timestamp:   now,
+			Timestamp:   nowMs,
 		},
 	}
 	if err := UpsertMilestones(shipment.ID, milestones); err != nil {

@@ -17,6 +17,7 @@ type ApiTradeRecord = {
   trade_id?: string;
   seller?: string;
   amount?: string;
+  product_title?: string;
   tracking_id?: string | null;
   status?: unknown;
   created_at?: string;
@@ -151,6 +152,10 @@ function normalizeTradeRow(input: TradeRow | ApiTradeRecord): TradeRow | null {
     parseCreatedAt((input as ApiTradeRecord).created_at),
   );
   const shipByDeadline = firstDefined(rawAccount.shipByDeadline, rawAccount.ship_by_deadline);
+  const productTitle = firstDefined(
+    rawAccount.product_title as string | undefined,
+    (input as ApiTradeRecord).product_title,
+  );
   let pubkey: PublicKey;
 
   try {
@@ -178,6 +183,7 @@ function normalizeTradeRow(input: TradeRow | ApiTradeRecord): TradeRow | null {
       created_at: orderCreatedAt,
       shipByDeadline,
       ship_by_deadline: shipByDeadline,
+      ...(productTitle ? { product_title: productTitle } : {}),
       status: normalizeStatus(firstDefined(rawAccount.status, (input as ApiTradeRecord).status)),
     },
   };

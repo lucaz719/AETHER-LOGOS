@@ -249,7 +249,16 @@ export default function UserDashboardPage() {
         </div>
 
         {/* Right side: badges + button */}
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexShrink: 0 }}>
+        <div style={{
+          display: "flex",
+          gap: "0.5rem",
+          alignItems: "center",
+          flexShrink: 0,
+          background: "var(--card)",
+          border: "1px solid var(--border)",
+          borderRadius: "0.75rem",
+          padding: "0.4rem 0.75rem",
+        }}>
           {loading ? (
             <>
               <SkeletonLine w="w-16" h="h-5" />
@@ -272,25 +281,27 @@ export default function UserDashboardPage() {
                 {user?.user_type ?? "buyer"}
               </span>
 
-              {/* KYC Badge with Warning */}
-              <div
-                title="Complete KYC to unlock trade limits"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  padding: "0.35rem 0.65rem",
-                  background: "rgba(249,115,22,0.15)",
-                  color: "#FB923C",
-                  border: "1px solid rgba(249,115,22,0.3)",
-                  borderRadius: "9999px",
-                  fontSize: "0.625rem",
-                  fontWeight: 600,
-                }}
-              >
-                <AlertCircle size={12} />
-                KYC: {user?.kyc_status ?? "none"}
-              </div>
+              {/* KYC Badge — hidden when none */}
+              {user?.kyc_status && user.kyc_status !== "none" && (
+                <div
+                  title="Complete KYC to unlock trade limits"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: "0.35rem 0.65rem",
+                    background: "rgba(249,115,22,0.15)",
+                    color: "#FB923C",
+                    border: "1px solid rgba(249,115,22,0.3)",
+                    borderRadius: "9999px",
+                    fontSize: "0.625rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <AlertCircle size={12} />
+                  KYC: {user.kyc_status}
+                </div>
+              )}
 
               <Link
                 href="/user/profile"
@@ -487,7 +498,9 @@ export default function UserDashboardPage() {
                     >
                       <div>
                         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
-                          {formatOrderReference(order, idx)}
+                          {(order.account?.product_title as string | undefined)?.trim()
+                            ? (order.account.product_title as string)
+                            : formatOrderReference(order, idx)}
                         </div>
                         <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
                           {formatOrderDate(order.account?.created_at)}

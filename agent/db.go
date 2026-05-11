@@ -20,6 +20,7 @@ type Shipment struct {
 	TradeID         string `json:"trade_id"`
 	Seller          string `json:"seller"`
 	Amount          string `json:"amount"`
+	ProductTitle    string `json:"product_title"`
 	ProofHash       string `json:"proof_hash"`
 	ProofTxSig      string `json:"proof_tx_sig"`
 	LastKnownStatus string `json:"last_known_status"`
@@ -176,6 +177,7 @@ func InitDB(path string) error {
 		trade_id          TEXT NOT NULL DEFAULT '',
 		seller            TEXT NOT NULL DEFAULT '',
 		amount            TEXT NOT NULL DEFAULT '0',
+		product_title     TEXT NOT NULL DEFAULT '',
 		proof_hash        TEXT NOT NULL DEFAULT '',
 		proof_tx_sig      TEXT NOT NULL DEFAULT '',
 		last_known_status TEXT NOT NULL DEFAULT '',
@@ -253,6 +255,9 @@ func InitDB(path string) error {
 	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN amount TEXT NOT NULL DEFAULT '0'`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
 		return err
 	}
+	if _, err = db.Exec(`ALTER TABLE shipments ADD COLUMN product_title TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
 	if _, err = db.Exec(`CREATE INDEX IF NOT EXISTS idx_shipments_trade_account ON shipments(trade_account)`); err != nil {
 		return err
 	}
@@ -268,10 +273,10 @@ func InitDB(path string) error {
 	return nil
 }
 
-func RegisterShipment(trackingID, wallet, callbackURL, carrier, tradeAccount, tradeID, seller, amount string) (int64, error) {
+func RegisterShipment(trackingID, wallet, callbackURL, carrier, tradeAccount, tradeID, seller, amount, productTitle string) (int64, error) {
 	result, err := db.Exec(
-		`INSERT INTO shipments (tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		trackingID, wallet, callbackURL, carrier, tradeAccount, tradeID, seller, amount,
+		`INSERT INTO shipments (tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, product_title) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		trackingID, wallet, callbackURL, carrier, tradeAccount, tradeID, seller, amount, productTitle,
 	)
 	if err != nil {
 		return 0, err
@@ -281,7 +286,7 @@ func RegisterShipment(trackingID, wallet, callbackURL, carrier, tradeAccount, tr
 
 func GetAllShipments() ([]Shipment, error) {
 	rows, err := db.Query(
-		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, product_title, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
 		 FROM shipments
 		 ORDER BY created_at DESC`,
 	)
@@ -303,6 +308,7 @@ func GetAllShipments() ([]Shipment, error) {
 			&s.TradeID,
 			&s.Seller,
 			&s.Amount,
+			&s.ProductTitle,
 			&s.ProofHash,
 			&s.ProofTxSig,
 			&s.LastKnownStatus,
@@ -318,7 +324,7 @@ func GetAllShipments() ([]Shipment, error) {
 
 func GetPendingShipments() ([]Shipment, error) {
 	rows, err := db.Query(
-		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, product_title, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
 		 FROM shipments
 		 WHERE proof_tx_sig = ''`,
 	)
@@ -340,6 +346,7 @@ func GetPendingShipments() ([]Shipment, error) {
 			&s.TradeID,
 			&s.Seller,
 			&s.Amount,
+			&s.ProductTitle,
 			&s.ProofHash,
 			&s.ProofTxSig,
 			&s.LastKnownStatus,
@@ -356,7 +363,7 @@ func GetPendingShipments() ([]Shipment, error) {
 func GetShipmentByTrackingID(trackingID string) (*Shipment, error) {
 	var s Shipment
 	err := db.QueryRow(
-		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, product_title, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
 		 FROM shipments WHERE tracking_id = ? ORDER BY id DESC LIMIT 1`,
 		trackingID,
 	).Scan(
@@ -369,6 +376,7 @@ func GetShipmentByTrackingID(trackingID string) (*Shipment, error) {
 		&s.TradeID,
 		&s.Seller,
 		&s.Amount,
+		&s.ProductTitle,
 		&s.ProofHash,
 		&s.ProofTxSig,
 		&s.LastKnownStatus,
@@ -384,7 +392,7 @@ func GetShipmentByTrackingID(trackingID string) (*Shipment, error) {
 func GetShipmentByTradeAccount(tradeAccount string) (*Shipment, error) {
 	var s Shipment
 	err := db.QueryRow(
-		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
+		`SELECT id, tracking_id, wallet, callback_url, carrier, trade_account, trade_id, seller, amount, product_title, proof_hash, proof_tx_sig, last_known_status, created_at, updated_at
 		 FROM shipments WHERE trade_account = ? ORDER BY id DESC LIMIT 1`,
 		tradeAccount,
 	).Scan(
@@ -397,6 +405,7 @@ func GetShipmentByTradeAccount(tradeAccount string) (*Shipment, error) {
 		&s.TradeID,
 		&s.Seller,
 		&s.Amount,
+		&s.ProductTitle,
 		&s.ProofHash,
 		&s.ProofTxSig,
 		&s.LastKnownStatus,

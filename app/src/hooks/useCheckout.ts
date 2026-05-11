@@ -167,6 +167,7 @@ export function useCheckout() {
                 trade_account: tradeAccountPda.toBase58(),
                 seller: vendorAuthority.toBase58(),
                 amount: String(item.priceUsdc * item.quantity),
+                product_title: item.title ?? "",
                 tracking_id: "",
                 callback_url: `${typeof window !== 'undefined' ? window.location.origin : ''}/api/shipment-update`,
               }),
