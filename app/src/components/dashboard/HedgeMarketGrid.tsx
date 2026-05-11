@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { CheckCircle, ExternalLink, X, Zap } from "lucide-react";
+import { createPortal } from "react-dom";
 
 export type HedgeMarket = {
   id: string;
@@ -38,9 +39,9 @@ function fakeTxHash(): string {
 
 function RiskBadge({ risk }: { risk: 'HIGH' | 'MEDIUM' | 'LOW' }) {
   const map: Record<string, React.CSSProperties> = {
-    HIGH:   { color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.3)' },
-    MEDIUM: { color: '#f59e0b', background: 'rgba(245,158,11,0.12)',  border: '1px solid rgba(245,158,11,0.3)'  },
-    LOW:    { color: '#34d399', background: 'rgba(52,211,153,0.12)',  border: '1px solid rgba(52,211,153,0.3)'  },
+    HIGH: { color: '#f87171', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.3)' },
+    MEDIUM: { color: '#d97706', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.32)' },
+    LOW: { color: '#34d399', background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.3)' },
   };
   return (
     <span style={{
@@ -54,13 +55,14 @@ function RiskBadge({ risk }: { risk: 'HIGH' | 'MEDIUM' | 'LOW' }) {
 export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
   const wallet = useWallet();
 
-  const [selectedIdx, setSelectedIdx]     = useState<number | null>(null);
-  const [selectedSide, setSelectedSide]   = useState<'YES' | 'NO'>('YES');
-  const [stakeAmount, setStakeAmount]     = useState('100');
-  const [busy, setBusy]                   = useState(false);
-  const [error, setError]                 = useState<string | null>(null);
-  const [success, setSuccess]             = useState<SuccessState | null>(null);
-  const [positions, setPositions]         = useState<SuccessState[]>(() => {
+  const [mounted, setMounted] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [selectedSide, setSelectedSide] = useState<'YES' | 'NO'>('YES');
+  const [stakeAmount, setStakeAmount] = useState('100');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<SuccessState | null>(null);
+  const [positions, setPositions] = useState<SuccessState[]>(() => {
     try {
       const stored = localStorage.getItem('aether_hedge_positions');
       return stored ? JSON.parse(stored) : [];
@@ -78,6 +80,10 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
     if (!stake || stake <= 0) return 0;
     return calcPayout(stake, selectedSide, selectedMarket);
   }, [selectedMarket, selectedSide, stakeAmount]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-dismiss success toast after 6s
   useEffect(() => {
@@ -150,29 +156,82 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
               {positions.length}
             </span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {positions.map((pos, i) => (
-              <div key={i} style={{
-                display: 'grid', gridTemplateColumns: '1fr auto auto auto',
-                gap: '1rem', alignItems: 'center',
-                padding: '0.75rem 1rem', borderRadius: '10px',
-                border: '1px solid var(--border)', background: 'var(--card)',
-              }}>
-                <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {pos.market}
-                </p>
-                <span style={{
-                  fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px',
-                  color: pos.side === 'YES' ? '#34d399' : '#f87171',
-                  background: pos.side === 'YES' ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
-                  border: `1px solid ${pos.side === 'YES' ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)'}`,
-                }}>{pos.side}</span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                  ${pos.amount} USDC
-                </span>
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#34d399', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                  ↑ ${pos.payout.toFixed(2)}
-                </span>
+              <div 
+                key={i} 
+                style={{
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr auto auto auto',
+                  gap: '1.25rem', 
+                  alignItems: 'center',
+                  padding: '0.85rem 1.25rem', 
+                  borderRadius: '12px',
+                  border: '1px solid var(--border)', 
+                  background: 'var(--card)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15), inset 2px 0 0 0 var(--cyan)',
+                  transition: 'all 0.2s ease',
+                  cursor: 'default'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(6,182,212,0.45)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ 
+                    fontSize: '0.78rem', 
+                    fontWeight: 700, 
+                    color: 'var(--text-primary)', 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis', 
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.01em'
+                  }}>
+                    {pos.market}
+                  </p>
+                </div>
+
+                <div style={{
+                  fontSize: '0.65rem', 
+                  fontWeight: 900, 
+                  padding: '0.25rem 0.65rem', 
+                  borderRadius: '6px',
+                  color: pos.side === 'YES' ? '#10b981' : '#f43f5e',
+                  background: pos.side === 'YES' ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)',
+                  border: `1px solid ${pos.side === 'YES' ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)'}`,
+                  letterSpacing: '0.05em'
+                }}>
+                  {pos.side}
+                </div>
+
+                <div style={{ 
+                  fontSize: '0.82rem', 
+                  fontWeight: 600, 
+                  color: 'var(--text-secondary)', 
+                  fontFamily: 'var(--font-jetbrains-mono, monospace)', 
+                  whiteSpace: 'nowrap',
+                  letterSpacing: '-0.02em'
+                }}>
+                  {pos.amount} <span style={{ fontSize: '0.62rem', opacity: 0.6 }}>USDC</span>
+                </div>
+
+                <div style={{ 
+                  fontSize: '0.82rem', 
+                  fontWeight: 700, 
+                  color: '#10b981', 
+                  fontFamily: 'var(--font-jetbrains-mono, monospace)', 
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}>
+                  <span style={{ fontSize: '0.7rem' }}>↑</span> ${pos.payout.toFixed(2)}
+                </div>
               </div>
             ))}
           </div>
@@ -257,31 +316,33 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
       </div>
 
       {/* Side panel */}
-      {selectedMarket && (
+      {mounted && selectedMarket && createPortal(
         <>
-          {/* Backdrop */}
           <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', zIndex: 40 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)', zIndex: 1100 }}
             onClick={closePanel}
             aria-label="Close hedge panel"
           />
 
-          {/* Panel */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Place Hedge"
             style={{
-              position: 'fixed', right: 0, top: 0, bottom: 0,
-              width: '100%', maxWidth: '400px', zIndex: 50,
+              position: 'fixed', right: 0, top: 0,
+              width: '100%', maxWidth: '400px',
+              height: '100vh', maxHeight: '100vh',
+              zIndex: 1101,
               display: 'flex', flexDirection: 'column',
-              background: 'var(--background)',
-              borderLeft: '1px solid var(--border)',
-              boxShadow: '-20px 0 60px rgba(0,0,0,0.55)',
+              background: 'var(--bg-card, #16161f)',
+              borderLeft: '2px solid transparent',
+              backgroundClip: 'padding-box',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              boxShadow: '-10px 0 50px rgba(0,0,0,0.85), inset 4px 0 0 0 rgba(6,182,212,0.65)',
             }}
           >
-            {/* Panel header */}
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 1 }}>
               <div>
                 <p style={{ fontSize: '0.62rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'var(--cyan)', marginBottom: '0.2rem' }}>
                   {selectedMarket.category}
@@ -291,9 +352,23 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
               <button
                 onClick={closePanel}
                 aria-label="Close"
-                style={{ padding: '0.4rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px' }}
+                className="hmg-close-button"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  border: '2px solid var(--border)',
+                  background: 'var(--card)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transform: 'rotate(0deg) scale(1)',
+                  transition: 'transform 0.2s ease',
+                }}
               >
-                <X size={16} />
+                <X size={18} color="var(--text-primary)" strokeWidth={3} />
               </button>
             </div>
 
@@ -302,18 +377,18 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
 
               {/* Market info */}
               <div style={{ padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)' }}>
-                <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '0.45rem' }}>Market</p>
+                <p style={{ fontSize: '0.6rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--cyan)', marginBottom: '0.45rem' }}>Market</p>
                 <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.45 }}>{selectedMarket.question}</p>
-                <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.75rem' }}>
-                  <div>
-                    <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Liquidity</span>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
-                      ${(selectedMarket.liquidity / 1_000_000).toFixed(2)}M USDC
+                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <div style={{ flex: 1, padding: '0.65rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
+                    <span style={{ fontSize: '0.58rem', color: 'var(--cyan)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.25rem' }}>Liquidity</span>
+                    <p style={{ fontSize: '0.82rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', margin: 0 }}>
+                      ${(selectedMarket.liquidity / 1_000_000).toFixed(2)}M
                     </p>
                   </div>
-                  <div>
-                    <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Resolves</span>
-                    <p style={{ fontSize: '0.8rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)' }}>
+                  <div style={{ flex: 1, padding: '0.65rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.03)' }}>
+                    <span style={{ fontSize: '0.58rem', color: 'var(--cyan)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.25rem' }}>Resolves</span>
+                    <p style={{ fontSize: '0.78rem', fontWeight: 800, fontFamily: 'monospace', color: 'var(--text-primary)', margin: 0 }}>
                       {new Date(selectedMarket.resolveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
@@ -465,7 +540,8 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
               </p>
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
 
       {/* Success toast — bottom-center on mobile, bottom-right on desktop */}
@@ -520,6 +596,9 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
       <style>{`
         @keyframes hmg-spin { to { transform: rotate(360deg); } }
         @keyframes hmg-slideIn { from { transform: translateX(-50%) translateY(16px); opacity: 0; } to { transform: translateX(-50%) translateY(0); opacity: 1; } }
+        .hmg-close-button:hover {
+          transform: rotate(90deg) scale(1.1);
+        }
       `}</style>
     </div>
   );
