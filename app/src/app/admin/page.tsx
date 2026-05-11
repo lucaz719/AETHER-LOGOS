@@ -389,6 +389,7 @@ export default function AdminPage() {
 
     // HACKATHON MOCK - If status is already verified in UI, allow simulation if on-chain fails
     const isVerifiedInUI = trade.last_known_status === "Verified" || trade.status === "Verified";
+    try {
       const tradeIdBytes = toByteArray(trade.trade_id);
       const buyerPub = new PublicKey(trade.wallet);
 
@@ -476,7 +477,7 @@ export default function AdminPage() {
       } catch (e) {
         console.debug("Agent status sync optional:", e);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
       setTxLink(null);
     } finally { setBusy(false); }
@@ -1675,4 +1676,3 @@ export default function AdminPage() {
     </>
   );
 }
-
