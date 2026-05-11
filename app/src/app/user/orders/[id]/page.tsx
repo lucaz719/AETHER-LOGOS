@@ -116,7 +116,8 @@ export default function OrderTrackingPage() {
   }
 
   const currentStatus = data?.shipment?.last_known_status?.toLowerCase() ?? "pending";
-  const isDelivered = currentStatus === "delivered" || currentStatus === "verified";
+  const isSettled = currentStatus === "released" || currentStatus === "settled";
+  const isDelivered = currentStatus === "delivered" || currentStatus === "verified" || isSettled;
   const hasProof = (!!data?.shipment?.proof_hash && data?.shipment?.proof_hash !== "") || isDelivered;
 
   return (
@@ -149,11 +150,12 @@ export default function OrderTrackingPage() {
               <div className="relative mb-12 -mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
                 <div className="relative min-w-[272px]">
                   <div className="absolute left-5 right-5 top-[22px] h-0.5 bg-border -z-10" />
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     <Step icon={<Box size={18} />} label="Order Placed" active done />
                     <Step icon={<ShieldCheck size={18} />} label="Escrow Locked" active done />
                     <Step icon={<Truck size={18} />} label="In Transit" active={!isDelivered} done={isDelivered} />
-                    <Step icon={<FileCheck2 size={18} />} label="zkTLS Verified" active={hasProof} done={hasProof} />
+                    <Step icon={<FileCheck2 size={18} />} label="zkTLS Verified" active={hasProof && !isSettled} done={hasProof} />
+                    <Step icon={<CheckCircle2 size={18} />} label="Funds Released" active={isSettled} done={isSettled} />
                   </div>
                 </div>
               </div>
@@ -183,8 +185,10 @@ export default function OrderTrackingPage() {
                 {(data?.milestones ?? []).length === 0 && (
                   <div className="pl-10 text-muted-foreground text-sm flex items-center gap-2">
                     <span className="animate-pulse w-2 h-2 rounded-full bg-amber-400 inline-block" />
-                    {isDelivered
-                      ? "Delivery confirmed by carrier."
+                    {isSettled
+                      ? "Settlement completed. Funds have been released."
+                      : isDelivered
+                        ? "Delivery confirmed by carrier."
                       : "Awaiting first shipment update..."}
                   </div>
                 )}
@@ -224,7 +228,9 @@ export default function OrderTrackingPage() {
                       <span className="text-sm font-black uppercase tracking-widest">Proof Verified</span>
                     </div>
                     <p className="text-xs text-muted-foreground mb-4 leading-relaxed font-bold uppercase tracking-wider">
-                      Settlement Agent has generated a zkTLS proof confirming delivery. Funds are eligible for release.
+                      {isSettled
+                        ? "Settlement Agent finalized release. Funds have been disbursed to the seller."
+                        : "Settlement Agent has generated a zkTLS proof confirming delivery. Funds are eligible for release."}
                     </p>
                     <Link
                       href={

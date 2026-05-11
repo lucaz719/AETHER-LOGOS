@@ -22,6 +22,7 @@ import { AGENT_URL } from "@/lib/config";
 
 type Tab = "init" | "verify" | "review" | "disputes" | "market" | "settlement" | "analytics";
 const DEMO_ADMIN = process.env.NEXT_PUBLIC_ADMIN_WALLET ?? "";
+const USDC_DECIMALS = 1_000_000;
 
 function AdminConnectPrompt() {
   return (
@@ -64,6 +65,25 @@ function asHex(value: unknown): string | null {
     return value.map((byte) => Number(byte).toString(16).padStart(2, "0")).join("");
   }
   return typeof value === "string" ? value : null;
+}
+
+function parseAtomicUsdc(value: unknown): number {
+  const raw = asStringValue(value);
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.round(parsed);
+}
+
+function parseDecimalUsdcToAtomic(value: unknown): number {
+  const raw = asStringValue(value);
+  if (!raw) return 0;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 0;
+  if (!raw.includes(".") && Number.isInteger(parsed) && Math.abs(parsed) >= USDC_DECIMALS) {
+    return Math.round(parsed);
+  }
+  return Math.round(parsed * USDC_DECIMALS);
 }
 
 function statusLabel(status: unknown): string {
@@ -133,6 +153,13 @@ function normalizeAdminTrade(input: any): any | null {
 
   const status = input?.status ?? account.status ?? "AwaitingShipment";
   const orderCreatedAt = asStringValue(account.orderCreatedAt ?? account.order_created_at);
+  const hasAgentAmount = input?.amount !== undefined && input?.amount !== null;
+  const explicitAtomic = parseAtomicUsdc(input?.amount_atomic);
+  const amountAtomic = explicitAtomic > 0
+    ? explicitAtomic
+    : hasAgentAmount
+      ? parseDecimalUsdcToAtomic(input?.amount)
+      : parseAtomicUsdc(account.amount);
   const createdAt =
     input?.created_at ??
     (orderCreatedAt ? new Date(Number(orderCreatedAt) * 1000).toISOString() : new Date().toISOString());
@@ -153,6 +180,7 @@ function normalizeAdminTrade(input: any): any | null {
       asStringValue(account.seller) ??
       "unknown",
     amount: asStringValue(input?.amount) ?? asStringValue(account.amount) ?? "0",
+    amount_atomic: amountAtomic,
     tracking_id: asStringValue(input?.tracking_id) ?? asStringValue(account.trackingId ?? account.tracking_id) ?? "pending",
     carrier: asStringValue(input?.carrier) ?? asStringValue(account.carrier) ?? "unknown",
     status,
@@ -734,12 +762,42 @@ export default function AdminPage() {
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(
       atomic / USDC_DECIMALS
     );
-  const fmtUSDStat = (atomic: number) => fmtUSD(Number.isFinite(atomic) ? atomic : 0);
+  
+  // New helper: If the number is small (like 2.04), treat it as already converted.
+  // If it's large (like 2040000), treat it as atomic units.
+  const fmtUSDStat = (val: number) => {
+    if (!Number.isFinite(val)) return "$0.00";
+    // If the value is > 10,000, it's likely atomic units (raw USDC).
+    // If it's small, it's likely already a decimal from the agent.
+    const isAtomic = val > 100000; 
+    const displayVal = isAtomic ? val / USDC_DECIMALS : val;
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(displayVal);
+  };
 
   // Computed treasury stats from live trade data
   const activeTVL = trades
     .filter((t: any) => t.last_known_status !== "Released")
     .reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+
+  const tradeAmountAtomic = (trade: any) => {
+    const normalizedAtomic = Number(trade?.amount_atomic);
+    if (Number.isFinite(normalizedAtomic) && normalizedAtomic >= 0) {
+      return normalizedAtomic;
+    }
+    const raw = asStringValue(trade?.amount);
+    if (!raw) return 0;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return 0;
+    if (!raw.includes(".") && Number.isInteger(parsed) && Math.abs(parsed) >= USDC_DECIMALS) {
+      return Math.round(parsed);
+    }
+    return Math.round(parsed * USDC_DECIMALS);
+  };
+
+  // Computed treasury stats from live trade data
+  const activeTVL = trades
+    .filter((t: any) => t.last_known_status !== "Released")
+    .reduce((sum: number, t: any) => sum + tradeAmountAtomic(t), 0);
   const activeShipments = trades.filter((t: any) => t.last_known_status === "InTransit").length;
 
   // Protocol revenue tracks earned fees from released trades plus projected fees from the active pipeline.
@@ -747,9 +805,9 @@ export default function AdminPage() {
   const releasedTrades = trades.filter((t: any) => t.last_known_status === "Released");
   const verifiedTrades = trades.filter((t: any) => t.last_known_status === "Verified");
   const inTransitTrades = trades.filter((t: any) => t.last_known_status === "InTransit");
-  const releasedVolume = releasedTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
-  const pendingSettlementVolume = verifiedTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
-  const inTransitVolume = inTransitTrades.reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
+  const releasedVolume = releasedTrades.reduce((sum: number, t: any) => sum + tradeAmountAtomic(t), 0);
+  const pendingSettlementVolume = verifiedTrades.reduce((sum: number, t: any) => sum + tradeAmountAtomic(t), 0);
+  const inTransitVolume = inTransitTrades.reduce((sum: number, t: any) => sum + tradeAmountAtomic(t), 0);
   const earnedRevenue = releasedVolume * PROTOCOL_FEE_RATE;
   const projectedFees = (pendingSettlementVolume + inTransitVolume) * PROTOCOL_FEE_RATE;
   const pendingSettlementRevenue = pendingSettlementVolume * PROTOCOL_FEE_RATE;
@@ -1248,7 +1306,7 @@ export default function AdminPage() {
                             <span className="addr">{truncateMiddle(t.wallet, 8, 4)}</span>
                           </div>
                           <div style={{ fontSize: "0.82rem", fontWeight: 700, color: "var(--text-primary)" }}>
-                            {t.amount ? fmtUSD(parseFloat(t.amount)) : "—"}
+                            {fmtUSD(tradeAmountAtomic(t))}
                           </div>
                           <div>
                             <span style={{
@@ -1399,7 +1457,7 @@ export default function AdminPage() {
 
             {/* BUSINESS ANALYTICS */}
             {tab === "analytics" && (() => {
-              const totalVolume = trades.reduce((s: number, t: any) => s + (parseFloat(t.amount) || 0), 0);
+              const totalVolume = trades.reduce((s: number, t: any) => s + tradeAmountAtomic(t), 0);
               const byStatus: Record<string, number> = {};
               trades.forEach((t: any) => {
                 const s = t.last_known_status || "AwaitingShipment";
@@ -1574,7 +1632,7 @@ export default function AdminPage() {
                         ))}
                       </div>
                       {releasedTrades.map((t: any) => {
-                        const gross = parseFloat(t.amount) || 0;
+                        const gross = tradeAmountAtomic(t);
                         const fee = gross * PROTOCOL_FEE_RATE;
                         const net = gross - fee;
                         return (
