@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { 
-  ArrowLeft, 
-  Box, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
-  FileCheck2, 
-  Globe, 
-  MapPin, 
-  ShieldCheck, 
-  Truck 
+import {
+  ArrowLeft,
+  Box,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FileCheck2,
+  Globe,
+  MapPin,
+  ShieldCheck,
+  Truck
 } from "lucide-react";
 import { useTradeSync } from "@/context/TradeContext";
 
@@ -150,10 +150,10 @@ export default function OrderTrackingPage() {
                 <div className="relative min-w-[272px]">
                   <div className="absolute left-5 right-5 top-[22px] h-0.5 bg-border -z-10" />
                   <div className="grid grid-cols-4 gap-2">
-                    <Step icon={<Box size={18}/>} label="Order Placed" active done />
-                    <Step icon={<ShieldCheck size={18}/>} label="Escrow Locked" active done />
-                    <Step icon={<Truck size={18}/>} label="In Transit" active={!isDelivered} done={isDelivered} />
-                    <Step icon={<FileCheck2 size={18}/>} label="zkTLS Verified" active={hasProof} done={hasProof} />
+                    <Step icon={<Box size={18} />} label="Order Placed" active done />
+                    <Step icon={<ShieldCheck size={18} />} label="Escrow Locked" active done />
+                    <Step icon={<Truck size={18} />} label="In Transit" active={!isDelivered} done={isDelivered} />
+                    <Step icon={<FileCheck2 size={18} />} label="zkTLS Verified" active={hasProof} done={hasProof} />
                   </div>
                 </div>
               </div>
@@ -161,25 +161,25 @@ export default function OrderTrackingPage() {
               {/* Milestone List */}
               <div className="space-y-6 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
                 {(data?.milestones ?? []).slice().reverse().map((m, i) => (
-                   <div key={i} className="relative pl-10">
-                     <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-background flex items-center justify-center ${i === 0 ? 'bg-primary' : 'bg-muted'}`}>
-                       <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                     </div>
-                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                       <div>
-                         <h4 className="font-bold text-foreground">{m.status}</h4>
-                         <p className="text-sm text-muted-foreground">{m.description}</p>
-                         <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
-                           <MapPin size={12} />
-                           {m.location}
-                         </div>
-                       </div>
-                       <div className="text-xs text-muted-foreground whitespace-nowrap">
-                         {new Date(m.timestamp).toLocaleString()}
-                       </div>
-                     </div>
-                   </div>
-                 ))}
+                  <div key={i} className="relative pl-10">
+                    <div className={`absolute left-0 top-1.5 w-6 h-6 rounded-full border-4 border-background flex items-center justify-center ${i === 0 ? 'bg-primary' : 'bg-muted'}`}>
+                      <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <h4 className="font-bold text-foreground">{m.status}</h4>
+                        <p className="text-sm text-muted-foreground">{m.description}</p>
+                        <div className="flex items-center gap-1 mt-1 text-xs text-primary font-medium">
+                          <MapPin size={12} />
+                          {m.location}
+                        </div>
+                      </div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {new Date(m.timestamp < 10000000000 ? m.timestamp * 1000 : m.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
                 {(data?.milestones ?? []).length === 0 && (
                   <div className="pl-10 text-muted-foreground text-sm flex items-center gap-2">
                     <span className="animate-pulse w-2 h-2 rounded-full bg-amber-400 inline-block" />
@@ -199,7 +199,7 @@ export default function OrderTrackingPage() {
                 <ShieldCheck className="text-primary" />
                 Settlement Status
               </h3>
-              
+
               <div className="space-y-4">
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Carrier Reference</p>
@@ -226,7 +226,7 @@ export default function OrderTrackingPage() {
                     <p className="text-xs text-muted-foreground mb-4 leading-relaxed font-bold uppercase tracking-wider">
                       Settlement Agent has generated a zkTLS proof confirming delivery. Funds are eligible for release.
                     </p>
-                    <Link 
+                    <Link
                       href={
                         data?.shipment?.proof_tx_sig?.startsWith('5xProof')
                           ? `https://solscan.io/account/${process.env.NEXT_PUBLIC_TRADE_ESCROW_PROGRAM_ID}?cluster=devnet`
@@ -274,9 +274,8 @@ export default function OrderTrackingPage() {
 function Step({ icon, label, active, done }: { icon: React.ReactNode, label: string, active: boolean, done: boolean }) {
   return (
     <div className="flex min-w-0 flex-col items-center gap-2 text-center">
-      <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all ${
-        done ? 'bg-primary text-white' : active ? 'bg-primary/20 text-primary border border-primary/50' : 'bg-muted text-muted-foreground'
-      }`}>
+      <div className={`flex h-11 w-11 items-center justify-center rounded-xl transition-all ${done ? 'bg-primary text-white' : active ? 'bg-primary/20 text-primary border border-primary/50' : 'bg-muted text-muted-foreground'
+        }`}>
         {done ? <CheckCircle2 size={20} /> : icon}
       </div>
       <span className={`text-[10px] font-bold uppercase leading-tight tracking-wider ${active || done ? 'text-foreground' : 'text-muted-foreground'}`}>

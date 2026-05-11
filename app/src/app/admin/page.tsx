@@ -144,16 +144,16 @@ export default function AdminPage() {
   const [reviewAddress, setReviewAddress] = useState("");
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  
-  const [requests, setRequests] = useState<{pubkey: string, account: any}[]>([]);
+
+  const [requests, setRequests] = useState<{ pubkey: string, account: any }[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
   // Disputes and markets state  
-  const [disputes, setDisputes] = useState<{pubkey: PublicKey; account: any}[]>([]);  
-  const [loadingDisputes, setLoadingDisputes] = useState(false);  
-  const [markets, setMarkets] = useState<any[]>([]);  
+  const [disputes, setDisputes] = useState<{ pubkey: PublicKey; account: any }[]>([]);
+  const [loadingDisputes, setLoadingDisputes] = useState(false);
+  const [markets, setMarkets] = useState<any[]>([]);
   const [loadingMarkets, setLoadingMarkets] = useState(false);
   const [showDemoMarkets, setShowDemoMarkets] = useState(false);
-  
+
   // Trade settlement state
   const [trades, setTrades] = useState<any[]>([]);
   const [loadingTrades, setLoadingTrades] = useState(false);
@@ -235,7 +235,7 @@ export default function AdminPage() {
     } catch (anchorErr: any) {
       console.warn("Anchor SDK fetch failed:", anchorErr?.message);
     }
-    
+
     // Fallback 2: Use decodeUnchecked with error handling
     try {
       if (!escrowProgram || !connection) {
@@ -243,18 +243,18 @@ export default function AdminPage() {
         setLoadingTrades(false);
         return;
       }
-      
+
       console.log("Admin: Fetching all program accounts with decodeUnchecked...");
       const programId = escrowProgram.programId;
       const accounts = await connection.getProgramAccounts(programId);
-      
+
       console.log(`Admin: Found ${accounts.length} program accounts, decoding...`);
-      
-        const converted: any[] = [];
-        for (const { pubkey, account } of accounts) {
+
+      const converted: any[] = [];
+      for (const { pubkey, account } of accounts) {
         try {
           const decoded = decodeTradeAccount(escrowProgram, account.data as Buffer);
-          
+
           const normalized = normalizeAdminTrade({ pubkey: pubkey.toBase58(), account: decoded });
           if (normalized) {
             converted.push(normalized);
@@ -265,7 +265,7 @@ export default function AdminPage() {
           continue;
         }
       }
-      
+
       console.log(`Admin: Decoded ${converted.length} trades`);
       setTrades(converted);
     } catch (e) {
@@ -316,7 +316,7 @@ export default function AdminPage() {
         method: "POST",
         body: JSON.stringify({ confirmed: true }),
       });
-      
+
       if (res.ok) {
         setStatus("SUCCESS: Delivery simulated in agent database.");
         fetchTrades();
@@ -336,7 +336,7 @@ export default function AdminPage() {
     try {
       const tradeIdBytes = toByteArray(trade.trade_id);
       const buyerPub = new PublicKey(trade.wallet);
-      
+
       const [tradePda] = PublicKey.findProgramAddressSync(
         [Buffer.from("trade"), buyerPub.toBuffer(), Buffer.from(tradeIdBytes)],
         ESCROW_PROGRAM_ID
@@ -489,102 +489,102 @@ export default function AdminPage() {
   }
 
   // Helper: convert various trade_id shapes to byte array  
-  const toByteArray = (v: any): number[] => {    
-    if (!v) return [];    
-    if (Array.isArray(v)) return v as number[];    
-    if (v instanceof Uint8Array) return Array.from(v);    
-    if (typeof v === 'string') {      
-      try { return Array.from(Buffer.from(v.replace(/^0x/, ''), 'hex')); } catch { return []; }    
-    }    
-    return [];  
-  };  
+  const toByteArray = (v: any): number[] => {
+    if (!v) return [];
+    if (Array.isArray(v)) return v as number[];
+    if (v instanceof Uint8Array) return Array.from(v);
+    if (typeof v === 'string') {
+      try { return Array.from(Buffer.from(v.replace(/^0x/, ''), 'hex')); } catch { return []; }
+    }
+    return [];
+  };
 
   // Fetch disputes when disputes tab active  
-  useEffect(() => {    
-    if (!escrowProgram || tab !== 'disputes') return;    
-    let cancelled = false;    
-    const load = async () => {      
-      setLoadingDisputes(true);      
-      try {        
-        const rows = (await (escrowProgram.account as any).tradeAccount.all()) as { pubkey: PublicKey; account: any }[];        
-        const disputed = rows.filter(r => {          
-          const st = r.account.status as any; return st && st.disputed !== undefined;        
-        });        
-        if (!cancelled) setDisputes(disputed as any);      
-      } catch (e) {        
-        console.warn('failed to load disputes', e);        
-        if (!cancelled) setDisputes([]);      
-      } finally { if (!cancelled) setLoadingDisputes(false); }    
-    };    
-    void load();    
-    const id = setInterval(() => void load(), 10_000);    
-    return () => { cancelled = true; clearInterval(id); };  
-  }, [escrowProgram, tab]);  
+  useEffect(() => {
+    if (!escrowProgram || tab !== 'disputes') return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingDisputes(true);
+      try {
+        const rows = (await (escrowProgram.account as any).tradeAccount.all()) as { pubkey: PublicKey; account: any }[];
+        const disputed = rows.filter(r => {
+          const st = r.account.status as any; return st && st.disputed !== undefined;
+        });
+        if (!cancelled) setDisputes(disputed as any);
+      } catch (e) {
+        console.warn('failed to load disputes', e);
+        if (!cancelled) setDisputes([]);
+      } finally { if (!cancelled) setLoadingDisputes(false); }
+    };
+    void load();
+    const id = setInterval(() => void load(), 10_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [escrowProgram, tab]);
 
   // Fetch markets when market tab active  
-  useEffect(() => {    
-    if (!marketProgram || tab !== 'market') return;    
-    let cancelled = false;    
-    const load = async () => {      
-      setLoadingMarkets(true);      
-      try {        
-        const rows = (await (marketProgram.account as any).marketAccount.all()) as { pubkey: PublicKey; account: any }[];        
-        const now = Math.floor(Date.now() / 1000);        
-        const toResolve = rows.filter(r => {          
-          const st = r.account.status as any; return st && st.open !== undefined && (Number(r.account.resolution_time) || 0) <= now;        
-        });        
+  useEffect(() => {
+    if (!marketProgram || tab !== 'market') return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingMarkets(true);
+      try {
+        const rows = (await (marketProgram.account as any).marketAccount.all()) as { pubkey: PublicKey; account: any }[];
+        const now = Math.floor(Date.now() / 1000);
+        const toResolve = rows.filter(r => {
+          const st = r.account.status as any; return st && st.open !== undefined && (Number(r.account.resolution_time) || 0) <= now;
+        });
         if (!cancelled) {
           setMarkets(toResolve as any);
           setShowDemoMarkets(toResolve.length === 0);
         }
-      } catch (e) {        
-        console.warn('failed to load markets, using fallback', e);        
+      } catch (e) {
+        console.warn('failed to load markets, using fallback', e);
         if (!cancelled) {
           setMarkets([]);
           setShowDemoMarkets(true);
         }
-      } finally { if (!cancelled) setLoadingMarkets(false); }    
-    };    
-    void load();    
-    const id = setInterval(() => void load(), 10_000);    
-    return () => { cancelled = true; clearInterval(id); };  
-  }, [marketProgram, tab]);  
+      } finally { if (!cancelled) setLoadingMarkets(false); }
+    };
+    void load();
+    const id = setInterval(() => void load(), 10_000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [marketProgram, tab]);
 
   // Admin resolve helper  
-  async function handleAdminResolve(trade: { pubkey: PublicKey; account: any }, winner: string) {    
-    if (!escrowProgram || !publicKey) return;    
-    setBusy(true); setStatus(null); setTxLink(null);    
-    try {      
-      const tradeIdArr = toByteArray(trade.account.trade_id);      
-      if (tradeIdArr.length === 0) throw new Error('invalid trade_id');      
-      const tradeIdBuf = Buffer.from(tradeIdArr);      
-      const [vaultPda] = PublicKey.findProgramAddressSync([Buffer.from('vault'), tradeIdBuf], ESCROW_PROGRAM_ID);      
-      const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from('authority')], ESCROW_PROGRAM_ID);      
-      const winnerPub = new PublicKey(winner);      
-      const winnerTokenAccount = await getAssociatedTokenAddress(new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'), winnerPub, false, TOKEN_PROGRAM_ID);      
-      const tx = await (escrowProgram.methods as any).adminResolve(tradeIdArr, winnerPub).accounts({        
-        admin: publicKey,        
-        tradeAccount: trade.pubkey,        
-        escrowVault: vaultPda,        
-        vaultAuthority: vaultAuth,        
-        winnerTokenAccount: winnerTokenAccount,        
-        tokenProgram: TOKEN_PROGRAM_ID,      
-      }).rpc();      
-      setStatus(`Resolved - tx: ${tx}`);      
+  async function handleAdminResolve(trade: { pubkey: PublicKey; account: any }, winner: string) {
+    if (!escrowProgram || !publicKey) return;
+    setBusy(true); setStatus(null); setTxLink(null);
+    try {
+      const tradeIdArr = toByteArray(trade.account.trade_id);
+      if (tradeIdArr.length === 0) throw new Error('invalid trade_id');
+      const tradeIdBuf = Buffer.from(tradeIdArr);
+      const [vaultPda] = PublicKey.findProgramAddressSync([Buffer.from('vault'), tradeIdBuf], ESCROW_PROGRAM_ID);
+      const [vaultAuth] = PublicKey.findProgramAddressSync([Buffer.from('authority')], ESCROW_PROGRAM_ID);
+      const winnerPub = new PublicKey(winner);
+      const winnerTokenAccount = await getAssociatedTokenAddress(new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'), winnerPub, false, TOKEN_PROGRAM_ID);
+      const tx = await (escrowProgram.methods as any).adminResolve(tradeIdArr, winnerPub).accounts({
+        admin: publicKey,
+        tradeAccount: trade.pubkey,
+        escrowVault: vaultPda,
+        vaultAuthority: vaultAuth,
+        winnerTokenAccount: winnerTokenAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }).rpc();
+      setStatus(`Resolved - tx: ${tx}`);
       setTxLink(`https://solscan.io/tx/${tx}?cluster=devnet`);
       // refresh disputes list      
-      const rows = (await (escrowProgram.account as any).tradeAccount.all()) as { pubkey: PublicKey; account: any }[];      
-      setDisputes(rows.filter(r => { const st = r.account.status as any; return st && st.disputed !== undefined; }));    
+      const rows = (await (escrowProgram.account as any).tradeAccount.all()) as { pubkey: PublicKey; account: any }[];
+      setDisputes(rows.filter(r => { const st = r.account.status as any; return st && st.disputed !== undefined; }));
       triggerRefresh();
-    } catch (e: unknown) {      
-      setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);      
+    } catch (e: unknown) {
+      setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
       setTxLink(null);
-      console.error(e);    
-    } finally { setBusy(false); }  
-  }  
+      console.error(e);
+    } finally { setBusy(false); }
+  }
 
   // Resolve market helper  
-  async function handleResolveMarket(market: any, outcome: boolean) {    
+  async function handleResolveMarket(market: any, outcome: boolean) {
     // HACKATHON MOCK - Demo market resolution
     if (!market.pubkey) {
       setBusy(true); setStatus(null); setTxLink(null);
@@ -595,18 +595,18 @@ export default function AdminPage() {
       return;
     }
 
-    if (!marketProgram || !publicKey) return;    
-    setBusy(true); setStatus(null); setTxLink(null);    
-    try {      
-      const tx = await (marketProgram.methods as any).resolveMarket(outcome).accounts({ creator: publicKey, marketAccount: market.pubkey }).rpc();      
-      setStatus(`SUCCESS: Market resolved — tx: ${tx}`);      
-      const rows = (await (marketProgram.account as any).marketAccount.all()) as { pubkey: PublicKey; account: any }[];      
-      const now = Math.floor(Date.now() / 1000);      
-      setMarkets(rows.filter(r => { const st = r.account.status as any; return st && st.open !== undefined && (Number(r.account.resolution_time) || 0) <= now; }));    
-    } catch (e: unknown) {      
-      setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);    
-    } finally { setBusy(false); }  
-  }  
+    if (!marketProgram || !publicKey) return;
+    setBusy(true); setStatus(null); setTxLink(null);
+    try {
+      const tx = await (marketProgram.methods as any).resolveMarket(outcome).accounts({ creator: publicKey, marketAccount: market.pubkey }).rpc();
+      setStatus(`SUCCESS: Market resolved — tx: ${tx}`);
+      const rows = (await (marketProgram.account as any).marketAccount.all()) as { pubkey: PublicKey; account: any }[];
+      const now = Math.floor(Date.now() / 1000);
+      setMarkets(rows.filter(r => { const st = r.account.status as any; return st && st.open !== undefined && (Number(r.account.resolution_time) || 0) <= now; }));
+    } catch (e: unknown) {
+      setStatus(`ERROR: ${e instanceof Error ? e.message : String(e)}`);
+    } finally { setBusy(false); }
+  }
 
   if (!publicKey) {
     return <AdminConnectPrompt />;
@@ -650,11 +650,11 @@ export default function AdminPage() {
       </p>
 
       {/* Tab bar */}
-      <div style={{ 
-        display: "flex", 
-        gap: "0.5rem", 
-        marginBottom: "2rem", 
-        borderBottom: "1px solid var(--border)", 
+      <div style={{
+        display: "flex",
+        gap: "0.5rem",
+        marginBottom: "2rem",
+        borderBottom: "1px solid var(--border)",
         paddingBottom: "1rem",
         overflowX: "auto",
         flexWrap: "nowrap",
@@ -691,11 +691,10 @@ export default function AdminPage() {
             background: status.startsWith("Resolved") || status.startsWith("SUCCESS")
               ? "rgba(52,211,153,0.08)"
               : "rgba(244,63,94,0.08)",
-            border: `1px solid ${
-              status.startsWith("Resolved") || status.startsWith("SUCCESS")
+            border: `1px solid ${status.startsWith("Resolved") || status.startsWith("SUCCESS")
                 ? "rgba(52,211,153,0.25)"
                 : "rgba(244,63,94,0.2)"
-            }`,
+              }`,
             borderRadius: "var(--radius-md)",
             padding: "0.85rem 1rem",
             marginBottom: "1.5rem",
@@ -717,25 +716,45 @@ export default function AdminPage() {
             {status}
           </span>
 
-          {txLink && (
-            <a
-              href={txLink}
-              target="_blank"
-              rel="noreferrer"
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
+            {txLink && (
+              <a
+                href={txLink}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  whiteSpace: "nowrap",
+                  fontSize: "0.75rem",
+                  color: "var(--cyan)",
+                  textDecoration: "underline",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                }}
+              >
+                View on Solscan
+                <ExternalLink size={12} />
+              </a>
+            )}
+            <button
+              onClick={() => setStatus(null)}
+              aria-label="Dismiss"
               style={{
-                whiteSpace: "nowrap",
-                fontSize: "0.75rem",
-                color: "var(--cyan)",
-                textDecoration: "underline",
-                display: "inline-flex",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px",
+                display: "flex",
                 alignItems: "center",
-                gap: "0.35rem",
+                color: "var(--text-secondary)",
+                opacity: 0.7,
               }}
             >
-              View on Solscan
-              <ExternalLink size={12} />
-            </a>
-          )}
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       )}
 
@@ -776,14 +795,14 @@ export default function AdminPage() {
             <button className="btn-primary" onClick={() => handleVerifyVendor()} disabled={busy || !vendorAddress.trim()}>
               {busy ? "Sending…" : "Verify Vendor"}
             </button>
-            
+
             <hr style={{ margin: "2rem 0", borderColor: "var(--border)", opacity: 0.5 }} />
-            
+
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h3 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>Pending Requests</h3>
               <button onClick={fetchRequests} className="btn-ghost" style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem" }}>Refresh</button>
             </div>
-            
+
             {loadingRequests ? (
               <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
             ) : requests.length === 0 ? (
@@ -798,8 +817,8 @@ export default function AdminPage() {
                         Authority: <span className="addr">{req.account.authority}</span>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleVerifyVendor(req.account.authority)} 
+                    <button
+                      onClick={() => handleVerifyVendor(req.account.authority)}
                       disabled={busy}
                       className="btn-secondary"
                       style={{ padding: "0.4rem 0.8rem", fontSize: "0.8rem" }}
@@ -820,63 +839,63 @@ export default function AdminPage() {
             </h2>
             <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
               Permanently closes an abusive <code>VendorReview</code> PDA and returns rent to the admin wallet. Paste the review account public key below.
-            </p>          
-            <div className="form-group" style={{ marginBottom: "1.25rem" }}>            
-              <label className="form-label">Review Account Pubkey</label>            
-              <input className="form-input" type="text" placeholder="Base58 public key…" value={reviewAddress} onChange={(e) => setReviewAddress(e.target.value)} />          
-            </div>          
-            <button className="btn-primary" onClick={handleCloseReview} disabled={busy || !reviewAddress.trim()}>{busy ? "Sending…" : "Close Review"}</button>        
-          </div>      
-        )}      
+            </p>
+            <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+              <label className="form-label">Review Account Pubkey</label>
+              <input className="form-input" type="text" placeholder="Base58 public key…" value={reviewAddress} onChange={(e) => setReviewAddress(e.target.value)} />
+            </div>
+            <button className="btn-primary" onClick={handleCloseReview} disabled={busy || !reviewAddress.trim()}>{busy ? "Sending…" : "Close Review"}</button>
+          </div>
+        )}
 
-        {tab === "disputes" && (        
-          <div className="glass" style={{ padding: "1.5rem" }}>          
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Gavel size={18} /> Disputed Trades</h2>          
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>List of trades currently in Disputed state. Admin may resolve in favor of buyer or seller.</p>          
-            {loadingDisputes ? (            
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>          
-            ) : disputes.length === 0 ? (            
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No disputes found.</div>          
-            ) : (            
-              <div style={{ display: 'grid', gap: '0.75rem' }}>{disputes.map(d => (              
-                <div key={d.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>                
-                  <div>                  
-                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{Buffer.from(toByteArray(d.account.trade_id || [])).toString('hex')}</div>                  
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Buyer: <span className="addr">{(d.account.buyer as PublicKey)?.toBase58?.() ?? String(d.account.buyer)}</span> • Seller: <span className="addr">{(d.account.seller as PublicKey)?.toBase58?.() ?? String(d.account.seller)}</span></div>                
-                  </div>                
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>                  
-                    <button className="btn-ghost" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.buyer))}>Settle for Buyer</button>                  
-                    <button className="btn-primary" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.seller))}>Settle for Seller</button>                
-                  </div>              
-                </div>            
-              ))}</div>          
-            )}        
-          </div>      
-        )}      
+        {tab === "disputes" && (
+          <div className="glass" style={{ padding: "1.5rem" }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Gavel size={18} /> Disputed Trades</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>List of trades currently in Disputed state. Admin may resolve in favor of buyer or seller.</p>
+            {loadingDisputes ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
+            ) : disputes.length === 0 ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No disputes found.</div>
+            ) : (
+              <div style={{ display: 'grid', gap: '0.75rem' }}>{disputes.map(d => (
+                <div key={d.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{Buffer.from(toByteArray(d.account.trade_id || [])).toString('hex')}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Buyer: <span className="addr">{(d.account.buyer as PublicKey)?.toBase58?.() ?? String(d.account.buyer)}</span> • Seller: <span className="addr">{(d.account.seller as PublicKey)?.toBase58?.() ?? String(d.account.seller)}</span></div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn-ghost" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.buyer))}>Settle for Buyer</button>
+                    <button className="btn-primary" disabled={busy} onClick={() => void handleAdminResolve(d, String(d.account.seller))}>Settle for Seller</button>
+                  </div>
+                </div>
+              ))}</div>
+            )}
+          </div>
+        )}
 
-        {tab === "market" && (        
-          <div className="glass" style={{ padding: "1.5rem" }}>          
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Scale size={18} /> Market Resolution</h2>          
-            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>Open markets past their resolution time are shown here. The creator may resolve; admin may call resolve if needed.</p>          
-            {loadingMarkets ? (            
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>          
-            ) : (markets.length === 0 && !showDemoMarkets) ? (            
-              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No markets to resolve.</div>          
-            ) : (            
+        {tab === "market" && (
+          <div className="glass" style={{ padding: "1.5rem" }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.75rem" }}><Scale size={18} /> Market Resolution</h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: "0.88rem", marginBottom: "1rem" }}>Open markets past their resolution time are shown here. The creator may resolve; admin may call resolve if needed.</p>
+            {loadingMarkets ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>Loading...</div>
+            ) : (markets.length === 0 && !showDemoMarkets) ? (
+              <div style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>No markets to resolve.</div>
+            ) : (
               <div style={{ display: 'grid', gap: '1rem' }}>
-                {markets.map(m => (              
-                  <div key={m.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>                
-                    <div>                  
-                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{String(m.account.question ?? m.pubkey.toBase58())}</div>                  
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resolves at: {new Date(Number(m.account.resolution_time) * 1000).toLocaleString()}</div>                
-                    </div>                
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>                  
-                      <button className="btn-ghost" disabled={busy} onClick={() => void handleResolveMarket(m, true)}>Outcome: YES</button>                  
-                      <button className="btn-primary" disabled={busy} onClick={() => void handleResolveMarket(m, false)}>Outcome: NO</button>                
-                    </div>              
-                  </div>            
+                {markets.map(m => (
+                  <div key={m.pubkey.toBase58()} style={{ padding: '1rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{String(m.account.question ?? m.pubkey.toBase58())}</div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Resolves at: {new Date(Number(m.account.resolution_time) * 1000).toLocaleString()}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="btn-ghost" disabled={busy} onClick={() => void handleResolveMarket(m, true)}>Outcome: YES</button>
+                      <button className="btn-primary" disabled={busy} onClick={() => void handleResolveMarket(m, false)}>Outcome: NO</button>
+                    </div>
+                  </div>
                 ))}
-                
+
                 {showDemoMarkets && [
                   {
                     id: "demo-market-001",
@@ -900,7 +919,7 @@ export default function AdminPage() {
                         <div style={{ fontWeight: 900, color: 'var(--text-primary)' }}>$2,000 USDC</div>
                       </div>
                     </div>
-                    
+
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                       <div style={{ padding: '0.75rem', background: 'rgba(34, 197, 94, 0.05)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
                         <div style={{ fontSize: '0.75rem', color: 'var(--green)', fontWeight: 600 }}>YES POOL</div>
@@ -922,9 +941,9 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
-              </div>          
-            )}        
-          </div>      
+              </div>
+            )}
+          </div>
         )}
 
         {tab === "settlement" && (
@@ -942,7 +961,7 @@ export default function AdminPage() {
               <div className="glass" style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)" }}>Loading trades...</div>
             ) : trades.length === 0 ? (
               <div className="glass" style={{ padding: "3rem", textAlign: "center", color: "var(--text-muted)" }}>
-                No active trades. <br/> Go place a trade on the marketplace to see it here.
+                No active trades. <br /> Go place a trade on the marketplace to see it here.
               </div>
             ) : (
               trades.map((t) => {
@@ -974,10 +993,10 @@ export default function AdminPage() {
                           {forceShipForm === t.trade_id ? (
                             <div className="glass" style={{ padding: "1rem", marginTop: "0.5rem", background: "rgba(255,255,255,0.02)" }}>
                               <label className="form-label">Demo Tracking ID</label>
-                              <input 
-                                className="form-input" 
-                                value={trackingInput} 
-                                onChange={(e) => setTrackingInput(e.target.value)} 
+                              <input
+                                className="form-input"
+                                value={trackingInput}
+                                onChange={(e) => setTrackingInput(e.target.value)}
                                 style={{ marginBottom: "0.75rem" }}
                               />
                               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -1014,7 +1033,7 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {status === "Released" && (
                       <p style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.75rem", textAlign: "center" }}>
                         ✓ Funds released to seller
