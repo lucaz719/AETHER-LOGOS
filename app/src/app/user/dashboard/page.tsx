@@ -202,7 +202,7 @@ export default function UserDashboardPage() {
           display: "flex",
           alignItems: "center",
           gap: "1rem",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid var(--border)",
           paddingBottom: "1.25rem",
           marginBottom: "1.5rem",
         }}
@@ -297,7 +297,7 @@ export default function UserDashboardPage() {
                 style={{
                   padding: "0.35rem 0.75rem",
                   background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.2)",
+                  border: "1px solid var(--border)",
                   color: "#9CA3AF",
                   borderRadius: "0.5rem",
                   fontSize: "0.75rem",
@@ -327,11 +327,11 @@ export default function UserDashboardPage() {
         <SettlementFlowViewer />
       </div>
 
-      {/* STATS ROW (4 columns) */}
+      {/* STATS ROW (3 columns) */}
       <div
         style={{
           display: "flex",
-          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          borderBottom: "1px solid var(--border)",
           marginBottom: "1.5rem",
         }}
       >
@@ -339,14 +339,13 @@ export default function UserDashboardPage() {
           { label: "Reputation", value: loading ? "—" : user?.reputation_score?.toFixed(1) ?? "0.0", color: reputationColor },
           { label: "Member Since", value: loading ? "—" : user?.created_at ? new Date(user.created_at).getFullYear().toString() : "–" },
           { label: "Total Orders", value: loading ? "—" : orders.length.toString() },
-          { label: "Wallet Balance", value: "—" },
         ].map((stat, idx) => (
           <div
             key={stat.label}
             style={{
               flex: 1,
               padding: "1.5rem",
-              borderRight: idx < 3 ? "1px solid rgba(255,255,255,0.08)" : "none",
+              borderRight: idx < 2 ? "1px solid var(--border)" : "none",
             }}
           >
             <div style={{ fontSize: "0.625rem", fontWeight: 700, letterSpacing: "0.12em", color: "#6B7280", textTransform: "uppercase", marginBottom: "0.5rem" }}>
@@ -385,8 +384,8 @@ export default function UserDashboardPage() {
                   gap: "0.5rem",
                   padding: "1rem",
                   borderRadius: "0.75rem",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid var(--border)",
+                  background: "var(--card)",
                   textDecoration: "none",
                   transition: "all 150ms ease",
                   cursor: "pointer",
@@ -421,9 +420,9 @@ export default function UserDashboardPage() {
           </h2>
           <div
             style={{
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--border)",
               borderRadius: "0.75rem",
-              background: "rgba(255,255,255,0.03)",
+              background: "var(--card)",
               overflow: "hidden",
             }}
           >
@@ -435,7 +434,7 @@ export default function UserDashboardPage() {
                     style={{
                       marginBottom: i < 2 ? "1rem" : 0,
                       paddingBottom: i < 2 ? "1rem" : 0,
-                      borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.08)" : "none",
+                      borderBottom: i < 2 ? "1px solid var(--border)" : "none",
                     }}
                   >
                     <SkeletonRow />
@@ -470,49 +469,49 @@ export default function UserDashboardPage() {
                   Shop Now →
                 </Link>
               </div>
-             ) : (
-               <div>
-                 {orders.slice(0, 5).map((order, idx) => {
-                   const meta = getStatusMeta(order.account?.status);
+            ) : (
+              <div>
+                {orders.slice(0, 5).map((order, idx) => {
+                  const meta = getStatusMeta(order.account?.status);
 
-                   return (
-                     <div
-                       key={idx}
-                       style={{
-                         padding: "1rem 1.5rem",
-                         borderBottom: idx < Math.min(4, orders.length - 1) ? "1px solid rgba(255,255,255,0.08)" : "none",
-                         display: "flex",
-                         justifyContent: "space-between",
-                         alignItems: "center",
-                       }}
-                     >
-                       <div>
-                         <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
-                           {formatOrderReference(order, idx)}
-                         </div>
-                         <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
-                           {formatOrderDate(order.account?.created_at)}
-                         </div>
-                       </div>
-                       <div
-                         style={{
-                           padding: "0.25rem 0.6rem",
-                           background: meta.bg,
-                           color: meta.color,
-                           borderRadius: "0.375rem",
-                           fontSize: "0.625rem",
-                           fontWeight: 600,
-                           border: `1px solid ${meta.color}30`,
-                         }}
-                       >
-                         {meta.label}
-                       </div>
-                     </div>
-                   );
-                 })}
-               </div>
-             )}
-           </div>
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "1rem 1.5rem",
+                        borderBottom: idx < Math.min(4, orders.length - 1) ? "1px solid var(--border)" : "none",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)", fontFamily: "monospace" }}>
+                          {formatOrderReference(order, idx)}
+                        </div>
+                        <div style={{ fontSize: "0.6875rem", color: "#6B7280", marginTop: "0.25rem" }}>
+                          {formatOrderDate(order.account?.created_at)}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          padding: "0.25rem 0.6rem",
+                          background: meta.bg,
+                          color: meta.color,
+                          borderRadius: "0.375rem",
+                          fontSize: "0.625rem",
+                          fontWeight: 600,
+                          border: `1px solid ${meta.color}30`,
+                        }}
+                      >
+                        {meta.label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ACCOUNT STATUS */}
@@ -522,13 +521,13 @@ export default function UserDashboardPage() {
           </h2>
           <div
             style={{
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: "1px solid var(--border)",
               borderRadius: "0.75rem",
-              background: "rgba(255,255,255,0.03)",
-              padding: "1.5rem",
+              background: "var(--card)",
+              padding: "1rem",
               display: "flex",
               flexDirection: "column",
-              gap: "1rem",
+              gap: "0.75rem",
             }}
           >
             {loading ? (
@@ -572,7 +571,7 @@ export default function UserDashboardPage() {
                 </div>
 
                 {/* Followed Stores */}
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Followed Stores
                   </div>
@@ -582,7 +581,7 @@ export default function UserDashboardPage() {
                 </div>
 
                 {/* Reviews Given */}
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
                   <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9CA3AF", marginBottom: "0.35rem" }}>
                     Reviews Given
                   </div>
@@ -592,20 +591,38 @@ export default function UserDashboardPage() {
                 </div>
 
                 {/* Admin Shortcut */}
-                <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1rem" }}>
-                   <Link
-                      href="/admin"
-                      style={{
-                        display: "inline-block",
-                        fontSize: "0.8125rem",
-                        color: "var(--cyan)",
-                        textDecoration: "none",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                      }}
-                    >
-                      Admin Panel →
-                    </Link>
+                <div style={{ borderTop: "1px solid var(--border)", paddingTop: "0.75rem" }}>
+                  <Link
+                    href="/admin"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.35rem",
+                      padding: "0.4rem 0.85rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "var(--cyan)",
+                      background: "rgba(6,182,212,0.08)",
+                      border: "1px solid rgba(6,182,212,0.25)",
+                      borderRadius: "0.5rem",
+                      textDecoration: "none",
+                      cursor: "pointer",
+                      letterSpacing: "0.02em",
+                      transition: "all 150ms ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as HTMLAnchorElement;
+                      el.style.background = "rgba(6,182,212,0.15)";
+                      el.style.borderColor = "rgba(6,182,212,0.45)";
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as HTMLAnchorElement;
+                      el.style.background = "rgba(6,182,212,0.08)";
+                      el.style.borderColor = "rgba(6,182,212,0.25)";
+                    }}
+                  >
+                    Admin Panel →
+                  </Link>
                 </div>
               </>
             )}

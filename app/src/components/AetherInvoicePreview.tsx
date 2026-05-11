@@ -30,6 +30,7 @@ export function AetherInvoicePreview({
   isOpen,
   onClose,
   invoiceCid,
+  status = 'PAID',
 }: {
   items: SettlementLineItem[];
   buyerAddress: string;
@@ -40,7 +41,8 @@ export function AetherInvoicePreview({
   isOpen: boolean;
   onClose: () => void;
   invoiceCid?: string;
-}) {
+  status?: string;
+}){
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -80,8 +82,21 @@ export function AetherInvoicePreview({
         <div
           className="glass rounded-3xl border border-white/10 shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto backdrop-blur-2xl"
           onClick={(e) => e.stopPropagation()}
-          style={{ animation: 'slideUp 300ms ease-out' }}
+          style={{ animation: 'slideUp 300ms ease-out', position: 'relative' }}
         >
+          {/* PAID status badge */}
+          {status === 'PAID' && (
+            <div style={{
+              position: 'absolute', top: '1.25rem', right: '3.5rem', zIndex: 10,
+              background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.5)',
+              borderRadius: '8px', padding: '0.25rem 0.75rem',
+              color: '#22c55e', fontSize: '0.72rem', fontWeight: 900,
+              letterSpacing: '0.18em', textTransform: 'uppercase',
+              boxShadow: '0 0 12px rgba(34,197,94,0.2)',
+            }}>
+              PAID ✓
+            </div>
+          )}
           {/* Header */}
           <div className="sticky top-0 flex items-center justify-between px-8 py-6 border-b border-white/5 bg-gradient-to-br from-white/10 to-white/5">
             <div className="flex items-center gap-3">

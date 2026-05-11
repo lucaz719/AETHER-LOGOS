@@ -60,6 +60,12 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
   const [busy, setBusy]                   = useState(false);
   const [error, setError]                 = useState<string | null>(null);
   const [success, setSuccess]             = useState<SuccessState | null>(null);
+  const [positions, setPositions]         = useState<SuccessState[]>(() => {
+    try {
+      const stored = localStorage.getItem('aether_hedge_positions');
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  });
 
   const selectedMarket = useMemo(
     () => (selectedIdx !== null ? markets[selectedIdx] : null),
@@ -102,13 +108,17 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
     // Demo mode: simulate 1.8s TX delay
     await new Promise(r => setTimeout(r, 1800));
     const tx = fakeTxHash();
-    setSuccess({
+    const newPosition: SuccessState = {
       tx,
       side: selectedSide,
       amount: Number(stakeAmount),
       payout: potentialPayout,
       market: selectedMarket.question,
-    });
+    };
+    setSuccess(newPosition);
+    const updated = [...positions, newPosition];
+    setPositions(updated);
+    try { localStorage.setItem('aether_hedge_positions', JSON.stringify(updated)); } catch { /* ignore */ }
     closePanel();
     setBusy(false);
   };
@@ -127,6 +137,47 @@ export function HedgeMarketGrid({ markets }: { markets: HedgeMarket[] }) {
           Predict logistics outcomes · Stake USDC · Earn proportional payouts
         </p>
       </div>
+
+      {/* Current Positions */}
+      {positions.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <CheckCircle size={16} color="var(--cyan)" aria-hidden="true" />
+            <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+              Current Positions
+            </h3>
+            <span style={{ fontSize: '0.62rem', fontWeight: 700, padding: '0.15rem 0.5rem', borderRadius: '999px', background: 'rgba(6,182,212,0.12)', color: 'var(--cyan)', border: '1px solid rgba(6,182,212,0.25)' }}>
+              {positions.length}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {positions.map((pos, i) => (
+              <div key={i} style={{
+                display: 'grid', gridTemplateColumns: '1fr auto auto auto',
+                gap: '1rem', alignItems: 'center',
+                padding: '0.75rem 1rem', borderRadius: '10px',
+                border: '1px solid var(--border)', background: 'var(--card)',
+              }}>
+                <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {pos.market}
+                </p>
+                <span style={{
+                  fontSize: '0.68rem', fontWeight: 800, padding: '0.2rem 0.6rem', borderRadius: '999px',
+                  color: pos.side === 'YES' ? '#34d399' : '#f87171',
+                  background: pos.side === 'YES' ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)',
+                  border: `1px solid ${pos.side === 'YES' ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                }}>{pos.side}</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                  ${pos.amount} USDC
+                </span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#34d399', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                  ↑ ${pos.payout.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Market cards grid */}
       <div style={{
