@@ -757,28 +757,11 @@ export default function AdminPage() {
   }
 
   // USDC has 6 decimals on Solana — convert atomic units to display dollars
-  const USDC_DECIMALS = 1_000_000;
   const fmtUSD = (atomic: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(
       atomic / USDC_DECIMALS
     );
-  
-  // New helper: If the number is small (like 2.04), treat it as already converted.
-  // If it's large (like 2040000), treat it as atomic units.
-  const fmtUSDStat = (val: number) => {
-    if (!Number.isFinite(val)) return "$0.00";
-    // If the value is > 10,000, it's likely atomic units (raw USDC).
-    // If it's small, it's likely already a decimal from the agent.
-    const isAtomic = val > 100000; 
-    const displayVal = isAtomic ? val / USDC_DECIMALS : val;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(displayVal);
-  };
-
-  // Computed treasury stats from live trade data
-  const activeTVL = trades
-    .filter((t: any) => t.last_known_status !== "Released")
-    .reduce((sum: number, t: any) => sum + (parseFloat(t.amount) || 0), 0);
-
+  const fmtUSDStat = (atomic: number) => fmtUSD(Number.isFinite(atomic) ? atomic : 0);
   const tradeAmountAtomic = (trade: any) => {
     const normalizedAtomic = Number(trade?.amount_atomic);
     if (Number.isFinite(normalizedAtomic) && normalizedAtomic >= 0) {
