@@ -1,21 +1,50 @@
-# AETHER-LOGOS
+<p align="center">
+  <a href="https://solana.com">
+    <img src="https://img.shields.io/badge/SOLANA-DEVNET-9945FF?style=for-the-badge&logo=solana&logoColor=white" alt="Solana" />
+  </a>
+  <a href="https://www.anchor-lang.com">
+    <img src="https://img.shields.io/badge/ANCHOR-0.32-2563EB?style=for-the-badge" alt="Anchor 0.32" />
+  </a>
+  <img src="https://img.shields.io/badge/MARKETPLACE-ON--CHAIN-06B6D4?style=for-the-badge" alt="On-chain marketplace" />
+  <img src="https://img.shields.io/badge/HEDGE-MARKETS-F59E0B?style=for-the-badge" alt="Hedge markets" />
+  <img src="https://img.shields.io/badge/AGENT-GO%20SERVICE-10B981?style=for-the-badge" alt="Go agent" />
+</p>
 
-Asset-light trade settlement protocol on Solana that combines:
+<h1 align="center">AETHER-LOGOS</h1>
 
-1. escrow-backed B2B settlement
-2. on-chain marketplace ordering
-3. logistics hedge markets
-4. agent-driven delivery proof submission
+<p align="center"><strong>Asset-Light Trade Settlement Protocol on Solana</strong></p>
 
-[![Built on Solana](https://img.shields.io/badge/Built%20on-Solana-9945FF?style=flat-square&logo=solana)](https://solana.com)
-[![Anchor](https://img.shields.io/badge/Anchor-0.32-blue?style=flat-square)](https://www.anchor-lang.com)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+<p align="center">
+  Escrow-backed B2B settlement | Marketplace ordering | Logistics hedge markets | Agentic proof submission
+</p>
 
-Built for the Solana Frontier Hackathon 2026.
+<p align="center">
+  Built for the Solana Frontier Hackathon 2026
+</p>
 
 ---
 
-## 1) What AETHER-LOGOS solves
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Core Modules](#core-modules)
+- [On-Chain Programs](#on-chain-programs)
+- [End-to-End Flows](#end-to-end-flows)
+- [Frontend Surfaces](#frontend-surfaces)
+- [Agent Service](#agent-service)
+- [Repository Layout](#repository-layout)
+- [Getting Started](#getting-started)
+- [Environment Variables](#environment-variables)
+- [Testing](#testing)
+- [Current Implementation Notes](#current-implementation-notes)
+- [Deployment Notes](#deployment-notes)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Overview
 
 Cross-border B2B trade still depends on delayed verification, paper workflows, and manual trust handoffs. AETHER-LOGOS replaces those weak points with:
 
@@ -28,7 +57,7 @@ The design goal is practical adoption: keep existing logistics rails, then make 
 
 ---
 
-## 2) System at a glance
+## Architecture
 
 ```text
 +-------------------------+       +-------------------------+
@@ -55,7 +84,7 @@ Prediction Market Program runs hedge staking and payouts.
 
 ---
 
-## 3) Core modules
+## Core Modules
 
 | Module | Path | Purpose |
 |---|---|---|
@@ -67,9 +96,9 @@ Prediction Market Program runs hedge staking and payouts.
 
 ---
 
-## 4) On-chain programs
+## On-Chain Programs
 
-### 4.1 Trade Escrow (`trade_escrow`)
+### Trade Escrow (`trade_escrow`)
 
 Program ID (Anchor.toml): `6pZzkjVSVwnhEGoqSZ5kUFzaNvmY2Dhoju5eEpbBo9T3`
 
@@ -93,7 +122,7 @@ Primary PDA seeds:
 - Escrow vault: `["vault", trade_id]`
 - Vault authority: `["authority"]`
 
-### 4.2 Prediction Market (`prediction_market`)
+### Prediction Market (`prediction_market`)
 
 Program ID (Anchor.toml): `Aopbcs5WyUGqhezfAofgaFEETbFi3eeh97gqahG3darr`
 
@@ -119,7 +148,7 @@ Primary PDA seeds:
 - Market vault: `["market_vault", market_pubkey]`
 - Market authority: `["market_authority", market_pubkey]`
 
-### 4.3 Marketplace (`marketplace`)
+### Marketplace (`marketplace`)
 
 Program IDs:
 
@@ -152,9 +181,9 @@ Primary PDA seeds:
 
 ---
 
-## 5) End-to-end flows
+## End-to-End Flows
 
-### 5.1 Marketplace order -> escrow settlement
+### Marketplace order -> escrow settlement
 
 ```text
 Buyer wallet
@@ -180,7 +209,7 @@ Trade status -> Verified
 Seller payout + platform fee split
 ```
 
-### 5.2 Hedge lifecycle
+### Hedge lifecycle
 
 ```text
 Market creator -> create_market
@@ -192,7 +221,7 @@ Winning users -> claim_winnings
 
 ---
 
-## 6) Frontend surfaces (Next.js app)
+## Frontend Surfaces
 
 ### Major routes
 
@@ -227,7 +256,7 @@ Note: `/marketplace` currently redirects to `/dashboard`.
 
 ---
 
-## 7) Agent service (Go)
+## Agent Service
 
 The agent runs independently and bridges logistics events to on-chain settlement.
 
@@ -257,7 +286,7 @@ The agent runs independently and bridges logistics events to on-chain settlement
 
 ---
 
-## 8) Repository layout
+## Repository Layout
 
 ```text
 AETHER-LOGOS/
@@ -276,9 +305,9 @@ AETHER-LOGOS/
 
 ---
 
-## 9) Local development setup
+## Getting Started
 
-### 9.1 Prerequisites
+### Prerequisites
 
 - Rust toolchain
 - Solana CLI
@@ -286,7 +315,7 @@ AETHER-LOGOS/
 - Node.js `18+`
 - Go `1.22+`
 
-### 9.2 Install dependencies
+### Install dependencies
 
 ```bash
 # repo root
@@ -298,7 +327,7 @@ npm install
 cd ..
 ```
 
-### 9.3 Build programs and patch IDLs
+### Build programs and patch IDLs
 
 ```bash
 anchor build
@@ -323,7 +352,7 @@ Copy-Item target\idl\prediction_market.json app\src\lib\idl\prediction_market.js
 Copy-Item target\idl\marketplace.json app\src\lib\idl\marketplace.json -Force
 ```
 
-### 9.4 Configure environment files
+### Configure environment files
 
 ```bash
 cp .env.example .env
@@ -331,7 +360,7 @@ cp app/.env.local.example app/.env.local
 cp agent/.env.example agent/.env
 ```
 
-### 9.5 Run services
+### Run services
 
 ```bash
 # terminal 1
@@ -345,7 +374,7 @@ go run .
 
 ---
 
-## 10) Environment variable reference
+## Environment Variables
 
 | Scope | Variable | Notes |
 |---|---|---|
@@ -361,7 +390,7 @@ go run .
 
 ---
 
-## 11) Test commands
+## Testing
 
 ```bash
 # root anchor/mocha tests
@@ -381,7 +410,7 @@ go build ./...
 
 ---
 
-## 12) Current implementation notes
+## Current Implementation Notes
 
 This repository includes hackathon shortcuts. Important ones:
 
@@ -394,7 +423,7 @@ These are visible, intentional implementation realities and should be addressed 
 
 ---
 
-## 13) Deployment hints
+## Deployment Notes
 
 - Frontend is Vercel-ready (`vercel.json`).
 - Agent is Render-ready (`render.yaml`).
@@ -409,7 +438,7 @@ Program ID drift is the most common integration failure point.
 
 ---
 
-## 14) Contributing
+## Contributing
 
 1. Fork the repository.
 2. Create a feature branch.
@@ -419,7 +448,7 @@ Program ID drift is the most common integration failure point.
 
 ---
 
-## 15) License
+## License
 
 MIT. See [LICENSE](LICENSE).
 

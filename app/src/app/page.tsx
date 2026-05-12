@@ -414,9 +414,14 @@ export default function LandingPage() {
             <div>
               <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Platform</p>
               <ul className="space-y-4">
-                {["Marketplace", "Risk Desk", "Suppliers", "Security"].map(link => (
-                  <li key={link}>
-                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                {[
+                  { label: "Marketplace", href: "/stores" },
+                  { label: "Risk Desk", href: "/dashboard?mode=hedge" },
+                  { label: "Suppliers", href: "/stores" },
+                  { label: "Escrow Trades", href: "/trades" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-[13px] text-[#808090] transition-colors hover:text-white">{link.label}</a>
                   </li>
                 ))}
               </ul>
@@ -425,20 +430,26 @@ export default function LandingPage() {
             <div>
               <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Resources</p>
               <ul className="space-y-4">
-                {["Documentation", "API Reference", "Status", "Support"].map(link => (
-                  <li key={link}>
-                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                {[
+                  { label: "Documentation", href: "https://github.com/lucaz719/AETHER-LOGOS#readme" },
+                  { label: "Support", href: "https://github.com/lucaz719/AETHER-LOGOS/issues" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} target="_blank" rel="noreferrer" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link.label}</a>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div>
-              <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Legal</p>
+              <p className={`${jetbrainsMono.className} text-[10px] uppercase tracking-[0.2em] text-white/40 mb-6`}>Open Source</p>
               <ul className="space-y-4">
-                {["Terms of Service", "Privacy Policy", "Escrow Agreement", "Cookie Policy"].map(link => (
-                  <li key={link}>
-                    <a href="#" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link}</a>
+                {[
+                  { label: "Repository", href: "https://github.com/lucaz719/AETHER-LOGOS" },
+                  { label: "License (MIT)", href: "https://github.com/lucaz719/AETHER-LOGOS/blob/main/LICENSE" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} target="_blank" rel="noreferrer" className="text-[13px] text-[#808090] transition-colors hover:text-white">{link.label}</a>
                   </li>
                 ))}
               </ul>
@@ -450,8 +461,12 @@ export default function LandingPage() {
               © 2026 AETHER-LOGOS PROTOCOL. ALL RIGHTS RESERVED.
             </p>
             <div className="mt-6 flex gap-8 md:mt-0">
-              {["X", "LinkedIn", "GitHub", "Telegram"].map(social => (
-                <a key={social} href="#" className="text-[11px] font-black text-[#444450] transition-colors hover:text-white tracking-widest">{social}</a>
+              {[
+                { label: "GITHUB", href: "https://github.com/lucaz719/AETHER-LOGOS" },
+                { label: "ISSUES", href: "https://github.com/lucaz719/AETHER-LOGOS/issues" },
+                { label: "DOCS", href: "https://github.com/lucaz719/AETHER-LOGOS#readme" },
+              ].map((social) => (
+                <a key={social.label} href={social.href} target="_blank" rel="noreferrer" className="text-[11px] font-black text-[#444450] transition-colors hover:text-white tracking-widest">{social.label}</a>
               ))}
             </div>
           </div>
